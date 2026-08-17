@@ -43,7 +43,10 @@
   }
 
   function applyCloudSync(gameState, grants = []) {
-    if (!validGameState(gameState)) return;
+    if (!validGameState(gameState)) {
+      send('ttd:bridge-sync-error', { message: 'The bridge received an invalid canonical game state.' });
+      return false;
+    }
 
     account.gold = gameState.economy.pips;
     account.astras = gameState.economy.astras;
@@ -54,6 +57,8 @@
     if (typeof renderGachaTop === 'function') renderGachaTop();
     if (changed && typeof renderCollection === 'function') renderCollection();
     saveAccount();
+    send('ttd:bridge-synced', { version: 1, economyRevision: gameState.revision || 1 });
+    return true;
   }
 
   function renderPullResults(results) {
