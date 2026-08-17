@@ -66,7 +66,10 @@
     document.head.appendChild(style);
   }
 
-  const originalMergeInstances = mergeInstances;
+  function hasSocketedJewels(inst) {
+    return !!(inst && Array.isArray(inst.enchants) && inst.enchants.some(Boolean));
+  }
+
   mergeInstances = function onlineAuthoritativeMerge(key, sourceId, targetId, targetCard) {
     if (!v5Ready) {
       if (typeof toastGlobal === 'function') toastGlobal('Finishing online account sync…');
@@ -76,6 +79,21 @@
       if (typeof toastGlobal === 'function') toastGlobal('A Class merge is already being processed');
       return;
     }
+
+    // Jewel socketing is the next authority slice. Until those exact jewel
+    // instances exist on the server, never let a browser-only socketed jewel
+    // cross the authoritative merge boundary and risk being orphaned.
+    const source = findInstance(key, sourceId);
+    const target = findInstance(key, targetId);
+    if (hasSocketedJewels(source) || hasSocketedJewels(target)) {
+      if (typeof showNotice === 'function') {
+        showNotice('Online Class Merge', 'Unsocket jewels from both copies before merging for now. Jewel sockets are the next system being moved to server authority.');
+      } else if (typeof toastGlobal === 'function') {
+        toastGlobal('Unsocket jewels before merging online');
+      }
+      return;
+    }
+
     const requestId = `merge-${Date.now().toString(36)}-${++requestCounter}`;
     mergePending = { requestId, key, sourceId, targetId, targetCard };
     send('ttd:merge-request', { requestId, key, sourceId, targetId });
@@ -175,11 +193,6 @@
     if (message.type === 'ttd:merge-error') {
       if (mergePending && (!message.requestId || message.requestId === mergePending.requestId)) mergePending = null;
       if (typeof showNotice === 'function') showNotice('Class Merge', message.message || 'The server rejected that Class merge.');
-      return;
-    }
-
-    if (message.type === 'ttd:open-account-screen') {
-      showScreen('backup');
       return;
     }
 
