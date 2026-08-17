@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { createHash } = require('node:crypto');
 
 initializeApp();
 const db = getFirestore();
@@ -125,6 +126,19 @@ function summarizeLegacyProfile(profile) {
   };
 }
 
+function serializeLegacyProfile(profile) {
+  const profileJson = JSON.stringify(profile);
+  const jsonBytes = Buffer.byteLength(profileJson, 'utf8');
+  if (jsonBytes > MAX_PROFILE_JSON_BYTES) {
+    throw new HttpsError('invalid-argument', 'The decoded profile is too large.');
+  }
+  return {
+    profileJson,
+    jsonBytes,
+    sha256: createHash('sha256').update(profileJson, 'utf8').digest('hex'),
+  };
+}
+
 exports.health = onCall({ region: REGION }, (request) => {
   const auth = requireAuth(request);
   return {
@@ -176,47 +190,69 @@ exports.importLegacySave = onCall({ region: REGION, timeoutSeconds: 30 }, async 
   const auth = requireAuth(request);
   const profile = decodeLegacySaveCode(request.data?.saveCode);
   const summary = summarizeLegacyProfile(profile);
+  const serialized = serializeLegacyProfile(profile);
   const userRef = db.doc(`users/${auth.uid}`);
   const legacyRef = db.doc(`users/${auth.uid}/legacy/profile`);
 
-  await db.runTransaction(async (tx) => {
-    const userSnap = await tx.get(userRef);
-    const existing = userSnap.exists ? userSnap.data() : null;
-    if (existing?.legacyImport?.locked === true) {
-      throw new HttpsError(
-        'failed-precondition',
-        'A legacy profile has already been imported for this account.',
-      );
-    }
+  try {
+    await db.runTransaction(async (tx) => {
+      const userSnap = await tx.get(userRef);
+      const existing = userSnap.exists ? userSnap.data() : null;
+      if (existing?.legacyImport?.locked === true) {
+        throw new HttpsError(
+          'failed-precondition',
+          'A legacy profile has already been imported for this account.',
+        );
+      }
 
-    tx.set(userRef, {
-      schemaVersion: 1,
-      uid: auth.uid,
-      email: auth.token.email || null,
-      displayName: auth.token.name || null,
-      photoURL: auth.token.picture || null,
-      providers: Object.keys(auth.token.firebase?.identities || {}),
-      createdAt: existing?.createdAt || FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-      legacyImport: {
-        locked: true,
+      tx.set(userRef, {
+        schemaVersion: 1,
+        uid: auth.uid,
+        email: auth.token.email || null,
+        displayName: auth.token.name || null,
+        photoURL: auth.token.picture || null,
+        providers: Object.keys(auth.token.firebase?.identities || {}),
+        createdAt: existing?.createdAt || FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        legacyImport: {
+          locked: true,
+          importedAt: FieldValue.serverTimestamp(),
+          source: 'rds1',
+          trusted: false,
+          summary,
+          snapshotSha256: serialized.sha256,
+        },
+        migrationStatus: 'legacy-imported',
+      }, { merge: true });
+
+      // v33 uses nested arrays (for example decks is an array of deck arrays),
+      // which Firestore cannot store directly. Preserve the exact legacy
+      // snapshot as JSON so its original structure survives losslessly.
+      tx.set(legacyRef, {
+        schemaVersion: 33,
         importedAt: FieldValue.serverTimestamp(),
         source: 'rds1',
         trusted: false,
+        storageEncoding: 'json-string-v1',
+        jsonBytes: serialized.jsonBytes,
+        sha256: serialized.sha256,
         summary,
-      },
-      migrationStatus: 'legacy-imported',
-    }, { merge: true });
-
-    tx.set(legacyRef, {
-      schemaVersion: 33,
-      importedAt: FieldValue.serverTimestamp(),
-      source: 'rds1',
-      trusted: false,
-      summary,
-      profile,
+        profileJson: serialized.profileJson,
+      });
     });
-  });
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    console.error('importLegacySave transaction failed', {
+      uid: auth.uid,
+      message: err?.message,
+      code: err?.code,
+      stack: err?.stack,
+    });
+    throw new HttpsError(
+      'internal',
+      'The legacy profile validated, but Firebase could not store the cloud snapshot.',
+    );
+  }
 
   return {
     ok: true,
