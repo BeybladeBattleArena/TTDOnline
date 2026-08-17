@@ -1,0 +1,14 @@
+{
+  "name": "ttd-online",
+  "private": true,
+  "scripts": {
+    "check:functions": "node --check functions/index.js",
+    "emulators": "firebase emulators:start",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,database",
+    "deploy": "firebase deploy"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.0.0"
+  }
+}
