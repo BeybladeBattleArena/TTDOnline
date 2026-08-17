@@ -174,10 +174,19 @@ function injectGameBridge() {
     script.id = 'ttd-online-game-bridge';
     script.src = GAME_BRIDGE_PATH;
     script.async = false;
+    script.onerror = () => {
+      gameFrame.hidden = true;
+      gameFrame.style.pointerEvents = 'none';
+      accountArea.hidden = false;
+      setStatus('The secure online gameplay bridge failed to load. Reload and try again.', 'error');
+    };
     (doc.head || doc.documentElement).appendChild(script);
   } catch (err) {
     console.error('Could not inject the online game bridge.', err);
-    setStatus('Could not attach the online gameplay bridge.', 'error');
+    gameFrame.hidden = true;
+    gameFrame.style.pointerEvents = 'none';
+    accountArea.hidden = false;
+    setStatus('Could not attach the secure online gameplay bridge.', 'error');
   }
 }
 
@@ -190,14 +199,16 @@ function showSignedOutMode() {
   signedOutEl.hidden = false;
   signedInEl.hidden = true;
   gameFrame.hidden = true;
+  gameFrame.style.pointerEvents = 'none';
   gameFrame.src = 'about:blank';
 }
 
 function showGameMode(user, generation, gameState) {
   signedOutEl.hidden = true;
   signedInEl.hidden = false;
-  accountArea.hidden = true;
-  gameFrame.hidden = false;
+  accountArea.hidden = false;
+  gameFrame.hidden = true;
+  gameFrame.style.pointerEvents = 'none';
   const query = [
     'online=1',
     `uid=${encodeURIComponent(user.uid)}`,
@@ -301,6 +312,7 @@ async function initializeFirebase() {
     signedOutEl.hidden = true;
     signedInEl.hidden = false;
     gameFrame.hidden = true;
+    gameFrame.style.pointerEvents = 'none';
     setStatus('Loading authoritative online profile…');
 
     try {
@@ -311,7 +323,7 @@ async function initializeFirebase() {
       await loadCloudProgression();
       applyCloudEconomyToLocalBridge(user.uid, generation, cloudGameState);
 
-      setStatus('Cloud account ready.', 'ok');
+      setStatus('Securing online gameplay bridge…');
       showGameMode(user, generation, cloudGameState);
     } catch (err) {
       console.error(err);
@@ -331,6 +343,22 @@ window.addEventListener('message', (event) => {
 
   if (message.type === 'ttd:bridge-ready') {
     sendCloudSyncToGame();
+    return;
+  }
+
+  if (message.type === 'ttd:bridge-synced') {
+    setStatus('Cloud account ready.', 'ok');
+    accountArea.hidden = true;
+    gameFrame.hidden = false;
+    gameFrame.style.pointerEvents = 'auto';
+    return;
+  }
+
+  if (message.type === 'ttd:bridge-sync-error') {
+    gameFrame.hidden = true;
+    gameFrame.style.pointerEvents = 'none';
+    accountArea.hidden = false;
+    setStatus(message.message || 'The secure online game state could not be synchronized.', 'error');
     return;
   }
 
