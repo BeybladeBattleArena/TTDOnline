@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026.08.17-1",
+  "runtime": {
+    "description": "Canonical die definitions loaded by the online game. The die key is permanent; display names may change.",
+    "source": "dicefile.json"
+  },
+  "dice": {
+    "fire": {"name":"Fireball","rarity":"common","glyph":"flame","color":"#e2584f","glow":"#ff9d70","target":"front","dmg":12,"atk":3.6,"hp":45,"category":"special","affinities":{"fire":1.0},"range":"map","special":{"kind":"fireball","classCooldownSteps":[{"atClass":5,"mult":0.92}]}},
+    "ice": {"name":"Icicle","rarity":"common","glyph":"snowflake","color":"#5fc7e0","glow":"#bdeeff","target":"front","dmg":9,"atk":4.0,"hp":40,"category":"physical","affinities":{"ice":1.0},"range":"map","special":{"kind":"icicle","classCooldownSteps":[{"atClass":3,"mult":0.94},{"atClass":6,"mult":0.94}]}},
+    "wind": {"name":"Wind Blade","rarity":"common","glyph":"spiral","color":"#bfe6c9","glow":"#eafff0","target":"front","dmg":10,"atk":3.4,"hp":32,"category":"special","affinities":{"wind":1.0},"range":"map","special":{"kind":"windblade","classCooldownSteps":[{"atClass":2,"mult":0.94}]}},
+    "poison": {"name":"Envenom","rarity":"common","glyph":"droplet","color":"#7ec26a","glow":"#b8f0a0","target":"strongest","dmg":16,"atk":3.5,"hp":38,"category":"physical","affinities":{"poison":1.0},"range":"mid","special":{"kind":"envenom","classCooldownSteps":[{"atClass":6,"mult":0.94}]}},
+    "broken": {"name":"Broken","rarity":"common","glyph":"crack","color":"#c65b4a","glow":"#ff9d80","target":"random","dmg":26,"atk":3.6,"hp":50,"category":"physical","affinities":{},"range":"map","special":{"kind":"broken","classCooldownSteps":[{"atClass":3,"mult":0.94}]}},
+    "electric": {"name":"Thunderbolt","rarity":"rare","glyph":"bolt","color":"#e0c848","glow":"#fff2a0","target":"front","dmg":14,"atk":3.8,"hp":48,"category":"special","affinities":{"lightning":1.0},"range":"map","special":{"kind":"thunderbolt","classCooldownSteps":[{"atClass":4,"mult":0.94}]}},
+    "iron": {"name":"Iron","rarity":"rare","glyph":"shield","color":"#9aa3b8","glow":"#dfe6f5","target":"strongest","category":"physical","affinities":{"metal":1.0},"dmg":20,"atk":1.0,"hp":70,"special":{"kind":"bossBonus","mult":2}},
+    "arrow": {"name":"Arrow","rarity":"rare","glyph":"chevron","color":"#d99a4e","glow":"#ffd699","target":"front","category":"physical","affinities":{},"dmg":11,"atk":0.75,"hp":42,"special":{"kind":"critBurst","every":5,"mult":4}},
+    "light": {"name":"Light","rarity":"rare","glyph":"sunburst","color":"#f0dca0","glow":"#fff6d8","target":"none","category":"status","affinities":{"holy":1.0},"dmg":0,"atk":1.0,"hp":36,"special":{"kind":"buffAS","amount":0.18,"dur":1.6}},
+    "crack": {"name":"Crack","rarity":"rare","glyph":"fracture","color":"#a08363","glow":"#e0c9a0","target":"front","category":"status","affinities":{"metal":1.0},"dmg":10,"atk":1.1,"hp":46,"special":{"kind":"armorBreak","amount":0.12,"dur":2.5}},
+    "laser": {"name":"Laser","rarity":"unique","glyph":"beamlines","color":"#e05fd0","glow":"#ffb3f0","target":"front","category":"special","affinities":{},"dmg":9,"atk":0.6,"hp":44,"special":{"kind":"laser","every":5,"beamDmg":60}},
+    "teleport": {"name":"Teleport","rarity":"unique","glyph":"rings","color":"#8b7fe8","glow":"#d7c4ff","target":"random","category":"status","affinities":{"arcane":1.0},"dmg":14,"atk":1.0,"hp":46,"special":{"kind":"teleportReset","chance":0.16}},
+    "mine": {"name":"Mine","rarity":"unique","glyph":"gem","color":"#d9b26a","glow":"#f3d491","target":"none","category":"status","affinities":{"metal":1.0},"dmg":0,"atk":1.4,"hp":40,"special":{"kind":"spGen","amount":6}},
+    "mimic": {"name":"Mimic","rarity":"unique","glyph":"venn","color":"#7fd6c8","glow":"#c8fff2","target":"front","category":"special","affinities":{"arcane":1.0},"dmg":10,"atk":1.0,"hp":46,"special":{"kind":"mimicMerge","spRefund":5}},
+    "absorb": {"name":"Absorb","rarity":"unique","glyph":"eye","color":"#6a5a9e","glow":"#c4b3ff","target":"random","category":"status","affinities":{"shadow":1.0},"dmg":9,"atk":1.2,"hp":44,"special":{"kind":"drain","spDrain":4,"slow":0.05,"dur":1.5}},
+    "growth": {"name":"Growth","rarity":"legendary","glyph":"leaf","color":"#7fb87a","glow":"#c9f0be","target":"front","category":"special","affinities":{"nature":1.0},"dmg":5,"atk":2.0,"hp":60,"special":{"kind":"growth","duration":10}},
+    "joker": {"name":"Joker","rarity":"legendary","glyph":"mask","color":"#c98bd6","glow":"#f0c2fa","target":"front","category":"special","affinities":{"arcane":1.0},"dmg":8,"atk":1.0,"hp":55,"special":{"kind":"joker"}},
+    "gun": {"name":"Gun","rarity":"legendary","glyph":"crosshair","color":"#556070","glow":"#9fb0c9","target":"random","category":"physical","affinities":{},"dmg":24,"atk":1.05,"hp":58,"special":{"kind":"gun"}},
+    "blizzard": {"name":"Blizzard","rarity":"legendary","glyph":"crystal","color":"#5ea8e8","glow":"#bfe0ff","target":"front","category":"special","affinities":{"ice":1.0},"dmg":11,"atk":1.0,"hp":62,"special":{"kind":"blizzard","every":5.5,"slow":0.22,"dur":2.6}},
+    "nuclear": {"name":"Nuclear","rarity":"legendary","glyph":"trefoil","color":"#8f6fd1","glow":"#d7c4ff","target":"front","category":"special","affinities":{"fire":1.0},"dmg":11,"atk":1.0,"hp":60,"special":{"kind":"nuclear"}},
+    "magnet": {"name":"Magnet","rarity":"rare","glyph":"magnet","color":"#8899aa","glow":"#d0dae8","target":"none","category":"status","affinities":{"metal":1.0},"dmg":0,"atk":1.0,"hp":38,"special":{"kind":"magnetPull"}},
+    "goldrush": {"name":"Gold Rush","rarity":"unique","glyph":"goldcoin","color":"#e0b84a","glow":"#ffe28a","target":"front","category":"physical","affinities":{},"dmg":8,"atk":1.0,"hp":44,"special":{"kind":"goldRush"}},
+    "luckylucky": {"name":"Lucky Lucky","rarity":"legendary","glyph":"clover","color":"#7fd68f","glow":"#c8ffd0","target":"front","category":"status","affinities":{},"dmg":3,"atk":1.1,"hp":50,"special":{"kind":"luckyBonus"}},
+    "shuriken": {"name":"Shuriken","rarity":"rare","glyph":"shuriken","color":"#c7cdd6","glow":"#f0f2f6","target":"front","category":"physical","affinities":{},"dmg":6,"atk":0.75,"hp":42,"special":{"kind":"shurikenBarrage"}},
+    "blackwind": {"name":"Blackwind Shuriken","rarity":"unique","glyph":"shuriken","color":"#4a4560","glow":"#8f7fd6","target":"front","category":"special","affinities":{"shadow":1.0},"dmg":9,"atk":1.9,"hp":44,"special":{"kind":"blackwindStick","radius":24,"tickDmg":5,"tickInterval":0.4,"baseLife":1.65,"lifePerDot":0.25}},
+    "bubble": {"name":"Bubble","rarity":"unique","glyph":"bubble","color":"#7fd0e8","glow":"#d4f5ff","target":"front","category":"special","affinities":{"water":1.0},"dmg":5,"atk":3.4,"hp":44,"special":{"kind":"bubbleCapture","contactDmg":3,"popDmg":14,"splashDmg":7,"landDmg":8,"baseHold":2.0,"durPerDot":0.35}},
+    "haunt": {"name":"Haunt","rarity":"unique","glyph":"ghost","color":"#a8a0d6","glow":"#e0daff","target":"random","category":"status","affinities":{"shadow":1.0},"dmg":6,"atk":1.3,"hp":42,"special":{"kind":"haunt","slowAmt":0.08,"dps":9,"dur":4}},
+    "heavensfist": {"name":"Heaven's Fist","rarity":"legendary","glyph":"fist","color":"#5f8fd6","glow":"#cfe4ff","target":"front","category":"physical","affinities":{"holy":1.0},"dmg":26,"atk":1.7,"hp":60,"special":{"kind":"heavensFist","splashDmg":10,"knockback":26}},
+    "bubblebeam": {"name":"Bubble Beam","rarity":"unique","glyph":"bubble","color":"#5eb8e0","glow":"#c8f0ff","target":"front","category":"physical","affinities":{"water":1.0},"dmg":3,"atk":2.0,"hp":42,"special":{"kind":"bubbleBeamBarrage"}},
+    "asclepius": {"name":"Asclepius","rarity":"legendary","glyph":"beaker","color":"#e08fb0","glow":"#ffe0ee","target":"random","category":"status","affinities":{"holy":1.0},"dmg":5,"atk":1.25,"hp":48,"special":{"kind":"asclepiusSyringe","confuseChance":0.4,"confuseDur":2.0,"gaugeFillTime":9,"healRange":1,"healAmount":22,"healCooldown":14,"chargeTime":1.3}},
+    "comet": {"name":"Comet","rarity":"legendary","glyph":"comet","color":"#141a30","glow":"#bfe0ff","target":"front","category":"special","affinities":{"arcane":0.25},"dmg":14,"atk":3.92,"hp":56,"special":{"kind":"cometRain","count":3,"stagger":0.25,"radius":20}},
+    "hitman": {"name":"Hitman","rarity":"legendary","glyph":"briefcase","color":"#3a3038","glow":"#c99a9a","target":"strongest","category":"physical","affinities":{},"dmg":20,"atk":2.2,"hp":54,"special":{"kind":"hitmanKit","sniperMult":1.6,"handgunMult":1.0,"meleeMult":1.2,"meleeCrit":0.1}},
+    "crossinggate": {"name":"Crossing Gate","rarity":"legendary","glyph":"gate","color":"#c9463f","glow":"#ffd8d4","target":"front","category":"special","affinities":{"metal":1.0},"dmg":0,"atk":3.0,"hp":50,"special":{"kind":"crossingGate","gateHp":121,"dmgTakenMult":1.15,"lowerDur":1.5,"cooldown":3.12,"bigBossDmg":14,"monsterLenGap":60}},
+    "bruteforceblizzard": {"name":"Brute Force Blizzard","rarity":"legendary","chestExclusive":true,"glyph":"fist","color":"#6fb8e0","glow":"#dcf2ff","target":"front","category":"physical","affinities":{"ice":1.0},"dmg":34,"atk":4.85,"hp":70,"special":{"kind":"dualSkill","skill1":{"cooldown":4.85,"range":"mid","category":"physical","affinities":{"ice":1.0},"dmgPunch":58,"dmgRing":20,"dmgTremor":5,"stunDur":1.0,"tremorPauseDur":0.35,"ringGap":0.45,"ringLife":0.95,"ringInner":24,"ringOuter":48,"shockwaveMax":84,"bounceKnock":26},"skill2":{"cooldown":4.75,"range":"close","dmgIce":31,"dmgArcane":3.4,"dotTick":4,"dotInterval":0.35,"chargeTime":1.0,"holdStart":0.12,"sweepDur":0.6,"holdEnd":0.12,"coneHalfAngle":0.2,"freezeExtend":2.7,"dmgCrystalExplosion":16,"crystalRadius":14}}},
+    "devilshadow": {"name":"Devil Shadow","rarity":"unique","glyph":"devilhead","color":"#5a1c26","glow":"#c9384a","target":"random","category":"special","affinities":{"shadow":1.0},"dmg":16,"atk":4.2,"hp":46,"special":{"kind":"devilShadow","range":"midfar","dmgSwarm":16,"stunDur":1.5,"dmgClaw":12,"clawKnock":8,"dotTick":4,"dotInterval":0.3,"coneHalfAngle":0.3,"classCooldownSteps":[{"atClass":2,"mult":0.94}]}},
+    "soulscimitar": {"name":"Soul Scimitar","rarity":"legendary","glyph":"scimitar","color":"#821d2d","glow":"#ff6b72","target":"random","category":"special","affinities":{"arcane":1.0},"dmg":14,"atk":4.3,"hp":56,"range":"map","special":{"kind":"soulScimitar","skillType":"projectile","baseBladeCount":2,"class3ExtraBlades":2,"class7ExtraBlades":2,"healClass":4,"healFraction":0.25,"targetSlowClass":5,"targetSlowChance":0.15,"slowAmount":0.35,"slowDuration":2.0,"pierceClass":6,"pierceDamageMult":0.3,"pierceSlowClass":7,"pierceSlowChance":0.07,"summonDuration":0.92,"travelMin":0.48,"travelMax":0.78,"collisionRadius":14}}
+  },
+  "lore": {
+    "soulscimitar": {
+      "flavor": "A blade called through a circle that should have stayed closed.",
+      "desc": "Summons paired ghostly scimitars from the far edges of the battlefield. They choose targets independently, then grow into additional blades, life-steal, Slow, and piercing attacks as the die classes up."
+    }
+  },
+  "design": {
+    "soulscimitar": {
+      "skills": [{
+        "id": "skill1",
+        "name": "Soul Scimitar",
+        "type": "projectile",
+        "damageCategory": "special",
+        "affinities": {"arcane": 1.0},
+        "cooldown": 4.3,
+        "range": "map",
+        "targeting": {"mode":"random_with_replacement","baseTargetCount":2,"canMultipleProjectilesChooseSameEnemy":true},
+        "spawn": {"pattern":"paired_far_sides","sides":["left","right"]},
+        "visual": {
+          "summon": "Rotating white alchemical sigil grows from small to roughly twice an average monster, sweeps crimson from the center outward, then restores white while the blade emerges.",
+          "projectile": "Off-white translucent ghost scimitar with a crimson demonic eye at the blade/hilt junction and a short crimson trail.",
+          "impact": "Blade appears to stab through its true target, dissolves into crimson particles, and the particles drift upward."
+        },
+        "tiers": {
+          "C1": ["Summon 2 blades, one from each far side."],
+          "C2": ["Increase damage through normal class damage scaling."],
+          "C3": ["Summon 2 additional independently-targeted blades (4 total)."],
+          "C4": ["True-target damage restores this die's HP by 25% of damage dealt; flash the casting die crimson."],
+          "C5": ["Each true-target hit has a 15% chance to Slow for 2 seconds."],
+          "C6": ["Blades pierce overlapping non-target enemies for 30% blade damage; pierced damage cannot heal and does not Slow."],
+          "C7": ["Increase damage through normal class damage scaling; summon 2 additional blades (6 total); pierced enemies have a 7% chance to Slow for 2 seconds."]
+        }
+      }]
+    }
+  }
+}
