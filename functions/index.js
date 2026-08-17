@@ -7,7 +7,10 @@ const db = getFirestore();
 
 const REGION = 'us-central1';
 const ACCOUNT_GENERATION = 1;
-const PROFILE_SCHEMA_VERSION = 2;
+const PROFILE_SCHEMA_VERSION = 3;
+const GAME_STATE_SCHEMA_VERSION = 1;
+const STARTING_PIPS = 600;
+const STARTING_ASTRAS = 0;
 
 function requireAuth(request) {
   if (!request.auth) {
@@ -26,40 +29,81 @@ function authFields(auth) {
   };
 }
 
-exports.health = onCall({ region: REGION }, (request) => {
-  const auth = requireAuth(request);
+function starterGameState() {
   return {
-    ok: true,
-    uid: auth.uid,
-    service: 'ttd-online',
-    schemaVersion: PROFILE_SCHEMA_VERSION,
+    schemaVersion: GAME_STATE_SCHEMA_VERSION,
     accountGeneration: ACCOUNT_GENERATION,
+    economy: {
+      pips: STARTING_PIPS,
+      astras: STARTING_ASTRAS,
+    },
+    revision: 1,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   };
-});
+}
 
-exports.ensureProfile = onCall({ region: REGION }, async (request) => {
-  const auth = requireAuth(request);
-  const ref = db.doc(`users/${auth.uid}`);
+function publicGameState(data) {
+  if (!data || typeof data !== 'object') {
+    throw new HttpsError('internal', 'The online game state is unavailable.');
+  }
+  const pips = data.economy?.pips;
+  const astras = data.economy?.astras;
+  if (!Number.isSafeInteger(pips) || pips < 0 || !Number.isSafeInteger(astras) || astras < 0) {
+    throw new HttpsError('internal', 'The online economy state is invalid.');
+  }
+  return {
+    schemaVersion: Number(data.schemaVersion || GAME_STATE_SCHEMA_VERSION),
+    accountGeneration: Number(data.accountGeneration || ACCOUNT_GENERATION),
+    revision: Number(data.revision || 1),
+    economy: { pips, astras },
+  };
+}
+
+async function ensureOnlineAccount(auth) {
+  const userRef = db.doc(`users/${auth.uid}`);
+  const gameRef = db.doc(`users/${auth.uid}/game/state`);
   const legacyRef = db.doc(`users/${auth.uid}/legacy/profile`);
-  const snap = await ref.get();
-  const current = snap.exists ? snap.data() : null;
-  const needsFreshBootstrap = !current || current.accountGeneration !== ACCOUNT_GENERATION;
+  let freshBootstrap = false;
+  let seededGameState = false;
 
-  if (needsFreshBootstrap) {
-    // There are no production players yet, so online accounts intentionally
-    // start clean instead of carrying the old v33 migration baseline forward.
-    await ref.set({
-      schemaVersion: PROFILE_SCHEMA_VERSION,
-      accountGeneration: ACCOUNT_GENERATION,
-      ...authFields(auth),
-      accountMode: 'fresh-online',
-      progressionStatus: 'local-bridge',
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+  await db.runTransaction(async (tx) => {
+    // Firestore transactions require reads before writes. Keeping account metadata
+    // and the starter economy in one transaction prevents half-created accounts.
+    const userSnap = await tx.get(userRef);
+    const gameSnap = await tx.get(gameRef);
+    const current = userSnap.exists ? userSnap.data() : null;
 
-    // Remove the now-obsolete test migration snapshot when upgrading an
-    // account that participated in the v33 import experiment.
+    freshBootstrap = !current || current.accountGeneration !== ACCOUNT_GENERATION;
+    seededGameState = freshBootstrap || !gameSnap.exists || gameSnap.data()?.accountGeneration !== ACCOUNT_GENERATION;
+
+    if (freshBootstrap) {
+      tx.set(userRef, {
+        schemaVersion: PROFILE_SCHEMA_VERSION,
+        accountGeneration: ACCOUNT_GENERATION,
+        ...authFields(auth),
+        accountMode: 'fresh-online',
+        progressionStatus: 'server-economy',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      tx.set(userRef, {
+        schemaVersion: PROFILE_SCHEMA_VERSION,
+        ...authFields(auth),
+        progressionStatus: 'server-economy',
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+
+    if (seededGameState) {
+      tx.set(gameRef, starterGameState());
+    }
+  });
+
+  if (freshBootstrap) {
+    // Cleanup from the short-lived pre-release migration experiment. This sits
+    // outside the transaction because it is unrelated to account correctness.
     await legacyRef.delete().catch((err) => {
       console.warn('Could not remove obsolete legacy snapshot', {
         uid: auth.uid,
@@ -67,19 +111,50 @@ exports.ensureProfile = onCall({ region: REGION }, async (request) => {
         message: err?.message,
       });
     });
-  } else {
-    await ref.set({
-      ...authFields(auth),
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
   }
 
+  const gameSnap = await gameRef.get();
+  return {
+    freshBootstrap,
+    seededGameState,
+    gameState: publicGameState(gameSnap.data()),
+  };
+}
+
+exports.health = onCall({ region: REGION }, (request) => {
+  const auth = requireAuth(request);
+  return {
+    ok: true,
+    uid: auth.uid,
+    service: 'ttd-online',
+    schemaVersion: PROFILE_SCHEMA_VERSION,
+    gameStateSchemaVersion: GAME_STATE_SCHEMA_VERSION,
+    accountGeneration: ACCOUNT_GENERATION,
+  };
+});
+
+exports.ensureProfile = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  const result = await ensureOnlineAccount(auth);
   return {
     ok: true,
     uid: auth.uid,
     schemaVersion: PROFILE_SCHEMA_VERSION,
     accountGeneration: ACCOUNT_GENERATION,
-    freshBootstrap: needsFreshBootstrap,
-    progressionStatus: 'local-bridge',
+    freshBootstrap: result.freshBootstrap,
+    seededGameState: result.seededGameState,
+    progressionStatus: 'server-economy',
+    gameState: result.gameState,
+  };
+});
+
+exports.getGameState = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  const result = await ensureOnlineAccount(auth);
+  return {
+    ok: true,
+    uid: auth.uid,
+    progressionStatus: 'server-economy',
+    gameState: result.gameState,
   };
 });
