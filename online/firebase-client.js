@@ -22,27 +22,66 @@ import {
 const PROJECT_ID = 'ttd-online-b8c0f';
 const REGION = 'us-central1';
 const SAVE_KEY = 'RUNE-DICE-SAVE-v1';
+const LOCAL_PROFILE_KEY = 'rd_account';
 
 const el = (id) => document.getElementById(id);
 const statusEl = el('status');
 const signedOutEl = el('signedOut');
 const signedInEl = el('signedIn');
 const migrationEl = el('migration');
+const accountArea = el('accountArea');
 const gameFrame = el('gameFrame');
 const importBox = el('importBox');
+const importComplete = el('importComplete');
 const accountLabel = el('accountLabel');
 const migrationState = el('migrationState');
 const importSummary = el('importSummary');
+const migrationFeedback = el('migrationFeedback');
+const localButton = el('useLocalSave');
+const pastedButton = el('importLegacy');
 
 let app;
 let auth;
 let db;
 let functions;
 let currentUser = null;
+let importBusy = false;
 
 function setStatus(message, kind = '') {
   statusEl.textContent = message || '';
   statusEl.dataset.kind = kind;
+}
+
+function setMigrationFeedback(message, kind = '') {
+  migrationFeedback.textContent = message || '';
+  migrationFeedback.dataset.kind = kind;
+}
+
+function setImportBusy(busy) {
+  importBusy = busy;
+  localButton.disabled = busy;
+  pastedButton.disabled = busy;
+  el('saveCode').disabled = busy;
+}
+
+function showSignedOutMode() {
+  accountArea.hidden = false;
+  signedOutEl.hidden = false;
+  migrationEl.hidden = true;
+  gameFrame.hidden = true;
+}
+
+function showMigrationMode() {
+  accountArea.hidden = false;
+  signedOutEl.hidden = true;
+  migrationEl.hidden = false;
+  importComplete.hidden = true;
+  gameFrame.hidden = true;
+}
+
+function showGameMode() {
+  accountArea.hidden = true;
+  gameFrame.hidden = false;
 }
 
 function checksumOf(str) {
@@ -61,7 +100,6 @@ function encodeSaveCode(obj) {
       json.charCodeAt(i) ^ SAVE_KEY.charCodeAt(i % SAVE_KEY.length),
     );
   }
-  // Match the legacy v33 codec byte-for-byte.
   const b64 = btoa(unescape(encodeURIComponent(xored)));
   return `RDS1-${checksumOf(json)}-${b64}`;
 }
@@ -89,33 +127,35 @@ async function initializeFirebase() {
 
   onAuthStateChanged(auth, async (user) => {
     currentUser = user;
-    signedOutEl.hidden = !!user;
     signedInEl.hidden = !user;
-    migrationEl.hidden = !user;
-    gameFrame.hidden = !user;
 
     if (!user) {
       accountLabel.textContent = '';
       migrationState.textContent = 'Sign in to continue.';
+      showSignedOutMode();
       setStatus('Ready.');
       return;
     }
 
     accountLabel.textContent = user.displayName || user.email || user.uid;
+    showMigrationMode();
     try {
       setStatus('Preparing your online account…');
       await httpsCallable(functions, 'ensureProfile')({});
-      await refreshCloudState();
+      const imported = await refreshCloudState();
       setStatus('Signed in.', 'ok');
+      if (imported) showGameMode();
     } catch (err) {
       console.error(err);
-      setStatus(humanizeError(err), 'error');
+      const message = humanizeError(err);
+      setStatus(message, 'error');
+      setMigrationFeedback(message, 'error');
     }
   });
 }
 
 async function refreshCloudState() {
-  if (!currentUser) return;
+  if (!currentUser) return false;
   const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
   const data = userSnap.exists() ? userSnap.data() : null;
   const legacy = data?.legacyImport;
@@ -129,11 +169,15 @@ async function refreshCloudState() {
       `highest Class C${Number(s.highestClass || 1)}`,
     ].join(' • ');
     importBox.hidden = true;
-  } else {
-    migrationState.textContent = 'No legacy v33 profile has been imported yet.';
-    importSummary.textContent = '';
-    importBox.hidden = false;
+    importComplete.hidden = false;
+    return true;
   }
+
+  migrationState.textContent = 'No legacy v33 profile has been imported yet.';
+  importSummary.textContent = '';
+  importBox.hidden = false;
+  importComplete.hidden = true;
+  return false;
 }
 
 function humanizeError(err) {
@@ -142,8 +186,51 @@ function humanizeError(err) {
   if (code.includes('email-already-in-use')) return 'An account already exists for that email.';
   if (code.includes('weak-password')) return 'That password does not meet the project password policy.';
   if (code.includes('popup-closed-by-user')) return 'Google sign-in was closed before it finished.';
+  if (code.includes('popup-blocked')) return 'The browser blocked the Google sign-in popup. Allow popups for this site and try again.';
   if (code.includes('failed-precondition')) return err.message || 'That action is not currently allowed.';
+  if (code.includes('invalid-argument')) return err.message || 'The save code was rejected as invalid.';
+  if (code.includes('unauthenticated')) return 'Your sign-in expired. Sign in again and retry.';
   return err?.message || 'Something went wrong.';
+}
+
+async function importSaveCode(saveCode, sourceLabel) {
+  if (!currentUser || importBusy) return;
+  if (!saveCode) {
+    setMigrationFeedback('No v33 save data was supplied.', 'error');
+    return;
+  }
+
+  const confirmed = confirm(`Import ${sourceLabel} as the one-time v33 baseline for this online account?`);
+  if (!confirmed) {
+    setMigrationFeedback('Import cancelled.');
+    return;
+  }
+
+  try {
+    setImportBusy(true);
+    setStatus('Validating and importing legacy profile…');
+    setMigrationFeedback('Uploading and validating the v33 profile…');
+    const result = await httpsCallable(functions, 'importLegacySave')({ saveCode });
+    const s = result.data?.summary || {};
+    setStatus(`Imported ${s.dieInstances || 0} die instances successfully.`, 'ok');
+    setMigrationFeedback(
+      `Import complete: ${Number(s.pips || 0).toLocaleString()} Pips • ${Number(s.astras || 0).toLocaleString()} Astras • ${Number(s.dieInstances || 0).toLocaleString()} dice.`,
+      'ok',
+    );
+    el('saveCode').value = '';
+    const imported = await refreshCloudState();
+    if (imported) {
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      showGameMode();
+    }
+  } catch (err) {
+    console.error(err);
+    const message = humanizeError(err);
+    setStatus(message, 'error');
+    setMigrationFeedback(`Import failed: ${message}\n${err?.code ? `Code: ${err.code}` : ''}`, 'error');
+  } finally {
+    setImportBusy(false);
+  }
 }
 
 el('emailSignIn').addEventListener('submit', async (event) => {
@@ -196,38 +283,29 @@ el('signOut').addEventListener('click', async () => {
   await signOut(auth);
 });
 
-el('useLocalSave').addEventListener('click', () => {
+localButton.addEventListener('click', async () => {
   try {
-    const raw = localStorage.getItem('rd_account');
-    if (!raw) throw new Error('No v33 profile exists in this browser’s Firebase Hosting storage yet. You can paste a portable RDS1 save code instead.');
+    const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
+    if (!raw) {
+      throw new Error('No v33 profile exists on this Firebase-hosted site yet. Open the game once on this site or paste a portable RDS1 save code below.');
+    }
     const profile = JSON.parse(raw);
-    el('saveCode').value = encodeSaveCode(profile);
-    setStatus('Current browser profile prepared. Review it, then press Import.', 'ok');
+    const saveCode = encodeSaveCode(profile);
+    await importSaveCode(saveCode, "this browser's current v33 save");
   } catch (err) {
-    setStatus(humanizeError(err), 'error');
+    const message = humanizeError(err);
+    setStatus(message, 'error');
+    setMigrationFeedback(message, 'error');
   }
 });
 
-el('importLegacy').addEventListener('click', async () => {
-  if (!currentUser) return;
+pastedButton.addEventListener('click', async () => {
   const saveCode = el('saveCode').value.trim();
   if (!saveCode) {
-    setStatus('Paste or prepare a Rune Dice RDS1 save code first.', 'error');
+    setMigrationFeedback('Paste a Rune Dice RDS1 save code first.', 'error');
     return;
   }
-  if (!confirm('Import this v33 profile as the one-time legacy baseline for this online account? This import cannot be repeated automatically.')) return;
-
-  try {
-    setStatus('Validating and importing legacy profile…');
-    const result = await httpsCallable(functions, 'importLegacySave')({ saveCode });
-    const s = result.data?.summary || {};
-    setStatus(`Imported ${s.dieInstances || 0} die instances successfully.`, 'ok');
-    el('saveCode').value = '';
-    await refreshCloudState();
-  } catch (err) {
-    console.error(err);
-    setStatus(humanizeError(err), 'error');
-  }
+  await importSaveCode(saveCode, 'the pasted RDS1 save');
 });
 
 initializeFirebase().catch((err) => {
@@ -236,5 +314,6 @@ initializeFirebase().catch((err) => {
   signedInEl.hidden = true;
   migrationEl.hidden = true;
   gameFrame.hidden = true;
+  accountArea.hidden = false;
   setStatus(humanizeError(err), 'error');
 });
