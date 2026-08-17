@@ -18,7 +18,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          project_id: timetodie-a52be
+          project_id: ttd-online-b8c0f
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
@@ -29,4 +29,4 @@ jobs:
       - run: npm install
       - run: npm --prefix functions install
       - run: npm run check
-      - run: npx firebase-tools deploy --project timetodie-a52be --non-interactive
+      - run: npx firebase-tools deploy --project ttd-online-b8c0f --non-interactive
