@@ -1,5 +1,5 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js';
 
 const REGION = 'us-central1';
@@ -10,6 +10,11 @@ const pipsEl = el('cloudPips');
 const astrasEl = el('cloudAstras');
 const accountBtn = el('accountSettings');
 const settingsBtn = el('gameSettings');
+const accountMenu = el('onlineAccountMenu');
+const accountMenuIdentity = el('accountMenuIdentity');
+const accountMenuProvider = el('accountMenuProvider');
+const accountResetPassword = el('accountResetPassword');
+const accountMenuClose = el('accountMenuClose');
 
 let auth = null;
 let functions = null;
@@ -40,6 +45,37 @@ function renderHudEconomy() {
   if (!match) return;
   if (pipsEl) pipsEl.textContent = match[1];
   if (astrasEl) astrasEl.textContent = match[2];
+}
+
+function providerLabel(user) {
+  const providers = new Set((user?.providerData || []).map((entry) => entry?.providerId).filter(Boolean));
+  const labels = [];
+  if (providers.has('google.com')) labels.push('Google');
+  if (providers.has('password')) labels.push('Email + password');
+  for (const provider of providers) {
+    if (provider !== 'google.com' && provider !== 'password') labels.push(provider);
+  }
+  return labels.length ? labels.join(' · ') : 'Firebase account';
+}
+
+function renderAccountMenu(user) {
+  if (!accountMenu) return;
+  if (!user) {
+    accountMenu.hidden = true;
+    return;
+  }
+  if (accountMenuIdentity) accountMenuIdentity.textContent = user.displayName || user.email || user.uid;
+  if (accountMenuProvider) accountMenuProvider.textContent = providerLabel(user);
+  if (accountResetPassword) {
+    const hasPassword = (user.providerData || []).some((entry) => entry?.providerId === 'password');
+    accountResetPassword.hidden = !(hasPassword && user.email);
+    accountResetPassword.textContent = 'Reset password';
+    accountResetPassword.disabled = false;
+  }
+}
+
+function closeAccountMenu() {
+  if (accountMenu) accountMenu.hidden = true;
 }
 
 function maybeSyncFavorites() {
@@ -76,6 +112,7 @@ async function start() {
     favoritesLoaded = false;
     favoriteRequestPending = false;
     mergeRequestPending = false;
+    renderAccountMenu(user);
     if (!user) return;
     try {
       await loadFavorites();
@@ -90,8 +127,43 @@ if (rawEconomy) {
   renderHudEconomy();
 }
 
-accountBtn?.addEventListener('click', () => postToGame({ type: 'ttd:open-account-screen' }));
-settingsBtn?.addEventListener('click', () => postToGame({ type: 'ttd:open-settings-screen' }));
+accountBtn?.addEventListener('click', () => {
+  if (!accountMenu || !currentUser) return;
+  renderAccountMenu(currentUser);
+  accountMenu.hidden = !accountMenu.hidden;
+});
+accountMenuClose?.addEventListener('click', closeAccountMenu);
+settingsBtn?.addEventListener('click', () => {
+  closeAccountMenu();
+  postToGame({ type: 'ttd:open-settings-screen' });
+});
+accountResetPassword?.addEventListener('click', async () => {
+  if (!auth || !currentUser?.email || accountResetPassword.disabled) return;
+  accountResetPassword.disabled = true;
+  accountResetPassword.textContent = 'Sending…';
+  try {
+    await sendPasswordResetEmail(auth, currentUser.email);
+    accountResetPassword.textContent = 'Reset email sent';
+    setTimeout(() => {
+      if (!accountResetPassword) return;
+      accountResetPassword.textContent = 'Reset password';
+      accountResetPassword.disabled = false;
+    }, 2200);
+  } catch (err) {
+    console.error('Could not send password reset email.', err);
+    accountResetPassword.textContent = 'Reset failed';
+    setTimeout(() => {
+      if (!accountResetPassword) return;
+      accountResetPassword.textContent = 'Reset password';
+      accountResetPassword.disabled = false;
+    }, 2200);
+  }
+});
+document.addEventListener('pointerdown', (event) => {
+  if (!accountMenu || accountMenu.hidden) return;
+  if (accountMenu.contains(event.target) || accountBtn?.contains(event.target)) return;
+  closeAccountMenu();
+});
 
 window.addEventListener('message', async (event) => {
   if (event.origin !== location.origin || event.source !== gameFrame?.contentWindow) return;
