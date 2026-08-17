@@ -17,7 +17,7 @@ import {
 const PROJECT_ID = 'ttd-online-b8c0f';
 const REGION = 'us-central1';
 const GAME_PATH = '/random-dice-game-33.html';
-const GAME_BRIDGE_PATH = '/online/game-bridge.js?v=1';
+const GAME_BRIDGE_PATH = '/online/game-bridge.js?v=2';
 const LOCAL_PROFILE_KEY = 'rd_account';
 const ACTIVE_UID_KEY = 'ttd_online_active_uid_v1';
 const SCOPED_PROFILE_PREFIX = 'ttd_online_profile_v1_';
@@ -37,8 +37,11 @@ let functions;
 let currentUser = null;
 let currentGeneration = 1;
 let cloudGameState = null;
-let cloudGachaGrants = [];
+let cloudDice = [];
+let cloudDecks = [];
 let gachaRequestInFlight = false;
+let deckRequestInFlight = false;
+let pendingDeckRequest = null;
 
 function setStatus(message, kind = '') {
   statusEl.textContent = message || '';
@@ -104,19 +107,52 @@ function clearActiveLocalProfile() {
 function validateGameState(gameState) {
   const pips = gameState?.economy?.pips;
   const astras = gameState?.economy?.astras;
+  const activeDeckIdx = gameState?.activeDeckIdx;
   if (!Number.isSafeInteger(pips) || pips < 0 || !Number.isSafeInteger(astras) || astras < 0) {
     throw new Error('Firebase returned an invalid online economy state.');
+  }
+  if (!Number.isSafeInteger(activeDeckIdx) || activeDeckIdx < 0 || activeDeckIdx > 2) {
+    throw new Error('Firebase returned an invalid active deck.');
   }
   return gameState;
 }
 
-function validateGachaGrants(grants) {
-  if (!Array.isArray(grants)) throw new Error('Firebase returned invalid gacha grants.');
-  return grants.filter((grant) =>
-    grant && typeof grant.key === 'string' &&
-    grant.instance && typeof grant.instance.id === 'string' && grant.instance.id &&
-    Number.isSafeInteger(grant.instance.cls) && grant.instance.cls >= 1 &&
-    Array.isArray(grant.instance.enchants) && grant.instance.enchants.length === 4);
+function validateDice(dice) {
+  if (!Array.isArray(dice)) throw new Error('Firebase returned invalid die inventory.');
+  for (const grant of dice) {
+    if (!grant || typeof grant.key !== 'string' ||
+      !grant.instance || typeof grant.instance.id !== 'string' || !grant.instance.id ||
+      !Number.isSafeInteger(grant.instance.cls) || grant.instance.cls < 1 || grant.instance.cls > 10 ||
+      !Array.isArray(grant.instance.enchants) || grant.instance.enchants.length !== 4) {
+      throw new Error('Firebase returned an invalid die instance.');
+    }
+  }
+  return dice;
+}
+
+function validateDecks(decks) {
+  if (!Array.isArray(decks) || decks.length !== 3) throw new Error('Firebase returned invalid decks.');
+  const normalized = decks.slice().sort((a, b) => a.index - b.index);
+  normalized.forEach((deck, index) => {
+    if (!deck || deck.index !== index || !Array.isArray(deck.slots) || deck.slots.length !== 5) {
+      throw new Error('Firebase returned an invalid deck.');
+    }
+    for (const slot of deck.slots) {
+      if (slot != null && (typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string')) {
+        throw new Error('Firebase returned an invalid deck slot.');
+      }
+    }
+  });
+  return normalized;
+}
+
+function adoptGameState(nextState) {
+  const validated = validateGameState(nextState);
+  if (!cloudGameState || Number(validated.revision || 0) >= Number(cloudGameState.revision || 0)) {
+    cloudGameState = validated;
+    renderCloudEconomy(cloudGameState);
+  }
+  return cloudGameState;
 }
 
 function renderCloudEconomy(gameState) {
@@ -130,8 +166,6 @@ function renderCloudEconomy(gameState) {
 }
 
 function applyCloudEconomyToLocalBridge(uid, generation, gameState) {
-  // v33 still owns the rest of its temporary browser profile. Before the iframe
-  // boots, replace only its currency fields with the canonical server values.
   try {
     const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
     if (!raw) return false;
@@ -160,7 +194,8 @@ function sendCloudSyncToGame() {
   postToGame({
     type: 'ttd:cloud-sync',
     gameState: cloudGameState,
-    gachaGrants: cloudGachaGrants,
+    dice: cloudDice,
+    decks: cloudDecks,
   });
 }
 
@@ -192,8 +227,11 @@ function injectGameBridge() {
 
 function showSignedOutMode() {
   cloudGameState = null;
-  cloudGachaGrants = [];
+  cloudDice = [];
+  cloudDecks = [];
   gachaRequestInFlight = false;
+  deckRequestInFlight = false;
+  pendingDeckRequest = null;
   renderCloudEconomy(null);
   accountArea.hidden = false;
   signedOutEl.hidden = false;
@@ -231,12 +269,10 @@ async function fetchFirebaseConfig() {
 }
 
 async function loadCloudProgression() {
-  const [stateResult, grantsResult] = await Promise.all([
-    httpsCallable(functions, 'getGameState')({}),
-    httpsCallable(functions, 'getGachaGrants')({}),
-  ]);
-  cloudGameState = validateGameState(stateResult.data?.gameState);
-  cloudGachaGrants = validateGachaGrants(grantsResult.data?.grants || []);
+  const result = await httpsCallable(functions, 'getInventoryState')({});
+  cloudGameState = validateGameState(result.data?.gameState);
+  cloudDice = validateDice(result.data?.dice || []);
+  cloudDecks = validateDecks(result.data?.decks || []);
   renderCloudEconomy(cloudGameState);
 }
 
@@ -259,24 +295,24 @@ async function handleGachaRequest(message) {
   gachaRequestInFlight = true;
   try {
     const result = await httpsCallable(functions, 'gachaPull')({ count });
-    cloudGameState = validateGameState(result.data?.gameState);
-    const results = validateGachaGrants(result.data?.results || []);
+    const nextState = validateGameState(result.data?.gameState);
+    const results = validateDice(result.data?.results || []);
+    adoptGameState(nextState);
 
-    const knownIds = new Set(cloudGachaGrants.map((grant) => grant.instance.id));
+    const knownIds = new Set(cloudDice.map((grant) => grant.instance.id));
     for (const grant of results) {
       if (!knownIds.has(grant.instance.id)) {
-        cloudGachaGrants.push(grant);
+        cloudDice.push(grant);
         knownIds.add(grant.instance.id);
       }
     }
 
-    renderCloudEconomy(cloudGameState);
     postToGame({
       type: 'ttd:gacha-result',
       requestId: message.requestId,
       receiptId: result.data?.receiptId || null,
       costPips: result.data?.costPips,
-      gameState: cloudGameState,
+      gameState: nextState,
       results,
     });
   } catch (err) {
@@ -288,6 +324,50 @@ async function handleGachaRequest(message) {
     });
   } finally {
     gachaRequestInFlight = false;
+  }
+}
+
+async function processDeckRequest(message) {
+  if (!currentUser) return;
+  if (deckRequestInFlight) {
+    pendingDeckRequest = message;
+    return;
+  }
+
+  deckRequestInFlight = true;
+  try {
+    const result = await httpsCallable(functions, 'setDeckState')({
+      decks: message.decks,
+      activeDeckIdx: message.activeDeckIdx,
+    });
+    const nextState = validateGameState(result.data?.gameState);
+    const decks = validateDecks(result.data?.decks || []);
+    adoptGameState(nextState);
+    cloudDecks = decks;
+    postToGame({
+      type: 'ttd:deck-state-result',
+      requestId: message.requestId,
+      gameState: nextState,
+      decks,
+    });
+  } catch (err) {
+    console.error('Server deck sync failed.', err);
+    const friendly = humanizeError(err);
+    try {
+      await loadCloudProgression();
+      postToGame({ type: 'ttd:deck-state-error', requestId: message.requestId, message: friendly });
+      sendCloudSyncToGame();
+    } catch (reloadErr) {
+      console.error('Could not restore canonical deck state.', reloadErr);
+      postToGame({ type: 'ttd:deck-state-error', requestId: message.requestId, message: friendly });
+    }
+  } finally {
+    deckRequestInFlight = false;
+    if (pendingDeckRequest) {
+      const pending = pendingDeckRequest;
+      pendingDeckRequest = null;
+      processDeckRequest(pending);
+    }
   }
 }
 
@@ -364,6 +444,11 @@ window.addEventListener('message', (event) => {
 
   if (message.type === 'ttd:gacha-request') {
     handleGachaRequest(message);
+    return;
+  }
+
+  if (message.type === 'ttd:deck-state-request') {
+    processDeckRequest(message);
   }
 });
 
