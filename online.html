@@ -6,27 +6,27 @@
   <title>Time to Die — Online</title>
   <style>
     :root{color-scheme:dark;--bg:#0a0c14;--panel:#171c34;--panel2:#12162a;--line:#2a3160;--gold:#f3d491;--muted:#97a0bd;--good:#7bd994;--bad:#ff7770}
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:#ece7da;font-family:Inter,system-ui,sans-serif}.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr}.bar{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:800;color:var(--gold)}.account{display:flex;gap:8px;align-items:center}.panel{margin:12px auto;width:min(760px,calc(100% - 24px));padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}h2{font-size:16px;margin:0 0 10px;color:var(--gold)}p{font-size:12px;line-height:1.45;color:var(--muted)}input,button{font:inherit}input{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 180px}button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer}button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800}button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700}.tiny{font-size:11px}.status{padding:10px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind="ok"]{color:var(--good)}.status[data-kind="error"]{color:var(--bad)}iframe{width:100%;height:100%;min-height:calc(100vh - 58px);border:0;background:#0a0c14}.game{min-height:0}[hidden]{display:none!important}@media(max-width:640px){.panel{margin:8px auto}.bar{padding:10px 12px}iframe{min-height:calc(100vh - 54px)}}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:#ece7da;font-family:Inter,system-ui,sans-serif}.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr}.bar{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:800;color:var(--gold)}.account{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.economy{font-size:11px;color:var(--gold);padding:5px 8px;border:1px solid #65552f;border-radius:999px;background:#1b1820}.panel{margin:12px auto;width:min(760px,calc(100% - 24px));padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}h2{font-size:16px;margin:0 0 10px;color:var(--gold)}p{font-size:12px;line-height:1.45;color:var(--muted)}input,button{font:inherit}input{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 180px}button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer}button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800}button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700}.tiny{font-size:11px}.status{padding:10px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind="ok"]{color:var(--good)}.status[data-kind="error"]{color:var(--bad)}iframe{width:100%;height:100%;min-height:calc(100vh - 58px);border:0;background:#0a0c14}.game{min-height:0}[hidden]{display:none!important}@media(max-width:640px){.panel{margin:8px auto}.bar{padding:10px 12px}iframe{min-height:calc(100vh - 54px)}}
   </style>
 </head>
 <body>
 <div class="shell">
   <header class="bar">
-    <div><div class="brand">TIME TO DIE — ONLINE</div><div class="tiny" style="color:var(--muted)">Firebase account foundation</div></div>
-    <div id="signedIn" class="account" hidden><span id="accountLabel"></span><button id="signOut">Sign out</button></div>
+    <div><div class="brand">TIME TO DIE — ONLINE</div><div class="tiny" style="color:var(--muted)">Firebase account + authoritative economy foundation</div></div>
+    <div id="signedIn" class="account" hidden><span id="cloudEconomy" class="economy"></span><span id="accountLabel"></span><button id="signOut">Sign out</button></div>
   </header>
 
   <main id="accountArea">
     <div id="status" class="status">Loading Firebase…</div>
     <section id="signedOut" class="panel" hidden>
       <h2>Sign in to play</h2>
-      <p>Online accounts begin with a fresh game profile. Legacy v33 save import has been retired while the game is still pre-release.</p>
+      <p>Online accounts begin with a fresh game profile. Pips and Astras are now initialized and read from server-owned Firebase state.</p>
       <form id="emailSignIn">
         <div class="row"><input id="email" type="email" autocomplete="email" placeholder="Email" required><input id="password" type="password" autocomplete="current-password" placeholder="Password" required></div>
         <div class="row" style="margin-top:8px"><button class="primary" type="submit">Sign in</button><button id="createAccount" type="button">Create account</button><button id="googleSignIn" class="google" type="button">Continue with Google</button></div>
       </form>
       <button id="resetPassword" type="button" style="margin-top:8px">Forgot password</button>
-      <p class="tiny">Current bridge build: authentication is online; gameplay progression is still temporarily cached per account in this browser while server-authoritative progression is being integrated.</p>
+      <p class="tiny">Current bridge build: the server owns the canonical currency balances. The v33 gameplay iframe still owns other temporary browser progression until each operation is migrated to authenticated Cloud Functions.</p>
     </section>
   </main>
 
