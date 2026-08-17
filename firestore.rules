@@ -4,12 +4,11 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function owns(uid) { return signedIn() && request.auth.uid == uid; }
 
-    // User-owned profile data. Economy-sensitive writes will move behind
-    // callable Cloud Functions as those systems are migrated.
+    // Player progression is readable by its owner, but client writes are
+    // intentionally blocked. Authoritative writes go through Cloud Functions.
     match /users/{uid} {
       allow read: if owns(uid);
-      allow create: if owns(uid);
-      allow update, delete: if false;
+      allow create, update, delete: if false;
 
       match /{document=**} {
         allow read: if owns(uid);
@@ -17,7 +16,7 @@ service cloud.firestore {
       }
     }
 
-    // Public-facing player summaries will be written by trusted backend code.
+    // Public-facing summaries and leaderboards will also be backend-written.
     match /publicProfiles/{uid} {
       allow read: if true;
       allow write: if false;
