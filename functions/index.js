@@ -1,16 +1,41 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { randomInt, randomUUID } = require('node:crypto');
 
 initializeApp();
 const db = getFirestore();
 
 const REGION = 'us-central1';
 const ACCOUNT_GENERATION = 1;
-const PROFILE_SCHEMA_VERSION = 3;
+const PROFILE_SCHEMA_VERSION = 4;
 const GAME_STATE_SCHEMA_VERSION = 1;
 const STARTING_PIPS = 600;
 const STARTING_ASTRAS = 0;
+
+const GACHA_COSTS = Object.freeze({ 1: 120, 10: 1000 });
+const RARITY_ORDER = Object.freeze(['common', 'rare', 'unique', 'legendary']);
+const RARITY_THRESHOLDS = Object.freeze([
+  ['common', 5500],
+  ['rare', 8200],
+  ['unique', 9500],
+  ['legendary', 10000],
+]);
+
+// Exact v33 gacha pools. Brute Force Blizzard is intentionally absent because
+// v33 marks it chestExclusive and keysByRarity() excludes chest-exclusive dice.
+const GACHA_POOLS = Object.freeze({
+  common: Object.freeze(['fire', 'ice', 'wind', 'poison', 'broken']),
+  rare: Object.freeze(['electric', 'iron', 'arrow', 'light', 'crack', 'magnet', 'shuriken']),
+  unique: Object.freeze([
+    'laser', 'teleport', 'mine', 'mimic', 'absorb', 'goldrush',
+    'blackwind', 'bubble', 'haunt', 'bubblebeam', 'devilshadow',
+  ]),
+  legendary: Object.freeze([
+    'growth', 'joker', 'gun', 'blizzard', 'nuclear', 'luckylucky',
+    'heavensfist', 'asclepius', 'comet', 'hitman', 'crossinggate',
+  ]),
+});
 
 function requireAuth(request) {
   if (!request.auth) {
@@ -60,6 +85,69 @@ function publicGameState(data) {
   };
 }
 
+function pickRarity() {
+  const roll = randomInt(10000);
+  for (const [rarity, ceiling] of RARITY_THRESHOLDS) {
+    if (roll < ceiling) return rarity;
+  }
+  return 'common';
+}
+
+function newServerDieInstance() {
+  return {
+    id: `d${randomUUID().replaceAll('-', '')}`,
+    cls: 1,
+    enchants: [null, null, null, null],
+  };
+}
+
+function buildGachaResults(count) {
+  const results = [];
+  let hasUniquePlus = false;
+
+  for (let i = 0; i < count; i++) {
+    let rarity = pickRarity();
+
+    // Preserve v33 exactly: on a ten-pull, if the first nine contained no
+    // Unique/Legendary, the tenth rarity is promoted to Unique only when its
+    // normal roll landed below Unique. A naturally rolled Legendary stays so.
+    if (count === 10 && i === 9 && !hasUniquePlus) {
+      if (RARITY_ORDER.indexOf(rarity) < RARITY_ORDER.indexOf('unique')) {
+        rarity = 'unique';
+      }
+    }
+
+    const pool = GACHA_POOLS[rarity];
+    const key = pool[randomInt(pool.length)];
+    const instance = newServerDieInstance();
+
+    if (rarity === 'unique' || rarity === 'legendary') hasUniquePlus = true;
+    results.push({ key, rarity, instance });
+  }
+
+  return results;
+}
+
+function publicGrant(data) {
+  const id = data?.id;
+  const key = data?.key;
+  const cls = data?.cls;
+  const enchants = data?.enchants;
+  if (
+    typeof id !== 'string' || !id ||
+    typeof key !== 'string' || !GACHA_POOLS[data?.rarity]?.includes(key) ||
+    !Number.isSafeInteger(cls) || cls < 1 || cls > 10 ||
+    !Array.isArray(enchants) || enchants.length !== 4
+  ) {
+    throw new HttpsError('internal', 'A stored gacha grant is invalid.');
+  }
+  return {
+    key,
+    rarity: data.rarity,
+    instance: { id, cls, enchants: [...enchants] },
+  };
+}
+
 async function ensureOnlineAccount(auth) {
   const userRef = db.doc(`users/${auth.uid}`);
   const gameRef = db.doc(`users/${auth.uid}/game/state`);
@@ -83,7 +171,7 @@ async function ensureOnlineAccount(auth) {
         accountGeneration: ACCOUNT_GENERATION,
         ...authFields(auth),
         accountMode: 'fresh-online',
-        progressionStatus: 'server-economy',
+        progressionStatus: 'server-gacha',
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -91,7 +179,7 @@ async function ensureOnlineAccount(auth) {
       tx.set(userRef, {
         schemaVersion: PROFILE_SCHEMA_VERSION,
         ...authFields(auth),
-        progressionStatus: 'server-economy',
+        progressionStatus: 'server-gacha',
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
@@ -130,6 +218,7 @@ exports.health = onCall({ region: REGION }, (request) => {
     schemaVersion: PROFILE_SCHEMA_VERSION,
     gameStateSchemaVersion: GAME_STATE_SCHEMA_VERSION,
     accountGeneration: ACCOUNT_GENERATION,
+    features: { serverEconomy: true, serverGacha: true },
   };
 });
 
@@ -143,7 +232,7 @@ exports.ensureProfile = onCall({ region: REGION }, async (request) => {
     accountGeneration: ACCOUNT_GENERATION,
     freshBootstrap: result.freshBootstrap,
     seededGameState: result.seededGameState,
-    progressionStatus: 'server-economy',
+    progressionStatus: 'server-gacha',
     gameState: result.gameState,
   };
 });
@@ -154,7 +243,103 @@ exports.getGameState = onCall({ region: REGION }, async (request) => {
   return {
     ok: true,
     uid: auth.uid,
-    progressionStatus: 'server-economy',
+    progressionStatus: 'server-gacha',
     gameState: result.gameState,
+  };
+});
+
+exports.getGachaGrants = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  await ensureOnlineAccount(auth);
+
+  const snap = await db.collection(`users/${auth.uid}/dice`)
+    .where('source', '==', 'gacha')
+    .get();
+
+  const grants = snap.docs.map((doc) => publicGrant(doc.data()));
+  return {
+    ok: true,
+    uid: auth.uid,
+    grants,
+  };
+});
+
+exports.gachaPull = onCall({ region: REGION, timeoutSeconds: 30 }, async (request) => {
+  const auth = requireAuth(request);
+  const count = Number(request.data?.count);
+  if (count !== 1 && count !== 10) {
+    throw new HttpsError('invalid-argument', 'Gacha count must be exactly 1 or 10.');
+  }
+
+  await ensureOnlineAccount(auth);
+
+  const cost = GACHA_COSTS[count];
+  const results = buildGachaResults(count);
+  const gameRef = db.doc(`users/${auth.uid}/game/state`);
+  const receiptRef = db.collection(`users/${auth.uid}/transactions`).doc();
+  let nextState = null;
+
+  await db.runTransaction(async (tx) => {
+    const gameSnap = await tx.get(gameRef);
+    const current = publicGameState(gameSnap.data());
+
+    if (current.economy.pips < cost) {
+      throw new HttpsError('failed-precondition', `Not enough Pips. This pull costs ${cost}.`);
+    }
+
+    nextState = {
+      schemaVersion: current.schemaVersion,
+      accountGeneration: current.accountGeneration,
+      revision: current.revision + 1,
+      economy: {
+        pips: current.economy.pips - cost,
+        astras: current.economy.astras,
+      },
+    };
+
+    tx.update(gameRef, {
+      economy: nextState.economy,
+      revision: nextState.revision,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    for (const result of results) {
+      const dieRef = db.doc(`users/${auth.uid}/dice/${result.instance.id}`);
+      tx.set(dieRef, {
+        id: result.instance.id,
+        key: result.key,
+        rarity: result.rarity,
+        cls: result.instance.cls,
+        enchants: result.instance.enchants,
+        source: 'gacha',
+        receiptId: receiptRef.id,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    tx.set(receiptRef, {
+      operation: 'gacha',
+      count,
+      costPips: cost,
+      balanceBefore: current.economy.pips,
+      balanceAfter: nextState.economy.pips,
+      stateRevisionBefore: current.revision,
+      stateRevisionAfter: nextState.revision,
+      results: results.map((result) => ({
+        key: result.key,
+        rarity: result.rarity,
+        instanceId: result.instance.id,
+      })),
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {
+    ok: true,
+    receiptId: receiptRef.id,
+    count,
+    costPips: cost,
+    gameState: nextState,
+    results,
   };
 });
