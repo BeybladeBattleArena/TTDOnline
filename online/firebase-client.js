@@ -17,6 +17,7 @@ import {
 const PROJECT_ID = 'ttd-online-b8c0f';
 const REGION = 'us-central1';
 const GAME_PATH = '/random-dice-game-33.html';
+const GAME_BRIDGE_PATH = '/online/game-bridge.js?v=1';
 const LOCAL_PROFILE_KEY = 'rd_account';
 const ACTIVE_UID_KEY = 'ttd_online_active_uid_v1';
 const SCOPED_PROFILE_PREFIX = 'ttd_online_profile_v1_';
@@ -36,6 +37,8 @@ let functions;
 let currentUser = null;
 let currentGeneration = 1;
 let cloudGameState = null;
+let cloudGachaGrants = [];
+let gachaRequestInFlight = false;
 
 function setStatus(message, kind = '') {
   statusEl.textContent = message || '';
@@ -50,7 +53,8 @@ function humanizeError(err) {
   if (code.includes('popup-closed-by-user')) return 'Google sign-in was closed before it finished.';
   if (code.includes('popup-blocked')) return 'The browser blocked the Google sign-in popup. Allow popups for this site and try again.';
   if (code.includes('unauthenticated')) return 'Your sign-in expired. Sign in again and retry.';
-  return err?.message || 'Something went wrong.';
+  if (code.includes('failed-precondition')) return err?.message?.replace(/^FirebaseError:\s*/i, '') || 'The server rejected that operation.';
+  return err?.message?.replace(/^FirebaseError:\s*/i, '') || 'Something went wrong.';
 }
 
 function scopedProfileKey(uid, generation = currentGeneration) {
@@ -106,6 +110,15 @@ function validateGameState(gameState) {
   return gameState;
 }
 
+function validateGachaGrants(grants) {
+  if (!Array.isArray(grants)) throw new Error('Firebase returned invalid gacha grants.');
+  return grants.filter((grant) =>
+    grant && typeof grant.key === 'string' &&
+    grant.instance && typeof grant.instance.id === 'string' && grant.instance.id &&
+    Number.isSafeInteger(grant.instance.cls) && grant.instance.cls >= 1 &&
+    Array.isArray(grant.instance.enchants) && grant.instance.enchants.length === 4);
+}
+
 function renderCloudEconomy(gameState) {
   if (!cloudEconomyEl) return;
   if (!gameState) {
@@ -119,7 +132,6 @@ function renderCloudEconomy(gameState) {
 function applyCloudEconomyToLocalBridge(uid, generation, gameState) {
   // v33 still owns the rest of its temporary browser profile. Before the iframe
   // boots, replace only its currency fields with the canonical server values.
-  // This bridge disappears once v34 moves all progression operations to Functions.
   try {
     const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
     if (!raw) return false;
@@ -138,8 +150,41 @@ function applyCloudEconomyToLocalBridge(uid, generation, gameState) {
   }
 }
 
+function postToGame(message) {
+  if (!gameFrame.contentWindow) return;
+  gameFrame.contentWindow.postMessage(message, location.origin);
+}
+
+function sendCloudSyncToGame() {
+  if (!cloudGameState) return;
+  postToGame({
+    type: 'ttd:cloud-sync',
+    gameState: cloudGameState,
+    gachaGrants: cloudGachaGrants,
+  });
+}
+
+function injectGameBridge() {
+  try {
+    const doc = gameFrame.contentDocument;
+    if (!doc || gameFrame.src === 'about:blank') return;
+    if (doc.getElementById('ttd-online-game-bridge')) return;
+
+    const script = doc.createElement('script');
+    script.id = 'ttd-online-game-bridge';
+    script.src = GAME_BRIDGE_PATH;
+    script.async = false;
+    (doc.head || doc.documentElement).appendChild(script);
+  } catch (err) {
+    console.error('Could not inject the online game bridge.', err);
+    setStatus('Could not attach the online gameplay bridge.', 'error');
+  }
+}
+
 function showSignedOutMode() {
   cloudGameState = null;
+  cloudGachaGrants = [];
+  gachaRequestInFlight = false;
   renderCloudEconomy(null);
   accountArea.hidden = false;
   signedOutEl.hidden = false;
@@ -174,6 +219,67 @@ async function fetchFirebaseConfig() {
   return config;
 }
 
+async function loadCloudProgression() {
+  const [stateResult, grantsResult] = await Promise.all([
+    httpsCallable(functions, 'getGameState')({}),
+    httpsCallable(functions, 'getGachaGrants')({}),
+  ]);
+  cloudGameState = validateGameState(stateResult.data?.gameState);
+  cloudGachaGrants = validateGachaGrants(grantsResult.data?.grants || []);
+  renderCloudEconomy(cloudGameState);
+}
+
+async function handleGachaRequest(message) {
+  if (!currentUser || gachaRequestInFlight) {
+    postToGame({
+      type: 'ttd:gacha-error',
+      requestId: message.requestId,
+      message: gachaRequestInFlight ? 'A pull is already being processed.' : 'Sign in again before pulling.',
+    });
+    return;
+  }
+
+  const count = Number(message.count);
+  if (count !== 1 && count !== 10) {
+    postToGame({ type: 'ttd:gacha-error', requestId: message.requestId, message: 'Invalid pull size.' });
+    return;
+  }
+
+  gachaRequestInFlight = true;
+  try {
+    const result = await httpsCallable(functions, 'gachaPull')({ count });
+    cloudGameState = validateGameState(result.data?.gameState);
+    const results = validateGachaGrants(result.data?.results || []);
+
+    const knownIds = new Set(cloudGachaGrants.map((grant) => grant.instance.id));
+    for (const grant of results) {
+      if (!knownIds.has(grant.instance.id)) {
+        cloudGachaGrants.push(grant);
+        knownIds.add(grant.instance.id);
+      }
+    }
+
+    renderCloudEconomy(cloudGameState);
+    postToGame({
+      type: 'ttd:gacha-result',
+      requestId: message.requestId,
+      receiptId: result.data?.receiptId || null,
+      costPips: result.data?.costPips,
+      gameState: cloudGameState,
+      results,
+    });
+  } catch (err) {
+    console.error('Server gacha failed.', err);
+    postToGame({
+      type: 'ttd:gacha-error',
+      requestId: message.requestId,
+      message: humanizeError(err),
+    });
+  } finally {
+    gachaRequestInFlight = false;
+  }
+}
+
 async function initializeFirebase() {
   const config = await fetchFirebaseConfig();
   app = initializeApp(config);
@@ -202,9 +308,7 @@ async function initializeFirebase() {
       const generation = Number(ensureResult.data?.accountGeneration || 1);
       bindLocalProfile(user.uid, generation);
 
-      const stateResult = await httpsCallable(functions, 'getGameState')({});
-      cloudGameState = validateGameState(stateResult.data?.gameState);
-      renderCloudEconomy(cloudGameState);
+      await loadCloudProgression();
       applyCloudEconomyToLocalBridge(user.uid, generation, cloudGameState);
 
       setStatus('Cloud account ready.', 'ok');
@@ -215,6 +319,25 @@ async function initializeFirebase() {
     }
   });
 }
+
+gameFrame.addEventListener('load', () => {
+  if (gameFrame.src === 'about:blank') return;
+  injectGameBridge();
+});
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== location.origin || event.source !== gameFrame.contentWindow) return;
+  const message = event.data || {};
+
+  if (message.type === 'ttd:bridge-ready') {
+    sendCloudSyncToGame();
+    return;
+  }
+
+  if (message.type === 'ttd:gacha-request') {
+    handleGachaRequest(message);
+  }
+});
 
 el('emailSignIn').addEventListener('submit', async (event) => {
   event.preventDefault();
