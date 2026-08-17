@@ -1,6 +1,6 @@
 # Time to Die — Firebase Migration
 
-Firebase project: `timetodie-a52be`
+Firebase project: `ttd-online-b8c0f`
 
 GitHub repository: `BeybladeBattleArena/TTDOnline`
 
