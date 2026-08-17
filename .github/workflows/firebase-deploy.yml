@@ -29,5 +29,5 @@ jobs:
 
       - run: npm install
       - run: npm --prefix functions install
-      - run: npm run check:functions
+      - run: npm run check
       - run: npx firebase-tools deploy --project timetodie-a52be --non-interactive
