@@ -18,22 +18,15 @@ The `agent/firebase-foundation` branch keeps the v33 game untouched while adding
 
 The online migration preview is served from `/online.html`. The existing v33 build remains at `/random-dice-game-33.html` and is still the root route until the account/progression migration is proven safe.
 
-## One-time Google Cloud bootstrap
+## Google Cloud deployment identity
 
-Run the bootstrap script while authenticated as an Owner (or an identity able to create service accounts, IAM bindings, workload identity pools/providers, and enable APIs) in Google Cloud Shell:
+The one-time Google Cloud bootstrap has been completed for project `ttd-online-b8c0f`.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/BeybladeBattleArena/TTDOnline/agent/firebase-foundation/scripts/bootstrap-gcp-wif.sh | bash
-```
+The deployment workflow uses Google Workload Identity Federation and creates **no service-account key**. The provider is restricted to the exact repository `BeybladeBattleArena/TTDOnline` and impersonates:
 
-The script creates **no service-account key**. It creates a GitHub deployment service account plus a Workload Identity provider restricted to the exact repository `BeybladeBattleArena/TTDOnline`.
+`github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com`
 
-At completion it prints two values. Add them under GitHub repository **Settings → Secrets and variables → Actions → Variables**:
-
-- `GCP_WORKLOAD_IDENTITY_PROVIDER`
-- `GCP_SERVICE_ACCOUNT`
-
-They are identifiers, not secret private keys.
+The Workload Identity provider and service-account identifiers are intentionally stored directly in the workflow because they are public identifiers, not credentials or private keys.
 
 ## Firestore location
 
@@ -54,7 +47,7 @@ The old RDS1 save codec uses an XOR obfuscation plus checksum. That can catch co
 
 ## Next engineering phase
 
-1. Provision/test Firestore and deploy this branch to a development Hosting target.
+1. Provision/test Firestore and deploy this branch to the development Firebase project.
 2. Exercise email/password and Google sign-in on desktop and mobile.
 3. Import a real v33 profile and verify account summary/storage.
 4. Replace local authoritative Pips/Astras with server transactions.
