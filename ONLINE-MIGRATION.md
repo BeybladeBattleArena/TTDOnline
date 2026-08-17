@@ -1,4 +1,4 @@
-# Time to Die — Firebase Migration
+# Time to Die — Firebase Online Foundation
 
 Firebase project: `ttd-online-b8c0f`
 
@@ -6,17 +6,27 @@ GitHub repository: `BeybladeBattleArena/TTDOnline`
 
 ## Current phase
 
-The `agent/firebase-foundation` branch keeps the v33 game untouched while adding:
+The `agent/firebase-foundation` branch keeps the v33 game source untouched while adding:
 
 - Firebase Hosting configuration
 - Email/password and Google Authentication client
-- Cloud profile creation through callable Functions
-- One-time v33/RDS1 legacy profile import
+- Fresh online account creation through callable Functions
 - Firestore rules that block client progression writes
 - Keyless GitHub Actions deployment through Google Workload Identity Federation
 - Firebase Emulator configuration
+- A temporary per-account browser profile bridge while server-authoritative progression is integrated
 
-The online migration preview is served from `/online.html`. The existing v33 build remains at `/random-dice-game-33.html` and is still the root route until the account/progression migration is proven safe.
+The online preview is served from `/online.html`. The existing v33 build remains at `/random-dice-game-33.html` and is still the root route until the online account/progression layer is proven safe.
+
+## Fresh-account policy
+
+There are no production players yet, so legacy v33/RDS1 migration has been retired rather than preserved as permanent compatibility debt.
+
+- New Firebase accounts begin with a fresh game profile.
+- Accounts used during the migration experiment are reset into the current fresh account generation when they next sign in.
+- Obsolete legacy migration snapshots are removed during that reset.
+- The browser bridge scopes temporary v33 local data by Firebase UID so accounts on one device do not share a save.
+- The bridge is transitional only; it is not the final cloud-save architecture.
 
 ## Google Cloud deployment identity
 
@@ -28,29 +38,18 @@ The deployment workflow uses Google Workload Identity Federation and creates **n
 
 The Workload Identity provider and service-account identifiers are intentionally stored directly in the workflow because they are public identifiers, not credentials or private keys.
 
-## Firestore location
+## Current trust boundary
 
-If the default Firestore database has not been provisioned yet, select its location deliberately before first deployment. Firestore database location is not changeable after provisioning.
+Authentication and account identity are online. The v33 gameplay code is still running as a transitional iframe and still writes gameplay progression to browser storage.
 
-For the current U.S.-hosted design, `nam5` is the recommended default here; the callable Functions are explicitly located in `us-central1`, which is the closest Functions region Firebase documents for `nam5`.
-
-Do not create a Realtime Database instance yet solely for this phase. RTDB will be introduced for presence/rooms in the social/matchmaking phase.
-
-## Legacy import trust boundary
-
-The old RDS1 save codec uses an XOR obfuscation plus checksum. That can catch corruption but is not cryptographic anti-cheat protection. Accordingly:
-
-- each online account gets at most one automatic legacy import;
-- the imported baseline is marked `trusted: false`;
-- client code cannot write progression documents directly;
-- imported data should not become authoritative leaderboard/economy data until the server-side progression migration is complete.
+Client code cannot write authoritative Firestore progression documents directly. The next phase replaces the local gameplay authority with callable server transactions and cloud-owned state.
 
 ## Next engineering phase
 
-1. Provision/test Firestore and deploy this branch to the development Firebase project.
-2. Exercise email/password and Google sign-in on desktop and mobile.
-3. Import a real v33 profile and verify account summary/storage.
-4. Replace local authoritative Pips/Astras with server transactions.
-5. Move gacha, Class merge, jewels/enchanting, chests, and run rewards into callable Functions.
-6. Convert v33 `saveAccount()` from whole-profile local persistence to a cloud-aware client cache backed by server-owned progression.
-7. Add Realtime Database presence, friends, rooms, and matchmaking only after progression is authoritative.
+1. Verify fresh account creation and account switching on desktop/mobile.
+2. Define the authoritative cloud game-state schema.
+3. Replace local authoritative Pips/Astras with server transactions.
+4. Move gacha, Class merge, jewels/enchanting, chests, and run rewards into callable Functions.
+5. Convert v33 `saveAccount()` from whole-profile local persistence to a cloud-aware cache backed by server-owned progression.
+6. Promote the online entrypoint to the main Hosting route after cloud progression is stable.
+7. Add Realtime Database presence, friends, rooms, and matchmaking after progression is authoritative.
