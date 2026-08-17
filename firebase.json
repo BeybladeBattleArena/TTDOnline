@@ -6,6 +6,7 @@
       ".firebaserc",
       ".git/**",
       ".github/**",
+      ".gitignore",
       "functions/**",
       "scripts/**",
       "node_modules/**",
@@ -13,7 +14,8 @@
       "firestore.rules",
       "firestore.indexes.json",
       "database.rules.json",
-      "README.md"
+      "README.md",
+      "ONLINE-MIGRATION.md"
     ],
     "rewrites": [
       { "source": "/", "destination": "/random-dice-game-33.html" }
@@ -31,9 +33,6 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "database": {
-    "rules": "database.rules.json"
-  },
   "functions": [
     {
       "source": "functions",
@@ -45,7 +44,6 @@
     "auth": { "port": 9099 },
     "functions": { "port": 5001 },
     "firestore": { "port": 8080 },
-    "database": { "port": 9000 },
     "hosting": { "port": 5000 },
     "ui": { "enabled": true, "port": 4000 },
     "singleProjectMode": true
