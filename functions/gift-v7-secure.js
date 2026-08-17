@@ -13,7 +13,7 @@ const DICE = new Map([
   ...['fire','ice','wind','poison','broken'].map((key) => [key,'common']),
   ...['electric','iron','arrow','light','crack','magnet','shuriken'].map((key) => [key,'rare']),
   ...['laser','teleport','mine','mimic','absorb','goldrush','blackwind','bubble','haunt','bubblebeam','devilshadow'].map((key) => [key,'unique']),
-  ...['growth','joker','gun','blizzard','nuclear','luckylucky','heavensfist','asclepius','comet','hitman','crossinggate','bruteforceblizzard'].map((key) => [key,'legendary']),
+  ...['growth','joker','gun','blizzard','nuclear','luckylucky','heavensfist','asclepius','comet','hitman','crossinggate','bruteforceblizzard','soulscimitar'].map((key) => [key,'legendary']),
 ]);
 
 // Readable development fixtures. These are intentionally not secret.
@@ -29,6 +29,13 @@ const DEV_CODES = Object.freeze({
       { jewelId:'elem_wind', tier:2 }, { jewelId:'elem_lightning', tier:2 },
     ] },
   },
+  'TTD-SOUL-C1': { label:'Soul Scimitar C1 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:1 }] } },
+  'TTD-SOUL-C2': { label:'Soul Scimitar C2 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:2 }] } },
+  'TTD-SOUL-C3': { label:'Soul Scimitar C3 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:3 }] } },
+  'TTD-SOUL-C4': { label:'Soul Scimitar C4 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:4 }] } },
+  'TTD-SOUL-C5': { label:'Soul Scimitar C5 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:5 }] } },
+  'TTD-SOUL-C6': { label:'Soul Scimitar C6 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:6 }] } },
+  'TTD-SOUL-C7': { label:'Soul Scimitar C7 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:7 }] } },
 });
 
 // Production promo definitions contain no plaintext player-facing code. The incoming
@@ -151,7 +158,7 @@ exports.redeemOnlineGiftCode = onCall({region:REGION,timeoutSeconds:30},async(re
     for(const spec of reward.dice){const key=String(spec?.key||''),rarity=DICE.get(key);if(!rarity)continue;const cls=Math.max(1,Math.min(10,Number.isSafeInteger(spec.cls)?spec.cls:1)),dieId=id('d');outDice.push({key,rarity,instance:{id:dieId,cls,enchants:[null,null,null,null]}});tx.set(db.doc(`users/${auth.uid}/dice/${dieId}`),{id:dieId,key,rarity,source:secure?'secure_promo':dev?'builtin_test_code':'gift_code',cls,enchants:[null,null,null,null],createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});}
     for(const spec of reward.jewels){const jewelId=String(spec?.jewelId||'');if(!JEWELS.has(jewelId))continue;const tier=Math.max(1,Math.min(5,Number.isSafeInteger(spec.tier)?spec.tier:1)),jewelInstanceId=id('j'),jewel={kind:'jewel',id:jewelInstanceId,jewelId,tier};outJewels.push(jewel);tx.set(db.doc(`users/${auth.uid}/jewels/${jewelInstanceId}`),{...jewel,socketedIn:null,source:secure?'secure_promo':dev?'builtin_test_code':'gift_code',createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});}
     ['normal','hard','hell'].forEach((difficulty,i)=>{const add=Math.max(0,Math.min(99,Number(reward.keys[difficulty]||0)));if(!add)return;tx.set(keyRefs[i],{kind:'key',difficultyKey:difficulty,name:`Chest Key [${difficulty[0].toUpperCase()+difficulty.slice(1)}]`,count:Number(inventorySnaps[i].data()?.count||0)+add,updatedAt:FieldValue.serverTimestamp()},{merge:true});});
-    ['lesser','master'].forEach((cardId,i)=>{const add=Math.max(0,Math.min(99,Number(reward.cards[cardId]||0)));if(!add)return;tx.set(cardRefs[i],{kind:'card',cardId,name:cardId==='lesser'?'Lesser Enchant Card':'Master Enchant Card',count:Number(inventorySnaps[3+i].data()?.count||0)+add,updatedAt:FieldValue.serverTimestamp()},{merge:true});});
+    ['lesser','master'].forEach((cardId,i)=>{const add=Math.max(0,Math.min(99,Number(reward.cards[cardId]||0)));if(!add)return;tx.set(cardRefs[3+i],{kind:'card',cardId,name:cardId==='lesser'?'Lesser Enchant Card':'Master Enchant Card',count:Number(inventorySnaps[3+i].data()?.count||0)+add,updatedAt:FieldValue.serverTimestamp()},{merge:true});});
 
     const revision=Number.isSafeInteger(game.revision)?game.revision+1:1;
     tx.update(gameRef,{economy:{pips:gp(game)+reward.pips,astras:ga(game)+reward.astras},revision,updatedAt:FieldValue.serverTimestamp()});
