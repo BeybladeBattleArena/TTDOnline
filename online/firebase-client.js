@@ -19,7 +19,7 @@ import {
   httpsCallable,
 } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js';
 
-const PROJECT_ID = 'timetodie-a52be';
+const PROJECT_ID = 'ttd-online-b8c0f';
 const REGION = 'us-central1';
 const SAVE_KEY = 'RUNE-DICE-SAVE-v1';
 
