@@ -28,12 +28,14 @@ const signedInEl = el('signedIn');
 const accountArea = el('accountArea');
 const gameFrame = el('gameFrame');
 const accountLabel = el('accountLabel');
+const cloudEconomyEl = el('cloudEconomy');
 
 let app;
 let auth;
 let functions;
 let currentUser = null;
 let currentGeneration = 1;
+let cloudGameState = null;
 
 function setStatus(message, kind = '') {
   statusEl.textContent = message || '';
@@ -66,17 +68,20 @@ function stashActiveLocalProfile(uid = localStorage.getItem(ACTIVE_UID_KEY), gen
 }
 
 function bindLocalProfile(uid, generation) {
-  currentGeneration = Number(generation || 1);
+  const nextGeneration = Number(generation || 1);
   try {
     const previousUid = localStorage.getItem(ACTIVE_UID_KEY);
-    if (previousUid) stashActiveLocalProfile(previousUid, currentGeneration);
+    const previousGeneration = currentGeneration;
+    if (previousUid) stashActiveLocalProfile(previousUid, previousGeneration);
 
+    currentGeneration = nextGeneration;
     const scoped = localStorage.getItem(scopedProfileKey(uid, currentGeneration));
     if (scoped) localStorage.setItem(LOCAL_PROFILE_KEY, scoped);
     else localStorage.removeItem(LOCAL_PROFILE_KEY);
 
     localStorage.setItem(ACTIVE_UID_KEY, uid);
   } catch (err) {
+    currentGeneration = nextGeneration;
     console.warn('Could not bind the temporary local account bridge.', err);
     localStorage.removeItem(LOCAL_PROFILE_KEY);
   }
@@ -92,7 +97,50 @@ function clearActiveLocalProfile() {
   }
 }
 
+function validateGameState(gameState) {
+  const pips = gameState?.economy?.pips;
+  const astras = gameState?.economy?.astras;
+  if (!Number.isSafeInteger(pips) || pips < 0 || !Number.isSafeInteger(astras) || astras < 0) {
+    throw new Error('Firebase returned an invalid online economy state.');
+  }
+  return gameState;
+}
+
+function renderCloudEconomy(gameState) {
+  if (!cloudEconomyEl) return;
+  if (!gameState) {
+    cloudEconomyEl.textContent = '';
+    return;
+  }
+  const { pips, astras } = gameState.economy;
+  cloudEconomyEl.textContent = `${pips.toLocaleString()} Pips • ${astras.toLocaleString()} Astras`;
+}
+
+function applyCloudEconomyToLocalBridge(uid, generation, gameState) {
+  // v33 still owns the rest of its temporary browser profile. Before the iframe
+  // boots, replace only its currency fields with the canonical server values.
+  // This bridge disappears once v34 moves all progression operations to Functions.
+  try {
+    const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
+    if (!raw) return false;
+    const profile = JSON.parse(raw);
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return false;
+
+    profile.gold = gameState.economy.pips;
+    profile.astras = gameState.economy.astras;
+    const json = JSON.stringify(profile);
+    localStorage.setItem(LOCAL_PROFILE_KEY, json);
+    localStorage.setItem(scopedProfileKey(uid, generation), json);
+    return true;
+  } catch (err) {
+    console.warn('Could not seed the temporary v33 profile with cloud economy.', err);
+    return false;
+  }
+}
+
 function showSignedOutMode() {
+  cloudGameState = null;
+  renderCloudEconomy(null);
   accountArea.hidden = false;
   signedOutEl.hidden = false;
   signedInEl.hidden = true;
@@ -100,12 +148,17 @@ function showSignedOutMode() {
   gameFrame.src = 'about:blank';
 }
 
-function showGameMode(user, generation) {
+function showGameMode(user, generation, gameState) {
   signedOutEl.hidden = true;
   signedInEl.hidden = false;
   accountArea.hidden = true;
   gameFrame.hidden = false;
-  const query = `online=1&uid=${encodeURIComponent(user.uid)}&gen=${encodeURIComponent(generation)}`;
+  const query = [
+    'online=1',
+    `uid=${encodeURIComponent(user.uid)}`,
+    `gen=${encodeURIComponent(generation)}`,
+    `economyRev=${encodeURIComponent(gameState.revision || 1)}`,
+  ].join('&');
   gameFrame.src = `${GAME_PATH}?${query}`;
 }
 
@@ -142,14 +195,20 @@ async function initializeFirebase() {
     signedOutEl.hidden = true;
     signedInEl.hidden = false;
     gameFrame.hidden = true;
-    setStatus('Preparing a fresh online account…');
+    setStatus('Loading authoritative online profile…');
 
     try {
-      const result = await httpsCallable(functions, 'ensureProfile')({});
-      const generation = Number(result.data?.accountGeneration || 1);
+      const ensureResult = await httpsCallable(functions, 'ensureProfile')({});
+      const generation = Number(ensureResult.data?.accountGeneration || 1);
       bindLocalProfile(user.uid, generation);
-      setStatus('Account ready.', 'ok');
-      showGameMode(user, generation);
+
+      const stateResult = await httpsCallable(functions, 'getGameState')({});
+      cloudGameState = validateGameState(stateResult.data?.gameState);
+      renderCloudEconomy(cloudGameState);
+      applyCloudEconomyToLocalBridge(user.uid, generation, cloudGameState);
+
+      setStatus('Cloud account ready.', 'ok');
+      showGameMode(user, generation, cloudGameState);
     } catch (err) {
       console.error(err);
       setStatus(humanizeError(err), 'error');
