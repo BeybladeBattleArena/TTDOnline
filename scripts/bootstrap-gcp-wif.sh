@@ -14,7 +14,7 @@ printf 'Project: %s\nRepo:    %s\n\n' "$PROJECT_ID" "$REPO"
 gcloud config set project "$PROJECT_ID"
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 
-# APIs used by Firebase Hosting, Rules, Firestore, Extensions checks and 2nd-gen Functions.
+# APIs used by Firebase Hosting, Rules, Firestore, Extensions checks, billing verification and 2nd-gen Functions.
 gcloud services enable \
   firebase.googleapis.com \
   firebasehosting.googleapis.com \
@@ -22,6 +22,7 @@ gcloud services enable \
   firebaserules.googleapis.com \
   firestore.googleapis.com \
   cloudfunctions.googleapis.com \
+  cloudbilling.googleapis.com \
   run.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
