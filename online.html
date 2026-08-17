@@ -12,7 +12,7 @@
 <body>
 <div class="shell">
   <header class="bar">
-    <div><div class="brand">TIME TO DIE — ONLINE</div><div class="tiny" style="color:var(--muted)">Firebase account + authoritative economy foundation</div></div>
+    <div><div class="brand">TIME TO DIE — ONLINE</div><div class="tiny" style="color:var(--muted)">Firebase account + server economy + server gacha</div></div>
     <div id="signedIn" class="account" hidden><span id="cloudEconomy" class="economy"></span><span id="accountLabel"></span><button id="signOut">Sign out</button></div>
   </header>
 
@@ -20,13 +20,13 @@
     <div id="status" class="status">Loading Firebase…</div>
     <section id="signedOut" class="panel" hidden>
       <h2>Sign in to play</h2>
-      <p>Online accounts begin with a fresh game profile. Pips and Astras are now initialized and read from server-owned Firebase state.</p>
+      <p>Online accounts begin fresh. Pips/Astras and gacha pulls are now server-authoritative: Firebase validates the cost, rolls the result, creates the exact die instance, and records the transaction.</p>
       <form id="emailSignIn">
         <div class="row"><input id="email" type="email" autocomplete="email" placeholder="Email" required><input id="password" type="password" autocomplete="current-password" placeholder="Password" required></div>
         <div class="row" style="margin-top:8px"><button class="primary" type="submit">Sign in</button><button id="createAccount" type="button">Create account</button><button id="googleSignIn" class="google" type="button">Continue with Google</button></div>
       </form>
       <button id="resetPassword" type="button" style="margin-top:8px">Forgot password</button>
-      <p class="tiny">Current bridge build: the server owns the canonical currency balances. The v33 gameplay iframe still owns other temporary browser progression until each operation is migrated to authenticated Cloud Functions.</p>
+      <p class="tiny">Transition build: the wrapper injects a same-origin bridge into untouched v33. Gacha and canonical currency come from Firebase; remaining inventory/decks/jewels/rewards are migrated next.</p>
     </section>
   </main>
 
