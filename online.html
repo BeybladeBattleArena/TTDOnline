@@ -3,61 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Time to Die — Online Account Preview</title>
+  <title>Time to Die — Online</title>
   <style>
     :root{color-scheme:dark;--bg:#0a0c14;--panel:#171c34;--panel2:#12162a;--line:#2a3160;--gold:#f3d491;--muted:#97a0bd;--good:#7bd994;--bad:#ff7770}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:#ece7da;font-family:Inter,system-ui,sans-serif}
-    .shell{min-height:100vh;display:grid;grid-template-rows:auto auto 1fr}.bar{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:800;color:var(--gold)}
-    .account{display:flex;gap:8px;align-items:center}.panel{margin:12px auto;width:min(760px,calc(100% - 24px));padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
-    h2{font-size:16px;margin:0 0 10px;color:var(--gold)} p{font-size:12px;line-height:1.45;color:var(--muted)} input,textarea,button{font:inherit}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 180px}
-    input,textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px} textarea{min-height:92px;resize:vertical;font-family:ui-monospace,monospace;font-size:11px}
-    button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer} button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800} button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700} button.danger{color:#ffb1ad} button:disabled{opacity:.45;cursor:default}.tiny{font-size:11px}.status{padding:8px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind="ok"]{color:var(--good)}.status[data-kind="error"]{color:var(--bad)}
-    .inlineStatus{margin-top:10px;padding:10px;border-radius:9px;background:#0d1020;border:1px solid var(--line);font-size:12px;color:var(--muted);white-space:pre-wrap}.inlineStatus[data-kind="ok"]{color:var(--good);border-color:#326642}.inlineStatus[data-kind="error"]{color:var(--bad);border-color:#713834}
-    iframe{width:100%;height:100%;min-height:calc(100vh - 58px);border:0;background:#0a0c14}.game{min-height:0}.note{border-left:3px solid var(--gold);padding-left:10px}.summary{color:#ece7da;font-size:11px}.sep{height:1px;background:var(--line);margin:13px 0}.successCard{padding:12px;border:1px solid #326642;border-radius:10px;background:#102319;color:var(--good)}
-    [hidden]{display:none!important}@media(max-width:640px){.panel{margin:8px auto}.bar{padding:10px 12px}iframe{min-height:calc(100vh - 54px)}}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:#ece7da;font-family:Inter,system-ui,sans-serif}.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr}.bar{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:800;color:var(--gold)}.account{display:flex;gap:8px;align-items:center}.panel{margin:12px auto;width:min(760px,calc(100% - 24px));padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}h2{font-size:16px;margin:0 0 10px;color:var(--gold)}p{font-size:12px;line-height:1.45;color:var(--muted)}input,button{font:inherit}input{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 180px}button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer}button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800}button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700}.tiny{font-size:11px}.status{padding:10px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind="ok"]{color:var(--good)}.status[data-kind="error"]{color:var(--bad)}iframe{width:100%;height:100%;min-height:calc(100vh - 58px);border:0;background:#0a0c14}.game{min-height:0}[hidden]{display:none!important}@media(max-width:640px){.panel{margin:8px auto}.bar{padding:10px 12px}iframe{min-height:calc(100vh - 54px)}}
   </style>
 </head>
 <body>
 <div class="shell">
   <header class="bar">
-    <div><div class="brand">TIME TO DIE — ONLINE PREVIEW</div><div class="tiny" style="color:var(--muted)">Firebase account migration layer for v33</div></div>
+    <div><div class="brand">TIME TO DIE — ONLINE</div><div class="tiny" style="color:var(--muted)">Firebase account foundation</div></div>
     <div id="signedIn" class="account" hidden><span id="accountLabel"></span><button id="signOut">Sign out</button></div>
   </header>
 
   <main id="accountArea">
     <div id="status" class="status">Loading Firebase…</div>
-
     <section id="signedOut" class="panel" hidden>
-      <h2>Sign in</h2>
+      <h2>Sign in to play</h2>
+      <p>Online accounts begin with a fresh game profile. Legacy v33 save import has been retired while the game is still pre-release.</p>
       <form id="emailSignIn">
         <div class="row"><input id="email" type="email" autocomplete="email" placeholder="Email" required><input id="password" type="password" autocomplete="current-password" placeholder="Password" required></div>
         <div class="row" style="margin-top:8px"><button class="primary" type="submit">Sign in</button><button id="createAccount" type="button">Create account</button><button id="googleSignIn" class="google" type="button">Continue with Google</button></div>
       </form>
       <button id="resetPassword" type="button" style="margin-top:8px">Forgot password</button>
-    </section>
-
-    <section id="migration" class="panel" hidden>
-      <h2>v33 → Online account</h2>
-      <div id="migrationState" class="tiny"></div>
-      <div id="importSummary" class="summary" style="margin-top:6px"></div>
-
-      <div id="importComplete" class="successCard" hidden>
-        Your v33 baseline is attached to this online account. Loading the game…
-      </div>
-
-      <div id="importBox" style="margin-top:12px">
-        <p class="note">This is a one-time compatibility import. The old RDS1 save format was not anti-cheat protected, so the baseline is preserved but marked untrusted until progression becomes server-authoritative.</p>
-        <button id="useLocalSave" class="primary" type="button" style="width:100%">Import this browser's current v33 save</button>
-        <div class="sep"></div>
-        <div class="tiny" style="margin-bottom:6px;color:var(--muted)">Or paste a portable v33 RDS1 save code:</div>
-        <textarea id="saveCode" spellcheck="false" placeholder="RDS1-…"></textarea>
-        <button id="importLegacy" type="button" style="width:100%;margin-top:8px">Import pasted RDS1 baseline</button>
-        <div id="migrationFeedback" class="inlineStatus">Choose the browser save above, or paste an RDS1 code.</div>
-      </div>
+      <p class="tiny">Current bridge build: authentication is online; gameplay progression is still temporarily cached per account in this browser while server-authoritative progression is being integrated.</p>
     </section>
   </main>
 
-  <div class="game"><iframe id="gameFrame" title="Time to Die v33" src="/random-dice-game-33.html" hidden></iframe></div>
+  <div class="game"><iframe id="gameFrame" title="Time to Die online bridge" src="about:blank" hidden></iframe></div>
 </div>
 <script type="module" src="/online/firebase-client.js"></script>
 </body>
