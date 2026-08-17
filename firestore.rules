@@ -4,19 +4,21 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function owns(uid) { return signedIn() && request.auth.uid == uid; }
 
-    // Player progression is readable by its owner, but client writes are
-    // intentionally blocked. Authoritative writes go through Cloud Functions.
+    // Account metadata is readable by its owner, but all writes are backend-only.
     match /users/{uid} {
       allow read: if owns(uid);
       allow create, update, delete: if false;
 
+      // Authoritative progression lives below the player document. Clients do
+      // not read or write these documents directly; callable Functions return
+      // the safe state required by the game. This keeps future receipts,
+      // anti-abuse metadata and server-only fields private by default.
       match /{document=**} {
-        allow read: if owns(uid);
-        allow write: if false;
+        allow read, write: if false;
       }
     }
 
-    // Public-facing summaries and leaderboards will also be backend-written.
+    // Public-facing summaries and leaderboards are backend-written.
     match /publicProfiles/{uid} {
       allow read: if true;
       allow write: if false;
