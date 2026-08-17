@@ -10,10 +10,11 @@
     .shell{min-height:100vh;display:grid;grid-template-rows:auto auto 1fr}.bar{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand{font-weight:800;color:var(--gold)}
     .account{display:flex;gap:8px;align-items:center}.panel{margin:12px auto;width:min(760px,calc(100% - 24px));padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
     h2{font-size:16px;margin:0 0 10px;color:var(--gold)} p{font-size:12px;line-height:1.45;color:var(--muted)} input,textarea,button{font:inherit}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 180px}
-    input,textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px} textarea{min-height:82px;resize:vertical;font-family:ui-monospace,monospace;font-size:11px}
-    button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer} button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800} button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700} button.danger{color:#ffb1ad}.tiny{font-size:11px}.status{padding:8px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind="ok"]{color:var(--good)}.status[data-kind="error"]{color:var(--bad)}
-    iframe{width:100%;height:100%;min-height:70vh;border:0;background:#0a0c14}.game{min-height:0}.note{border-left:3px solid var(--gold);padding-left:10px}.summary{color:#ece7da;font-size:11px}
-    [hidden]{display:none!important}@media(max-width:640px){.panel{margin:8px auto}.bar{padding:10px 12px}iframe{min-height:76vh}}
+    input,textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px} textarea{min-height:92px;resize:vertical;font-family:ui-monospace,monospace;font-size:11px}
+    button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer} button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800} button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700} button.danger{color:#ffb1ad} button:disabled{opacity:.45;cursor:default}.tiny{font-size:11px}.status{padding:8px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind="ok"]{color:var(--good)}.status[data-kind="error"]{color:var(--bad)}
+    .inlineStatus{margin-top:10px;padding:10px;border-radius:9px;background:#0d1020;border:1px solid var(--line);font-size:12px;color:var(--muted);white-space:pre-wrap}.inlineStatus[data-kind="ok"]{color:var(--good);border-color:#326642}.inlineStatus[data-kind="error"]{color:var(--bad);border-color:#713834}
+    iframe{width:100%;height:100%;min-height:calc(100vh - 58px);border:0;background:#0a0c14}.game{min-height:0}.note{border-left:3px solid var(--gold);padding-left:10px}.summary{color:#ece7da;font-size:11px}.sep{height:1px;background:var(--line);margin:13px 0}.successCard{padding:12px;border:1px solid #326642;border-radius:10px;background:#102319;color:var(--good)}
+    [hidden]{display:none!important}@media(max-width:640px){.panel{margin:8px auto}.bar{padding:10px 12px}iframe{min-height:calc(100vh - 54px)}}
   </style>
 </head>
 <body>
@@ -23,7 +24,7 @@
     <div id="signedIn" class="account" hidden><span id="accountLabel"></span><button id="signOut">Sign out</button></div>
   </header>
 
-  <main>
+  <main id="accountArea">
     <div id="status" class="status">Loading Firebase…</div>
 
     <section id="signedOut" class="panel" hidden>
@@ -39,10 +40,19 @@
       <h2>v33 → Online account</h2>
       <div id="migrationState" class="tiny"></div>
       <div id="importSummary" class="summary" style="margin-top:6px"></div>
+
+      <div id="importComplete" class="successCard" hidden>
+        Your v33 baseline is attached to this online account. Loading the game…
+      </div>
+
       <div id="importBox" style="margin-top:12px">
-        <p class="note">Legacy imports are currently marked <b>untrusted</b>: the old RDS1 checksum detects corruption but was never anti-cheat security. Imported accounts will not become authoritative leaderboard/economy records until the server migration is complete.</p>
-        <textarea id="saveCode" spellcheck="false" placeholder="Paste an RDS1-… portable save code"></textarea>
-        <div class="row" style="margin-top:8px"><button id="useLocalSave" type="button">Use this browser's v33 save</button><button id="importLegacy" class="primary" type="button">Import one-time baseline</button></div>
+        <p class="note">This is a one-time compatibility import. The old RDS1 save format was not anti-cheat protected, so the baseline is preserved but marked untrusted until progression becomes server-authoritative.</p>
+        <button id="useLocalSave" class="primary" type="button" style="width:100%">Import this browser's current v33 save</button>
+        <div class="sep"></div>
+        <div class="tiny" style="margin-bottom:6px;color:var(--muted)">Or paste a portable v33 RDS1 save code:</div>
+        <textarea id="saveCode" spellcheck="false" placeholder="RDS1-…"></textarea>
+        <button id="importLegacy" type="button" style="width:100%;margin-top:8px">Import pasted RDS1 baseline</button>
+        <div id="migrationFeedback" class="inlineStatus">Choose the browser save above, or paste an RDS1 code.</div>
       </div>
     </section>
   </main>
