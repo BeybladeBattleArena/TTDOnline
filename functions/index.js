@@ -1,17 +1,20 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { randomInt, randomUUID } = require('node:crypto');
+const { createHash, randomInt, randomUUID } = require('node:crypto');
 
 initializeApp();
 const db = getFirestore();
 
 const REGION = 'us-central1';
 const ACCOUNT_GENERATION = 1;
-const PROFILE_SCHEMA_VERSION = 4;
+const PROFILE_SCHEMA_VERSION = 5;
 const GAME_STATE_SCHEMA_VERSION = 1;
+const INVENTORY_VERSION = 1;
+const DECKS_VERSION = 1;
 const STARTING_PIPS = 600;
 const STARTING_ASTRAS = 0;
+const STARTER_KEYS = Object.freeze(['fire', 'ice', 'wind', 'poison', 'broken']);
 
 const GACHA_COSTS = Object.freeze({ 1: 120, 10: 1000 });
 const RARITY_ORDER = Object.freeze(['common', 'rare', 'unique', 'legendary']);
@@ -37,6 +40,10 @@ const GACHA_POOLS = Object.freeze({
   ]),
 });
 
+const DICE_RARITY = Object.freeze(Object.fromEntries(
+  Object.entries(GACHA_POOLS).flatMap(([rarity, keys]) => keys.map((key) => [key, rarity])),
+));
+
 function requireAuth(request) {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Authentication required.');
@@ -54,10 +61,20 @@ function authFields(auth) {
   };
 }
 
+function starterInstanceId(uid, key, copyIndex) {
+  const digest = createHash('sha256')
+    .update(`ttd-starter-v1:${uid}:${key}:${copyIndex}`)
+    .digest('hex');
+  return `d${digest.slice(0, 31)}`;
+}
+
 function starterGameState() {
   return {
     schemaVersion: GAME_STATE_SCHEMA_VERSION,
     accountGeneration: ACCOUNT_GENERATION,
+    inventoryVersion: INVENTORY_VERSION,
+    decksVersion: DECKS_VERSION,
+    activeDeckIdx: 0,
     economy: {
       pips: STARTING_PIPS,
       astras: STARTING_ASTRAS,
@@ -74,15 +91,46 @@ function publicGameState(data) {
   }
   const pips = data.economy?.pips;
   const astras = data.economy?.astras;
+  const activeDeckIdx = Number(data.activeDeckIdx ?? 0);
   if (!Number.isSafeInteger(pips) || pips < 0 || !Number.isSafeInteger(astras) || astras < 0) {
     throw new HttpsError('internal', 'The online economy state is invalid.');
+  }
+  if (!Number.isSafeInteger(activeDeckIdx) || activeDeckIdx < 0 || activeDeckIdx > 2) {
+    throw new HttpsError('internal', 'The online active deck index is invalid.');
   }
   return {
     schemaVersion: Number(data.schemaVersion || GAME_STATE_SCHEMA_VERSION),
     accountGeneration: Number(data.accountGeneration || ACCOUNT_GENERATION),
+    inventoryVersion: Number(data.inventoryVersion || 0),
+    decksVersion: Number(data.decksVersion || 0),
+    activeDeckIdx,
     revision: Number(data.revision || 1),
     economy: { pips, astras },
   };
+}
+
+function starterDieDocument(uid, key, copyIndex) {
+  const id = starterInstanceId(uid, key, copyIndex);
+  return {
+    id,
+    key,
+    rarity: 'common',
+    cls: 1,
+    enchants: [null, null, null, null],
+    source: 'starter',
+    starterCopyIndex: copyIndex,
+  };
+}
+
+function starterDeckSlots(uid) {
+  return STARTER_KEYS.map((key) => ({
+    key,
+    instId: starterInstanceId(uid, key, 0),
+  }));
+}
+
+function emptyDeckSlots() {
+  return [null, null, null, null, null];
 }
 
 function pickRarity() {
@@ -128,24 +176,42 @@ function buildGachaResults(count) {
   return results;
 }
 
-function publicGrant(data) {
+function publicDie(data) {
   const id = data?.id;
   const key = data?.key;
+  const rarity = data?.rarity;
   const cls = data?.cls;
   const enchants = data?.enchants;
   if (
     typeof id !== 'string' || !id ||
-    typeof key !== 'string' || !GACHA_POOLS[data?.rarity]?.includes(key) ||
+    typeof key !== 'string' || DICE_RARITY[key] !== rarity ||
     !Number.isSafeInteger(cls) || cls < 1 || cls > 10 ||
     !Array.isArray(enchants) || enchants.length !== 4
   ) {
-    throw new HttpsError('internal', 'A stored gacha grant is invalid.');
+    throw new HttpsError('internal', 'A stored die instance is invalid.');
   }
   return {
     key,
-    rarity: data.rarity,
+    rarity,
+    source: data.source === 'starter' ? 'starter' : 'gacha',
     instance: { id, cls, enchants: [...enchants] },
   };
+}
+
+function publicDeck(data, fallbackIndex) {
+  const index = Number(data?.index ?? fallbackIndex);
+  const slots = data?.slots;
+  if (!Number.isSafeInteger(index) || index < 0 || index > 2 || !Array.isArray(slots) || slots.length !== 5) {
+    throw new HttpsError('internal', 'A stored deck is invalid.');
+  }
+  const safeSlots = slots.map((slot) => {
+    if (slot == null) return null;
+    if (typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string') {
+      throw new HttpsError('internal', 'A stored deck slot is invalid.');
+    }
+    return { key: slot.key, instId: slot.instId };
+  });
+  return { index, slots: safeSlots };
 }
 
 async function ensureOnlineAccount(auth) {
@@ -154,16 +220,22 @@ async function ensureOnlineAccount(auth) {
   const legacyRef = db.doc(`users/${auth.uid}/legacy/profile`);
   let freshBootstrap = false;
   let seededGameState = false;
+  let seededInventory = false;
+  let seededDecks = false;
 
   await db.runTransaction(async (tx) => {
-    // Firestore transactions require reads before writes. Keeping account metadata
-    // and the starter economy in one transaction prevents half-created accounts.
+    // Firestore transactions require reads before writes. Keeping account metadata,
+    // starter economy, starter inventory and exact starter decks in one transaction
+    // prevents any half-created online account state.
     const userSnap = await tx.get(userRef);
     const gameSnap = await tx.get(gameRef);
-    const current = userSnap.exists ? userSnap.data() : null;
+    const currentUser = userSnap.exists ? userSnap.data() : null;
+    const currentGame = gameSnap.exists ? gameSnap.data() : null;
 
-    freshBootstrap = !current || current.accountGeneration !== ACCOUNT_GENERATION;
-    seededGameState = freshBootstrap || !gameSnap.exists || gameSnap.data()?.accountGeneration !== ACCOUNT_GENERATION;
+    freshBootstrap = !currentUser || currentUser.accountGeneration !== ACCOUNT_GENERATION;
+    seededGameState = freshBootstrap || !gameSnap.exists || currentGame?.accountGeneration !== ACCOUNT_GENERATION;
+    seededInventory = seededGameState || Number(currentGame?.inventoryVersion || 0) < INVENTORY_VERSION;
+    seededDecks = seededGameState || Number(currentGame?.decksVersion || 0) < DECKS_VERSION;
 
     if (freshBootstrap) {
       tx.set(userRef, {
@@ -171,7 +243,7 @@ async function ensureOnlineAccount(auth) {
         accountGeneration: ACCOUNT_GENERATION,
         ...authFields(auth),
         accountMode: 'fresh-online',
-        progressionStatus: 'server-gacha',
+        progressionStatus: 'server-inventory-decks',
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -179,13 +251,45 @@ async function ensureOnlineAccount(auth) {
       tx.set(userRef, {
         schemaVersion: PROFILE_SCHEMA_VERSION,
         ...authFields(auth),
-        progressionStatus: 'server-gacha',
+        progressionStatus: 'server-inventory-decks',
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
 
     if (seededGameState) {
       tx.set(gameRef, starterGameState());
+    } else {
+      const gamePatch = { updatedAt: FieldValue.serverTimestamp() };
+      if (seededInventory) gamePatch.inventoryVersion = INVENTORY_VERSION;
+      if (seededDecks) {
+        gamePatch.decksVersion = DECKS_VERSION;
+        if (!Number.isSafeInteger(currentGame?.activeDeckIdx)) gamePatch.activeDeckIdx = 0;
+      }
+      tx.set(gameRef, gamePatch, { merge: true });
+    }
+
+    if (seededInventory) {
+      for (const key of STARTER_KEYS) {
+        for (let copyIndex = 0; copyIndex < 3; copyIndex++) {
+          const die = starterDieDocument(auth.uid, key, copyIndex);
+          tx.set(db.doc(`users/${auth.uid}/dice/${die.id}`), {
+            ...die,
+            createdAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        }
+      }
+    }
+
+    if (seededDecks) {
+      const deckSlots = [starterDeckSlots(auth.uid), emptyDeckSlots(), emptyDeckSlots()];
+      for (let index = 0; index < 3; index++) {
+        tx.set(db.doc(`users/${auth.uid}/decks/deck-${index}`), {
+          schemaVersion: DECKS_VERSION,
+          index,
+          slots: deckSlots[index],
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
     }
   });
 
@@ -205,8 +309,61 @@ async function ensureOnlineAccount(auth) {
   return {
     freshBootstrap,
     seededGameState,
+    seededInventory,
+    seededDecks,
     gameState: publicGameState(gameSnap.data()),
   };
+}
+
+async function readInventoryAndDecks(uid) {
+  const [diceSnap, decksSnap] = await Promise.all([
+    db.collection(`users/${uid}/dice`).get(),
+    db.collection(`users/${uid}/decks`).get(),
+  ]);
+
+  const dice = diceSnap.docs.map((doc) => publicDie(doc.data()))
+    .sort((a, b) => a.instance.id.localeCompare(b.instance.id));
+
+  const byIndex = new Map(decksSnap.docs.map((doc) => {
+    const deck = publicDeck(doc.data(), Number(doc.id.replace('deck-', '')));
+    return [deck.index, deck];
+  }));
+  const decks = [0, 1, 2].map((index) => byIndex.get(index) || { index, slots: emptyDeckSlots() });
+  return { dice, decks };
+}
+
+function normalizeDeckStateInput(rawDecks, rawActiveDeckIdx) {
+  const activeDeckIdx = Number(rawActiveDeckIdx);
+  if (!Number.isSafeInteger(activeDeckIdx) || activeDeckIdx < 0 || activeDeckIdx > 2) {
+    throw new HttpsError('invalid-argument', 'Active deck index must be 0, 1 or 2.');
+  }
+  if (!Array.isArray(rawDecks) || rawDecks.length !== 3) {
+    throw new HttpsError('invalid-argument', 'Exactly three decks are required.');
+  }
+
+  const decks = rawDecks.map((rawDeck, deckIndex) => {
+    if (!Array.isArray(rawDeck) || rawDeck.length !== 5) {
+      throw new HttpsError('invalid-argument', `Deck ${deckIndex + 1} must have exactly five slots.`);
+    }
+    const seenKeys = new Set();
+    const slots = rawDeck.map((slot) => {
+      if (slot == null) return null;
+      if (typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string' || !slot.instId) {
+        throw new HttpsError('invalid-argument', 'A deck slot is malformed.');
+      }
+      if (!DICE_RARITY[slot.key]) {
+        throw new HttpsError('invalid-argument', 'A deck references an unknown die.');
+      }
+      if (seenKeys.has(slot.key)) {
+        throw new HttpsError('invalid-argument', 'A deck cannot contain the same die type twice.');
+      }
+      seenKeys.add(slot.key);
+      return { key: slot.key, instId: slot.instId };
+    });
+    return { index: deckIndex, slots };
+  });
+
+  return { activeDeckIdx, decks };
 }
 
 exports.health = onCall({ region: REGION }, (request) => {
@@ -218,7 +375,12 @@ exports.health = onCall({ region: REGION }, (request) => {
     schemaVersion: PROFILE_SCHEMA_VERSION,
     gameStateSchemaVersion: GAME_STATE_SCHEMA_VERSION,
     accountGeneration: ACCOUNT_GENERATION,
-    features: { serverEconomy: true, serverGacha: true },
+    features: {
+      serverEconomy: true,
+      serverGacha: true,
+      serverInventory: true,
+      serverDecks: true,
+    },
   };
 });
 
@@ -232,7 +394,9 @@ exports.ensureProfile = onCall({ region: REGION }, async (request) => {
     accountGeneration: ACCOUNT_GENERATION,
     freshBootstrap: result.freshBootstrap,
     seededGameState: result.seededGameState,
-    progressionStatus: 'server-gacha',
+    seededInventory: result.seededInventory,
+    seededDecks: result.seededDecks,
+    progressionStatus: 'server-inventory-decks',
     gameState: result.gameState,
   };
 });
@@ -243,8 +407,22 @@ exports.getGameState = onCall({ region: REGION }, async (request) => {
   return {
     ok: true,
     uid: auth.uid,
-    progressionStatus: 'server-gacha',
+    progressionStatus: 'server-inventory-decks',
     gameState: result.gameState,
+  };
+});
+
+exports.getInventoryState = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  const result = await ensureOnlineAccount(auth);
+  const inventory = await readInventoryAndDecks(auth.uid);
+  return {
+    ok: true,
+    uid: auth.uid,
+    progressionStatus: 'server-inventory-decks',
+    gameState: result.gameState,
+    dice: inventory.dice,
+    decks: inventory.decks,
   };
 });
 
@@ -256,11 +434,66 @@ exports.getGachaGrants = onCall({ region: REGION }, async (request) => {
     .where('source', '==', 'gacha')
     .get();
 
-  const grants = snap.docs.map((doc) => publicGrant(doc.data()));
+  const grants = snap.docs.map((doc) => publicDie(doc.data()));
   return {
     ok: true,
     uid: auth.uid,
     grants,
+  };
+});
+
+exports.setDeckState = onCall({ region: REGION, timeoutSeconds: 30 }, async (request) => {
+  const auth = requireAuth(request);
+  await ensureOnlineAccount(auth);
+  const normalized = normalizeDeckStateInput(request.data?.decks, request.data?.activeDeckIdx);
+  const gameRef = db.doc(`users/${auth.uid}/game/state`);
+  let nextGameState = null;
+
+  await db.runTransaction(async (tx) => {
+    const gameSnap = await tx.get(gameRef);
+    const current = publicGameState(gameSnap.data());
+
+    const referenced = new Map();
+    for (const deck of normalized.decks) {
+      for (const slot of deck.slots) {
+        if (slot) referenced.set(slot.instId, slot.key);
+      }
+    }
+
+    for (const [instId, expectedKey] of referenced) {
+      const dieSnap = await tx.get(db.doc(`users/${auth.uid}/dice/${instId}`));
+      if (!dieSnap.exists || dieSnap.data()?.key !== expectedKey) {
+        throw new HttpsError('failed-precondition', 'A deck references a die instance this account does not own.');
+      }
+    }
+
+    nextGameState = {
+      ...current,
+      activeDeckIdx: normalized.activeDeckIdx,
+      revision: current.revision + 1,
+    };
+
+    for (const deck of normalized.decks) {
+      tx.set(db.doc(`users/${auth.uid}/decks/deck-${deck.index}`), {
+        schemaVersion: DECKS_VERSION,
+        index: deck.index,
+        slots: deck.slots,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    tx.update(gameRef, {
+      activeDeckIdx: normalized.activeDeckIdx,
+      decksVersion: DECKS_VERSION,
+      revision: nextGameState.revision,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {
+    ok: true,
+    gameState: nextGameState,
+    decks: normalized.decks,
   };
 });
 
@@ -288,8 +521,7 @@ exports.gachaPull = onCall({ region: REGION, timeoutSeconds: 30 }, async (reques
     }
 
     nextState = {
-      schemaVersion: current.schemaVersion,
-      accountGeneration: current.accountGeneration,
+      ...current,
       revision: current.revision + 1,
       economy: {
         pips: current.economy.pips - cost,
