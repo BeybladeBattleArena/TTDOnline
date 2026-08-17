@@ -14,10 +14,11 @@ printf 'Project: %s\nRepo:    %s\n\n' "$PROJECT_ID" "$REPO"
 gcloud config set project "$PROJECT_ID"
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 
-# APIs used by Firebase Hosting, Rules, Firestore and 2nd-gen Functions.
+# APIs used by Firebase Hosting, Rules, Firestore, Extensions checks and 2nd-gen Functions.
 gcloud services enable \
   firebase.googleapis.com \
   firebasehosting.googleapis.com \
+  firebaseextensions.googleapis.com \
   firebaserules.googleapis.com \
   firestore.googleapis.com \
   cloudfunctions.googleapis.com \
@@ -75,10 +76,11 @@ cat <<OUT
 
 Bootstrap complete.
 
-Add these as GitHub repository VARIABLES (not secrets):
+Workload Identity provider:
+${PROVIDER_NAME}
 
-GCP_WORKLOAD_IDENTITY_PROVIDER=${PROVIDER_NAME}
-GCP_SERVICE_ACCOUNT=${SERVICE_ACCOUNT_EMAIL}
+Deployment service account:
+${SERVICE_ACCOUNT_EMAIL}
 
 The workload provider is restricted to:
 ${REPO}
