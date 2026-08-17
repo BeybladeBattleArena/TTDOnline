@@ -29,4 +29,6 @@ jobs:
       - run: npm install
       - run: npm --prefix functions install
       - run: npm run check
+      - name: Remove retired legacy import callable
+        run: npx firebase-tools functions:delete importLegacySave --region us-central1 --project ttd-online-b8c0f --force || true
       - run: npx firebase-tools deploy --project ttd-online-b8c0f --non-interactive --force
