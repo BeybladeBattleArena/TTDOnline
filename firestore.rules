@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owns(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // User-owned profile data. Economy-sensitive writes will move behind
+    // callable Cloud Functions as those systems are migrated.
+    match /users/{uid} {
+      allow read: if owns(uid);
+      allow create: if owns(uid);
+      allow update, delete: if false;
+
+      match /{document=**} {
+        allow read: if owns(uid);
+        allow write: if false;
+      }
+    }
+
+    // Public-facing player summaries will be written by trusted backend code.
+    match /publicProfiles/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /leaderboards/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
