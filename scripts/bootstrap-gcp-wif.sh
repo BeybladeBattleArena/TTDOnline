@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ID="timetodie-a52be"
+PROJECT_ID="ttd-online-b8c0f"
 REPO="BeybladeBattleArena/TTDOnline"
 POOL_ID="github-actions"
 PROVIDER_ID="ttd-online"
