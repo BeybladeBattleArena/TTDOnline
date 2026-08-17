@@ -2,7 +2,7 @@
   "name": "ttd-functions",
   "private": true,
   "main": "index.js",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "scripts": {
     "lint": "node --check index.js",
     "serve": "firebase emulators:start --only functions",
