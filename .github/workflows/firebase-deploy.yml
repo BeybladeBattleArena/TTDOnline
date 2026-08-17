@@ -3,7 +3,7 @@ name: Firebase Deploy
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, agent/firebase-foundation]
 
 permissions:
   contents: read
@@ -19,8 +19,8 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           project_id: ttd-online-b8c0f
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
 
       - uses: actions/setup-node@v4
         with:
