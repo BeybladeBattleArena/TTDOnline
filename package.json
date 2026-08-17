@@ -3,16 +3,14 @@
   "private": true,
   "scripts": {
     "check": "npm run check:functions && npm run check:client && npm run check:bridge && npm run check:loader",
-    "check:functions": "node --check functions/index.js && node --check functions/progression-v5.js && node --check functions/main-v5.js",
-    "check:client": "node --input-type=module --check < online/firebase-client-v4.js && node --input-type=module --check < online/progression-client-v5.js",
-    "check:bridge": "node --check online/game-bridge-inner.js && node --check online/progression-bridge-v5.js && node --check online/game-loader.js",
+    "check:functions": "node --check functions/index.js && node --check functions/progression-v5.js && node --check functions/singleplayer-v6.js && node --check functions/gift-v6-fix2.js && node --check functions/social-v6-fix.js && node --check functions/main-v6.js",
+    "check:client": "node --input-type=module --check < online/firebase-client-v4.js && node --input-type=module --check < online/progression-client-v5.js && node --input-type=module --check < online/run-client-v6.js && node --input-type=module --check < online/merge-client-v6.js && node --input-type=module --check < online/singleplayer-client-v6-core.js && node --input-type=module --check < online/singleplayer-client-v6.js",
+    "check:bridge": "node --check online/game-bridge-inner.js && node --check online/progression-bridge-v5.js && node --check online/singleplayer-bridge-v6.js && node --check online/merge-bridge-v6.js && node --check online/run-ui-bridge-v6.js && node --check online/refresh-bridge-v6.js && node --check online/game-loader.js",
     "check:loader": "node scripts/check-online-loader.mjs",
     "emulators": "firebase emulators:start",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy": "firebase deploy"
   },
-  "devDependencies": {
-    "firebase-tools": "^14.0.0"
-  }
+  "devDependencies": { "firebase-tools":"^14.0.0" }
 }

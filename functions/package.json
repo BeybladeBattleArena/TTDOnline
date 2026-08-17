@@ -1,15 +1,12 @@
 {
   "name": "ttd-functions",
   "private": true,
-  "main": "main-v5.js",
+  "main": "main-v6.js",
   "engines": { "node": "22" },
   "scripts": {
-    "lint": "node --check index.js && node --check progression-v5.js && node --check main-v5.js",
+    "lint": "node --check index.js && node --check progression-v5.js && node --check singleplayer-v6.js && node --check gift-v6-fix2.js && node --check social-v6-fix.js && node --check main-v6.js",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions"
   },
-  "dependencies": {
-    "firebase-admin": "^13.0.0",
-    "firebase-functions": "^6.0.0"
-  }
+  "dependencies": { "firebase-admin":"^13.0.0", "firebase-functions":"^6.0.0" }
 }
