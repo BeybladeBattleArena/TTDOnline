@@ -2,9 +2,10 @@
   'use strict';
   const ORIGIN=location.origin;
   const GAME_PATH='/random-dice-game-33.html';
-  const DICE_PATH='/dicefile.json?v=1';
+  const DICE_PATH='/dicefile.json?v=2';
   const BRIDGES=[
     '/online/dice-catalog-bridge-v7.js?v=7',
+    '/online/slither-vine-bridge-v8.js?v=8',
     '/online/game-bridge-inner.js?v=4',
     '/online/progression-bridge-v5.js?v=5',
     '/online/singleplayer-bridge-v6.js?v=6',
@@ -18,6 +19,9 @@
   const SKILL_SWITCH='    switch(sp.kind){';
   const LOOP_TIME='    state.time += dt;';
   const DRAW_LANE='drawLane(dt);';
+  const ADVENTURE_SKILLS='      if(state.adventure && !silenced) tickMonsterSkills(e, dt);';
+  const ZOMBIE_SKILLS='        if(!silenced) tickZombieSkills(e);';
+  const TARGET_LABEL="    const targetLabel = {front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', none:'Does not attack'}[d.target]||d.target;";
 
   function send(type,payload={}){window.parent.postMessage({type,...payload},ORIGIN);}
   async function loadText(url){
@@ -37,6 +41,9 @@
     if(!catalog.dice.soulscimitar || catalog.dice.soulscimitar?.special?.kind!=='soulScimitar'){
       throw new Error('dicefile.json does not contain the Soul Scimitar runtime definition.');
     }
+    if(!catalog.dice.slithervine || catalog.dice.slithervine?.special?.kind!=='slitherVine'){
+      throw new Error('dicefile.json does not contain the Slither Vine runtime definition.');
+    }
     const start=source.indexOf(DICE_START);
     const keys=source.indexOf(DICE_KEYS,start);
     if(start<0 || keys<0)throw new Error('The v33 DICE definition block could not be located.');
@@ -45,21 +52,39 @@
       +`  /* Canonical runtime catalog: /dicefile.json */\n  const __TTD_DICEFILE = ${safeLiteral};\n  const DICE = __TTD_DICEFILE.dice;\n`
       +source.slice(keys);
   }
-  function installSoulScimitarHooks(source){
+  function installCatalogHooks(source){
     source=replaceOnce(
       source,
       SKILL_SWITCH,
-      `${SKILL_SWITCH}\n      case 'soulScimitar': {\n        fireSoulScimitar(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }`,
+      `${SKILL_SWITCH}\n      case 'soulScimitar': {\n        fireSoulScimitar(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }\n      case 'slitherVine': {\n        fireSlitherVine(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }`,
       'die skill dispatcher'
     );
     source=replaceOnce(
       source,
       LOOP_TIME,
-      `${LOOP_TIME}\n    updateSoulScimitars(dt);`,
+      `${LOOP_TIME}\n    updateSoulScimitars(dt);\n    updateSlitherVines(dt);`,
       'main battle loop time step'
     );
     if(!source.includes(DRAW_LANE))throw new Error('The battle canvas draw call could not be located.');
-    source=source.split(DRAW_LANE).join(`${DRAW_LANE} drawSoulScimitars();`);
+    source=source.split(DRAW_LANE).join(`${DRAW_LANE} drawSlitherVines(); drawSoulScimitars();`);
+    source=replaceOnce(
+      source,
+      ADVENTURE_SKILLS,
+      '      if(state.adventure && !silenced && !e._slitherBlocked) tickMonsterSkills(e, dt);',
+      'Adventure enemy skill gate'
+    );
+    source=replaceOnce(
+      source,
+      ZOMBIE_SKILLS,
+      '        if(!silenced && !e._slitherBlocked) tickZombieSkills(e);',
+      'Endless Horde enemy skill gate'
+    );
+    source=replaceOnce(
+      source,
+      TARGET_LABEL,
+      "    const targetLabel = {front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', fastest:'Fastest enemy (ties: highest current HP)', none:'Does not attack'}[d.target]||d.target;",
+      'die detail target label'
+    );
     return source;
   }
 
@@ -75,7 +100,7 @@
 
     send('ttd:bridge-phase',{phase:'assets-loaded',message:'Online account systems and dice catalog loaded…'});
     let transformed=installCanonicalDice(gameHtml,catalog);
-    transformed=installSoulScimitarHooks(transformed);
+    transformed=installCatalogHooks(transformed);
 
     const markerIndex=transformed.lastIndexOf(IIFE_END_MARKER);
     if(markerIndex<0)throw new Error('The v33 game closure marker could not be located.');
