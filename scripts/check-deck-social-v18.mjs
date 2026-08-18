@@ -31,6 +31,7 @@ requireMarkers(editor,[
   'Now using ${nameFor(pending.index)} as your active deck.',
   'ttdDeckEditName',
   '/^[A-Za-z0-9]{1,12}$/',
+  'name!==defaultName(index)&&!/^[A-Za-z0-9]{1,12}$/.test(name)',
   "send('ttd:deck-v18-save-request'",
   "send('ttd:deck-v18-equip-request'",
   "send('ttd:deck-v18-rename-request'",
@@ -57,6 +58,7 @@ if(!clientEntry.includes("import './deck-social-client-v18.js?v=18';"))throw new
 requireMarkers(functions,[
   'const LEVEL_CAP = 100;',
   "const CUSTOM_DECK_NAME = /^[A-Za-z0-9]{1,12}$/;",
+  'if (name === defaultDeckName(index)) return name;',
   'return step * step * 100;',
   'exports.getDeckManagerState',
   'exports.saveDeckV18',
