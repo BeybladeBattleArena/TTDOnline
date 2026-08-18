@@ -24,6 +24,21 @@ function genericDisplayName() {
   return `DieMaster${randomInt(10000, 100000)}`;
 }
 
+exports.getPlayerNameSetupState = onCall({ region: REGION, timeoutSeconds: 10 }, async (request) => {
+  const auth = requireAuth(request);
+  const [userSnap, socialSnap] = await Promise.all([
+    db.doc(`users/${auth.uid}`).get(),
+    db.doc(`users/${auth.uid}/game/social`).get(),
+  ]);
+  const user = userSnap.data() || {};
+  const social = socialSnap.data() || {};
+  return {
+    ok:true,
+    complete:user.nameSetupComplete === true || social.nameSetupComplete === true,
+    displayName:cleanDisplayName(social.displayName || user.displayName || auth.token.name || ''),
+  };
+});
+
 exports.setInitialPlayerName = onCall({ region: REGION, timeoutSeconds: 15 }, async (request) => {
   const auth = requireAuth(request);
   const useGeneric = request.data?.useGeneric === true;
