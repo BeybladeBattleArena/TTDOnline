@@ -11,7 +11,7 @@
 <body>
   <div class="boot">Preparing complete cloud game and dice catalog…</div>
   <script>
-    (()=>{
+    (async()=>{
       'use strict';
       const params=new URLSearchParams(location.search);
       const token=params.get('boot')||`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
@@ -22,8 +22,6 @@
         return url.pathname+url.search+url.hash;
       };
 
-      // Every same-origin runtime fetch is forced fresh. This makes release correctness independent
-      // of manually remembered ?v= numbers in patch files.
       const nativeFetch=window.fetch.bind(window);
       window.fetch=(input,init={})=>{
         const raw=typeof input==='string'||input instanceof URL ? String(input) : input?.url;
@@ -37,10 +35,22 @@
         return nativeFetch(input,init);
       };
 
-      const script=document.createElement('script');
-      script.src=window.__TTD_ASSET_URL('/online/game-loader.js');
-      script.async=false;
-      document.head.appendChild(script);
+      try{
+        const manifestResponse=await nativeFetch(window.__TTD_ASSET_URL('/assets/game-assets.json'),{cache:'no-store'});
+        if(!manifestResponse.ok) throw new Error(`asset manifest returned HTTP ${manifestResponse.status}`);
+        const manifest=await manifestResponse.json();
+        if(manifest?.schemaVersion!==1 || !manifest.assets) throw new Error('asset manifest schema is invalid');
+        window.__TTD_GAME_ASSETS=Object.freeze(manifest.assets);
+
+        const script=document.createElement('script');
+        script.src=window.__TTD_ASSET_URL('/online/game-loader.js');
+        script.async=false;
+        document.head.appendChild(script);
+      }catch(err){
+        console.error('Runtime asset bootstrap failed.',err);
+        document.querySelector('.boot').textContent='Could not load verified game assets. Reload and try again.';
+        window.parent?.postMessage({type:'ttd:bridge-sync-error',message:`Could not load verified game assets: ${err?.message||'unknown error'}`},location.origin);
+      }
     })();
   </script>
 </body>
