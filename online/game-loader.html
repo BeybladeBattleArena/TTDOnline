@@ -4,12 +4,44 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta id="ttd-online-game-bridge" data-mode="loader-v9">
-  <meta name="ttd-build" content="interaction-v14">
+  <meta name="ttd-build" content="release-integrity-v15">
   <title>Time To Die Online</title>
   <style>html,body{margin:0;width:100%;height:100%;background:#090b14;color:#e8e0c8;font-family:system-ui,sans-serif}body{display:flex;align-items:center;justify-content:center}.boot{opacity:.72;font-size:13px;letter-spacing:.02em;text-align:center;padding:24px}</style>
 </head>
 <body>
   <div class="boot">Preparing complete cloud game and dice catalog…</div>
-  <script src="/online/game-loader.js?v=9&build=14"></script>
+  <script>
+    (()=>{
+      'use strict';
+      const params=new URLSearchParams(location.search);
+      const token=params.get('boot')||`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+      window.__TTD_BUILD_TOKEN=token;
+      window.__TTD_ASSET_URL=(path)=>{
+        const url=new URL(path,location.origin);
+        if(url.origin===location.origin) url.searchParams.set('__ttd',token);
+        return url.pathname+url.search+url.hash;
+      };
+
+      // Every same-origin runtime fetch is forced fresh. This makes release correctness independent
+      // of manually remembered ?v= numbers in patch files.
+      const nativeFetch=window.fetch.bind(window);
+      window.fetch=(input,init={})=>{
+        const raw=typeof input==='string'||input instanceof URL ? String(input) : input?.url;
+        if(raw){
+          const url=new URL(raw,location.href);
+          if(url.origin===location.origin){
+            url.searchParams.set('__ttd',token);
+            return nativeFetch(url.href,{...init,cache:'no-store'});
+          }
+        }
+        return nativeFetch(input,init);
+      };
+
+      const script=document.createElement('script');
+      script.src=window.__TTD_ASSET_URL('/online/game-loader.js');
+      script.async=false;
+      document.head.appendChild(script);
+    })();
+  </script>
 </body>
 </html>
