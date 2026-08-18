@@ -100,7 +100,7 @@
       {label:'Cancel'},
       {label:'Save Name',kind:'gold',onClick:(value)=>{
         const name=String(value||'').trim();
-        if(!/^[A-Za-z0-9]{1,12}$/.test(name)){notice('Invalid Deck Name','Deck names must use 1 to 12 letters or numbers only.');return;}
+        if(name!==defaultName(index)&&!/^[A-Za-z0-9]{1,12}$/.test(name)){notice('Invalid Deck Name','Deck names must use 1 to 12 letters or numbers only.');return;}
         const requestId=`rename-${Date.now().toString(36)}-${++requestCounter}`;
         send('ttd:deck-v18-rename-request',{requestId,index,name});
       }},

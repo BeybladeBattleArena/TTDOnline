@@ -32,6 +32,7 @@ function storedDeckName(value, index) {
 function requestedDeckName(value, index) {
   if (value == null || value === '') return defaultDeckName(index);
   const name = cleanString(value, 12);
+  if (name === defaultDeckName(index)) return name;
   if (!CUSTOM_DECK_NAME.test(name)) {
     throw new HttpsError('invalid-argument', 'Deck names must use 1 to 12 letters or numbers only.');
   }
