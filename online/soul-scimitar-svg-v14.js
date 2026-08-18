@@ -1,27 +1,34 @@
-  /* ================= SOUL SCIMITAR EXACT SVG V14 =================
-     Uses the registered game asset exactly. File, viewBox, size, anchor, and rotation come from
-     assets/game-assets.json rather than being guessed independently in rendering code.
+  /* ================= SOUL SABER EXACT ASSET RUNTIME =================
+     Collection/shop glyph keeps the existing spectral icon.
+     Attack animation uses the separately registered user-provided Soul Saber artwork.
   */
-  const __ttdSoulAsset = window.__TTD_GAME_ASSETS?.soulScimitar;
-  if(!__ttdSoulAsset || __ttdSoulAsset.path !== '/assets/soul-scimitar-spectral.svg'){
-    throw new Error('Soul Scimitar asset contract is missing or invalid.');
+  const __ttdSoulIconAsset = window.__TTD_GAME_ASSETS?.soulScimitar;
+  const __ttdSoulAttackAsset = window.__TTD_GAME_ASSETS?.soulSaberAttack;
+  if(!__ttdSoulIconAsset || __ttdSoulIconAsset.path !== '/assets/soul-scimitar-spectral.svg'){
+    throw new Error('Soul Saber icon asset contract is missing or invalid.');
   }
-  const __ttdSoulIcon = __ttdSoulAsset.usage?.icon;
-  const __ttdSoulBattle = __ttdSoulAsset.usage?.battle;
-  if(!__ttdSoulIcon || !__ttdSoulBattle) throw new Error('Soul Scimitar usage contract is incomplete.');
+  if(!__ttdSoulAttackAsset || __ttdSoulAttackAsset.path !== '/assets/soul-saber-attack.svg'){
+    throw new Error('Soul Saber attack asset contract is missing or invalid.');
+  }
+  const __ttdSoulIconUsage = __ttdSoulIconAsset.usage?.icon;
+  const __ttdSoulBattle = __ttdSoulAttackAsset.usage?.battle;
+  if(!__ttdSoulIconUsage || !__ttdSoulBattle) throw new Error('Soul Saber usage contract is incomplete.');
 
-  const __TTD_SOUL_SCIMITAR_SVG_URL = typeof window.__TTD_ASSET_URL === 'function'
-    ? window.__TTD_ASSET_URL(__ttdSoulAsset.path)
-    : `${__ttdSoulAsset.path}?__ttd=${Date.now().toString(36)}`;
+  const __TTD_SOUL_ICON_URL = typeof window.__TTD_ASSET_URL === 'function'
+    ? window.__TTD_ASSET_URL(__ttdSoulIconAsset.path)
+    : `${__ttdSoulIconAsset.path}?__ttd=${Date.now().toString(36)}`;
+  const __TTD_SOUL_ATTACK_URL = typeof window.__TTD_ASSET_URL === 'function'
+    ? window.__TTD_ASSET_URL(__ttdSoulAttackAsset.path)
+    : `${__ttdSoulAttackAsset.path}?__ttd=${Date.now().toString(36)}`;
+
   const __ttdSoulBaseRenderGlyph = renderGlyph;
-  const __ttdSoulScimitarImage = new Image();
-  __ttdSoulScimitarImage.decoding = 'async';
-  __ttdSoulScimitarImage.src = __TTD_SOUL_SCIMITAR_SVG_URL;
+  const __ttdSoulSaberAttackImage = new Image();
+  __ttdSoulSaberAttackImage.decoding = 'async';
+  __ttdSoulSaberAttackImage.src = __TTD_SOUL_ATTACK_URL;
 
   renderGlyph = function renderGlyphWithExactSoulScimitar(key, color){
     if(key === 'scimitar'){
-      const [iconW,iconH]=__ttdSoulIcon.box;
-      return `<svg class="soulScimitarExactGlyph" viewBox="${__ttdSoulAsset.viewBox}" aria-hidden="true"><image href="${__TTD_SOUL_SCIMITAR_SVG_URL}" x="0" y="0" width="${iconW}" height="${iconH}" preserveAspectRatio="xMidYMid meet"/></svg>`;
+      return `<svg class="soulScimitarExactGlyph" viewBox="${__ttdSoulIconAsset.viewBox}" aria-hidden="true"><image href="${__TTD_SOUL_ICON_URL}" x="0" y="0" width="${__ttdSoulIconAsset.width}" height="${__ttdSoulIconAsset.height}" preserveAspectRatio="xMidYMid meet"/></svg>`;
     }
     return __ttdSoulBaseRenderGlyph(key, color);
   };
@@ -60,8 +67,8 @@
     ctx.closePath();
     ctx.fill();
 
-    if(__ttdSoulScimitarImage.complete && __ttdSoulScimitarImage.naturalWidth){
-      ctx.drawImage(__ttdSoulScimitarImage,-drawW*anchorX,-drawH*anchorY,drawW,drawH);
+    if(__ttdSoulSaberAttackImage.complete && __ttdSoulSaberAttackImage.naturalWidth){
+      ctx.drawImage(__ttdSoulSaberAttackImage,-drawW*anchorX,-drawH*anchorY,drawW,drawH);
     }
     ctx.restore();
   };
