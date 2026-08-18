@@ -94,25 +94,35 @@ for(const marker of [
 if(/#collectionGrid\{[^}]*overflow-y\s*:\s*auto/i.test(mobileBridge)) throw new Error('Mobile bridge may not re-enable direct collection scrolling.');
 
 for(const marker of [
-  '__TTD_COLLECTION_PORTRAIT_AUTHORITY_V17',
+  '__TTD_COLLECTION_PANEL_AUTHORITY_V18',
   '#deckScreen.active{',
-  'height:100%!important;max-height:100%!important',
-  '--ttd-card-w:clamp(58px,calc((100vw - 54px)/4),76px)',
-  '--ttd-card-h:min(76px,calc((100% - 16px)/3))',
-  'grid-template-columns:repeat(3,var(--ttd-card-w))',
-  'grid-auto-rows:var(--ttd-card-h)',
+  'grid-template-rows:auto auto auto minmax(0,1fr)',
+  '#ttdCollectionPanel{',
+  'grid-template-rows:auto minmax(0,1fr) auto',
+  'grid-template-columns:repeat(4,minmax(0,1fr))',
+  'grid-auto-rows:80px',
   '#collectionScrollRail{',
   '#ttdCollectionVisibleTrack{',
   '#ttdCollectionVisibleThumb{',
-  'position:relative!important;left:auto!important;right:auto!important;bottom:auto!important',
-  '#saveDeckBtn{',
+  '#ttdCollectionPanel #deckFooter{',
+  '#ttdCollectionPanel #saveDeckBtn{',
+  "save.textContent='Save Deck'",
+  "panel.appendChild(tools)",
+  "panel.appendChild(viewport)",
+  "panel.appendChild(footer)",
+  'attachInstanceCardEvents=function attachInstanceCardEventsV18',
+  'dragState.lastDist>MOVE_THRESHOLD',
+  'beginInstDrag(card,key,dragState.lastX,dragState.lastY)',
+  'showDieDetail(key,{collectionInstId:instId})',
   "grid.addEventListener('wheel',e=>e.preventDefault(),{passive:false})",
   "grid.addEventListener('touchmove',e=>e.preventDefault(),{passive:false})",
   "slider.dispatchEvent(new Event('input',{bubbles:true}))",
+  'assertPanel',
   'setTimeout(retry,0)',
-]) if(!portraitBridge.includes(marker)) throw new Error(`Missing self-contained portrait Collection authority marker: ${marker}`);
-if(/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(portraitBridge)) throw new Error('Final portrait authority may not stretch dice cards to fill three columns.');
-if(/attachInstanceCardEvents\s*=/.test(portraitBridge)) throw new Error('Final portrait authority must not become another die-gesture implementation.');
+]) if(!portraitBridge.includes(marker)) throw new Error(`Missing unified Collection panel authority marker: ${marker}`);
+if(/grid-template-columns:repeat\(3[^)]*\)/.test(portraitBridge)) throw new Error('Final Collection panel must render four dice across, not three.');
+if(/--ttd-card-h|min\(76px,calc\(\(100%/.test(portraitBridge)) throw new Error('Collection card height may not depend on percentage viewport math; cards must keep a stable small height.');
+if(/dragState\.scrolling|scrollHost\?\.scrollTop|startScroll-dy/.test(portraitBridge)) throw new Error('Collection die gestures may not implement scrolling; the visible rail is the only scroll control.');
 
 for(const needle of [
   '  /* ---------- DECK ---------- */\n  .deckTabs{',
@@ -151,4 +161,4 @@ for(const marker of [
 if(soulBridge.includes('Path2D(')) throw new Error('Soul Saber must use registered artwork, not a traced Path2D recreation.');
 if(/data:image|embedded raster|svgText\.match|URL\.createObjectURL/i.test(soulBridge)) throw new Error('Soul Saber runtime may not silently unwrap raster-wrapped SVGs.');
 
-console.log('V15 runtime verified: Collection portrait authority is self-contained, re-injected after the transformed document independently of the synchronous bridge chain, keeps small cards, exposes one visible scrollbar, and pins Save inside the iframe viewport.');
+console.log('V15 runtime verified: Search, Collection viewport, and Save Deck form one bounded portrait panel; four small dice fit across; the visible rail is the only scroll control; hold opens info and drag remains available for merges.');
