@@ -3,6 +3,7 @@ import { getAuth, onAuthStateChanged, reload } from 'https://www.gstatic.com/fir
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js';
 
 const REGION = 'us-central1';
+const NAMING_FEATURE_LAUNCH_MS = Date.parse('2026-08-18T02:10:00Z');
 const el = (id) => document.getElementById(id);
 let auth = null;
 let functions = null;
@@ -17,10 +18,14 @@ async function waitForApp() {
   throw new Error('Firebase did not initialize.');
 }
 
-function likelyJustCreated(user) {
+function shouldCheckOnboarding(user) {
   const created = Date.parse(user?.metadata?.creationTime || '');
   const signedIn = Date.parse(user?.metadata?.lastSignInTime || '');
-  return Number.isFinite(created) && Number.isFinite(signedIn) && Math.abs(signedIn-created) <= 5000;
+  if (!Number.isFinite(created)) return false;
+  const justCreated = Number.isFinite(signedIn) && Math.abs(signedIn-created) <= 5000;
+  // Accounts created after this feature launched remain eligible for the prompt until the
+  // server records completion, even if the browser closed during their first session.
+  return justCreated || created >= NAMING_FEATURE_LAUNCH_MS;
 }
 
 function cacheKey(uid) { return `ttd_name_onboarded_v9_${uid}`; }
@@ -102,7 +107,7 @@ function showNamePrompt(user, suggested='') {
 }
 
 async function maybeOnboard(user) {
-  if (!user || user.uid !== activeUid || isCached(user.uid) || !likelyJustCreated(user)) return;
+  if (!user || user.uid !== activeUid || isCached(user.uid) || !shouldCheckOnboarding(user)) return;
   try {
     const result = await httpsCallable(functions,'getPlayerNameSetupState')({});
     if (!user || user.uid !== activeUid) return;
