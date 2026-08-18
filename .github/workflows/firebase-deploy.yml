@@ -9,14 +9,15 @@ permissions:
   contents: read
   id-token: write
 
-# There is exactly one production deploy lane. A newer deploy always cancels an older one,
-# regardless of which change produced it.
 concurrency:
   group: firebase-production-deploy
   cancel-in-progress: true
 
 jobs:
   deploy:
+    # Direct/intermediate main commits never publish. Automatic production deploys require
+    # one deliberate finished release commit. Manual workflow_dispatch remains available.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
