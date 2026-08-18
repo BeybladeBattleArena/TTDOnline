@@ -1,5 +1,4 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
 const { randomInt } = require('node:crypto');
@@ -63,23 +62,4 @@ exports.setInitialPlayerName = onCall({ region: REGION, timeoutSeconds: 15 }, as
   ]);
 
   return { ok:true, displayName, generated:useGeneric };
-});
-
-// Friends already has a display-name editor. Keep that existing path authoritative too, so a
-// later rename is reflected in the compact account bar and Firebase Auth on the next session.
-exports.syncPlayerDisplayName = onDocumentWritten({
-  region:REGION,
-  document:'users/{uid}/game/social',
-  timeoutSeconds:15,
-}, async (event) => {
-  const beforeName = cleanDisplayName(event.data?.before?.data()?.displayName || '');
-  const afterName = cleanDisplayName(event.data?.after?.data()?.displayName || '');
-  if (!afterName || afterName === beforeName) return;
-  const uid = event.params.uid;
-  const now = FieldValue.serverTimestamp();
-  await Promise.all([
-    db.doc(`users/${uid}`).set({ displayName:afterName, nameSetupComplete:true, updatedAt:now }, { merge:true }),
-    db.doc(`publicProfiles/${uid}`).set({ schemaVersion:1, uid, displayName:afterName, updatedAt:now }, { merge:true }),
-    getAuth().updateUser(uid, { displayName:afterName }),
-  ]);
 });
