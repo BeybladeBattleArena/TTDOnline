@@ -176,4 +176,7 @@
   // Restore a manual preference only when not actively entering a battle.
   try { setCollapsed(localStorage.getItem('ttd_bar_collapsed_v1') === '1', false); } catch (_) { setCollapsed(false, false); }
   syncAuthBar();
+
+  // New-account naming is intentionally lazy: it never blocks the game loader or returning users.
+  import('/online/onboarding-client-v9.js?v=9').catch((err) => console.error('Player-name onboarding failed to load.', err));
 })();
