@@ -63,12 +63,19 @@ for(const name of fs.readdirSync(onlineDir)){
 const soulBridge=read('online/soul-scimitar-svg-v14.js');
 for(const marker of [
   'window.__TTD_GAME_ASSETS?.soulScimitar',
-  'window.__TTD_ASSET_URL(__ttdSoulAsset.path)',
+  'window.__TTD_GAME_ASSETS?.soulSaberAttack',
+  'window.__TTD_ASSET_URL(__ttdSoulIconAsset.path)',
+  'window.__TTD_ASSET_URL(__ttdSoulAttackAsset.path)',
   'const [drawW,drawH]=__ttdSoulBattle.box',
   'const [anchorX,anchorY]=__ttdSoulBattle.anchor || [0.5,0.5]',
   'rotationDegrees',
-]) if(!soulBridge.includes(marker)) fail(`Soul Scimitar runtime is not manifest-authoritative: ${marker}`);
-if(soulBridge.includes('Path2D(')) fail('Registered Soul Scimitar art may not be redrawn as Path2D.');
-if(/drawImage\([^\n]*,\s*-27\s*,\s*-27\s*,\s*54\s*,\s*54\s*\)/.test(soulBridge)) fail('Soul Scimitar render dimensions must come from the asset manifest, not hardcoded values.');
+  'ctx.drawImage(__ttdSoulSaberAttackImage'
+]) if(!soulBridge.includes(marker)) fail(`Soul Saber runtime is not manifest-authoritative: ${marker}`);
+if(soulBridge.includes('Path2D(')) fail('Registered Soul Saber art may not be redrawn as Path2D.');
+if(/drawImage\([^\n]*,\s*-27\s*,\s*-27\s*,\s*54\s*,\s*54\s*\)/.test(soulBridge)) fail('Soul Saber render dimensions must come from the asset manifest, not hardcoded values.');
+
+const attack=manifest.assets?.soulSaberAttack;
+if(!attack || attack.path!=='/assets/soul-saber-attack.svg') fail('Soul Saber attack asset must be separately registered.');
+if(JSON.stringify(attack.usage?.battle?.box)!=='[49,49]') fail('Soul Saber attack box must remain at the approved two-thirds visual scale.');
 
 console.log(`Release integrity verified: ${registeredPaths.size} registered assets, manifest-authoritative art geometry, cache-safe runtime loading, single production branch, and live-commit deployment verification.`);
