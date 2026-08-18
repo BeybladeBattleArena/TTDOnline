@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const ORIGIN=location.origin;
-  const GAME_PATH='/random-dice-game-33.html';
+  const GAME_PATH='/random-dice-game-33.html?v=33';
   const DICE_PATH='/dicefile.json?v=2';
   const BRIDGES=[
     '/online/dice-catalog-bridge-v7.js?v=7',
@@ -12,6 +12,7 @@
     '/online/merge-bridge-v6.js?v=6',
     '/online/run-ui-bridge-v6.js?v=6',
     '/online/refresh-bridge-v6.js?v=6',
+    '/online/mobile-input-bridge-v9.js?v=9',
   ];
   const IIFE_END_MARKER='\n})();\n</'+'script>';
   const DICE_START='  const DICE = {';
@@ -25,7 +26,7 @@
 
   function send(type,payload={}){window.parent.postMessage({type,...payload},ORIGIN);}
   async function loadText(url){
-    const response=await fetch(url,{cache:'no-store'});
+    const response=await fetch(url,{cache:'force-cache'});
     if(!response.ok)throw new Error(`${url} returned HTTP ${response.status}.`);
     return response.text();
   }
