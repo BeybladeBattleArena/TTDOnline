@@ -148,7 +148,7 @@
 
   function showClassLabel(anchor,newCls){
     const r=rectOf(anchor),cx=r.left+r.width/2;
-    const y=Math.max(58,r.top-7);
+    const y=Math.max(58,r.top-14);
     const label=document.createElement('div');
     label.className='ttdClassLabel';
     label.style.left=`${Math.max(54,Math.min(innerWidth-54,cx))}px`;
@@ -174,6 +174,7 @@
     for(let i=0;i<tileEls.length;i++){
       const tile=tileEls[i],die=state.board[i];if(!tile||!die||!die.pu)continue;
       tile.querySelector('.powerStarStack')?.remove();
+      const dieEl=tile.querySelector('.die');if(!dieEl)continue;
       const stack=document.createElement('div');stack.className='powerStarStack';
       const count=Math.max(0,Math.min(4,Number(die.pu)||0));
       for(let j=0;j<count;j++){
@@ -182,7 +183,7 @@
         star.style.opacity=String(.38+.62*((j+1)/count));star.style.zIndex=String(2+j);
         stack.appendChild(star);
       }
-      tile.appendChild(stack);
+      dieEl.appendChild(stack);
     }
   }
 
@@ -227,6 +228,7 @@
 
       const cleanup=()=>{
         if(dragState.rafId)cancelAnimationFrame(dragState.rafId);
+        dragState.rafId=null;
         if(dragState.spinnerEl?.parentElement)dragState.spinnerEl.remove();
         card.classList.remove('lifting');
         scrollHost?.classList.remove('ttdManualScrolling');
@@ -267,7 +269,10 @@
         if(dragState.lifted){
           dragState.moved=true;cleanup();beginInstDrag(card,key,mv.clientX,mv.clientY);
         }else{
-          dragState.scrolling=true;dragState.cancelled=true;cleanup();scrollHost?.classList.add('ttdManualScrolling');
+          // Before the hold activates, this is a collection scroll. We still own the pointer so
+          // Chrome cannot steal it later; update scrollTop ourselves. Once lifted, this branch is
+          // no longer reachable, so an actual die drag can never scroll the collection.
+          dragState.scrolling=true;dragState.moved=true;cleanup();scrollHost?.classList.add('ttdManualScrolling');
           if(scrollHost)scrollHost.scrollTop=startScroll-dy;
         }
       };
@@ -276,7 +281,7 @@
         finishListeners();cleanup();window.__dragKey=null;
         document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
         if(instDrag===dragState&&dragState.active)endInstDrag(up.clientX,up.clientY);
-        else if(instDrag===dragState&&!dragState.cancelled&&!dragState.moved&&!dragState.detailFired&&!dragState.lifted)quickEquip(key,instId);
+        else if(instDrag===dragState&&!dragState.cancelled&&!dragState.scrolling&&!dragState.moved&&!dragState.detailFired&&!dragState.lifted)quickEquip(key,instId);
         if(instDrag===dragState)instDrag=null;
       };
       const onCancel=()=>{
@@ -367,6 +372,17 @@
     if(!launch||currentDeckIsFull())return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
     showFullDeckNotice('play');
+  },true);
+
+  // Do not let the player switch away from a half-built active deck either. Otherwise changing
+  // tabs could turn that draft into a later cloud save when another deck becomes active.
+  document.addEventListener('click',event=>{
+    const tab=event.target?.closest?.('#deckTabs .deckTab');
+    if(!tab||currentDeckIsFull())return;
+    const targetIdx=Array.prototype.indexOf.call(tab.parentElement.children,tab);
+    if(targetIdx===account.activeDeckIdx)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    showFullDeckNotice('leave');
   },true);
 
   renderDeckScreen();
