@@ -5,6 +5,7 @@
   const DICE_PATH='/dicefile.json?v=2';
   const BRIDGES=[
     '/online/dice-catalog-bridge-v7.js?v=7',
+    '/online/soul-scimitar-art-v13.js?v=13',
     '/online/slither-vine-bridge-v8.js?v=8',
     '/online/game-bridge-inner.js?v=4',
     '/online/progression-bridge-v5.js?v=5',
