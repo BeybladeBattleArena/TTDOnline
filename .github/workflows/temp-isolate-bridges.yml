@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - agent/deck-bridge-isolation
+  pull_request:
+    branches:
+      - main
 permissions:
   contents: write
 jobs:
