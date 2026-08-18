@@ -30,8 +30,8 @@ jobs:
 
           p=Path('scripts/check-deck-social-v18.mjs')
           s=p.read_text()
-          old="""const isolationContext={\n  console:{error(){}},\n  send(){},\n  BRIDGES:['synthetic-first-bridge','synthetic-deck-editor'],\n  sources:[\"(()=>{throw new Error('synthetic bridge failure');})();\",\"globalThis.__deckEditorSurvived=true;\"],\n};"""
-          new="""const isolationContext={\n  console:{error(){}},\n  window:{parent:{postMessage(){}}},\n  location:{origin:'https://example.invalid'},\n  BRIDGES:['synthetic-first-bridge','synthetic-deck-editor'],\n  sources:[\"(()=>{throw new Error('synthetic bridge failure');})();\",\"globalThis.__deckEditorSurvived=true;\"],\n};"""
+          old="const isolationContext={console:{error(){}},send(){}};"
+          new="const isolationContext={console:{error(){}},window:{parent:{postMessage(){}}},location:{origin:'https://example.invalid'}};"
           if old not in s: raise SystemExit('synthetic isolation context marker missing')
           s=s.replace(old,new,1)
           anchor="requireMarkers(loader,['const isolatedSources=sources.map','failed without blocking later bridges.','bridge-runtime-error'],'bridge isolation');\n"
