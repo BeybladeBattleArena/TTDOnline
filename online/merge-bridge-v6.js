@@ -16,6 +16,16 @@
     if(m.type!=='ttd:v6-merge-result'||!pendingMerge||m.requestId!==pendingMerge.requestId)return;
     const p=pendingMerge;pendingMerge=null;const target=m.target?.instance;if(!target?.id||target.id!==p.targetId){showNotice('Class Merge','The server returned an invalid merge result. Reloading will restore the cloud account.');send('ttd:v6-refresh-request');return;}
     account.owned[p.key]=(account.owned[p.key]||[]).filter(inst=>inst.id!==p.sourceId);let survivor=findInstance(p.key,p.targetId);if(!survivor){survivor={id:p.targetId,cls:target.cls,enchants:[null,null,null,null]};account.owned[p.key].push(survivor);}survivor.cls=target.cls;survivor.enchants=[null,null,null,null];applyDecks(m.decks||[]);account.favoriteDice=favs(m.favorites?.instanceIds||[]);const returned=addJewels(m.returnedJewels||[]);
-    const oldClass=Number(m.oldClass||target.cls-1),newClass=Number(m.newClass||target.cls);playClassUpAnimation(p.key,oldClass,newClass,p.targetCard).then(()=>{renderDeckScreen();if(typeof renderInventoryScreen==='function')renderInventoryScreen();if(returned.length){const names=returned.map(j=>jewelDisplayName(j.jewelId,j.tier));setTimeout(()=>showNotice('Jewels Returned',`${returned.length} socketed jewel${returned.length===1?' was':'s were'} returned to Inventory before ${DICE[p.key].name} merged to Class ${newClass}.<br><br><strong>${names.join(', ')}</strong>`),1250);}send('ttd:v6-refresh-request');});
+    const oldClass=Number(m.oldClass||target.cls-1),newClass=Number(m.newClass||target.cls);
+
+    // The authoritative transaction is complete now. Update the collection immediately instead
+    // of leaving the old pair on-screen for the duration of the celebration animation.
+    renderDeckScreen();
+    if(typeof renderInventoryScreen==='function'&&document.getElementById('inventoryScreen')?.classList.contains('active'))renderInventoryScreen();
+
+    playClassUpAnimation(p.key,oldClass,newClass,p.targetCard).then(()=>{
+      if(returned.length){const names=returned.map(j=>jewelDisplayName(j.jewelId,j.tier));setTimeout(()=>showNotice('Jewels Returned',`${returned.length} socketed jewel${returned.length===1?' was':'s were'} returned to Inventory before ${DICE[p.key].name} merged to Class ${newClass}.<br><br><strong>${names.join(', ')}</strong>`),260);}
+      send('ttd:v6-refresh-request');
+    });
   });
 })();
