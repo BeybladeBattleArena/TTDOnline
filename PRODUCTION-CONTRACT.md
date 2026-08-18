@@ -13,10 +13,12 @@
 
 - `assets/game-assets.json` is the source of truth for registered game art.
 - Runtime rendering must use the exact registered file. Do not redraw, trace, approximate, rasterize, or substitute an asset unless explicitly requested.
+- Registered SVG game assets must remain pure vector. `<image>` elements and embedded `data:image` raster content are forbidden.
+- Runtime code must not silently unwrap, repair, or substitute an invalid registered asset. Invalid art must fail release checks instead of degrading into another representation.
 - ViewBox, render box, anchor, and rotation come from the asset contract rather than being guessed independently in rendering code.
 - Runtime asset URLs use the build-token helper and Firebase serves active-development game assets with `no-store`, so successful releases cannot keep an older cached SVG/image.
 - New user-provided art must be registered in the asset manifest before it is wired into gameplay.
 
 ## Release rule
 
-`npm run check` must pass before Hosting deploys. The release-integrity checks fail closed if production branch rules, live-build verification, caching protections, or registered-asset rules are removed.
+`npm run check` must pass before Hosting deploys. The release-integrity checks fail closed if production branch rules, deliberate `[release]` gating, live-build verification, caching protections, pure-vector SVG requirements, or registered-asset rules are removed.

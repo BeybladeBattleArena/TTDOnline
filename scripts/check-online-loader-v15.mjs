@@ -83,17 +83,21 @@ if(!iconContract || iconContract.path!=='/assets/soul-scimitar-spectral.svg') th
 if(!attackContract || attackContract.path!=='/assets/soul-saber-attack.svg') throw new Error('Soul Saber attack asset manifest entry is missing.');
 if(JSON.stringify(attackContract.usage?.battle?.box)!=='[49,49]') throw new Error('Soul Saber attack size is not the approved two-thirds visual scale.');
 if(!soulIconSvg.includes('viewBox="0 0 128 128"') || !soulIconSvg.includes('#FAE4D5')) throw new Error('Existing Soul Saber icon asset changed unexpectedly.');
-if(!soulAttackSvg.includes('viewBox="0 0 128 128"') || !soulAttackSvg.includes('data:image/png;base64,')) throw new Error('Outlined transparent Soul Saber attack SVG is missing its embedded exact artwork.');
+if(!soulAttackSvg.includes('viewBox="0 0 128 128"')) throw new Error('Soul Saber attack SVG lost its 128×128 viewBox.');
+if(/<image\b|data:image/i.test(soulAttackSvg)) throw new Error('Soul Saber attack SVG must remain pure vector and may not embed raster artwork.');
+if((soulAttackSvg.match(/<path\b/g)||[]).length<20) throw new Error('Soul Saber attack SVG lost expected vector detail.');
 for(const marker of [
   'window.__TTD_GAME_ASSETS?.soulScimitar',
   'window.__TTD_GAME_ASSETS?.soulSaberAttack',
   'window.__TTD_ASSET_URL(__ttdSoulIconAsset.path)',
   'window.__TTD_ASSET_URL(__ttdSoulAttackAsset.path)',
+  '__ttdSoulSaberAttackImage.src = __TTD_SOUL_ATTACK_URL',
   'renderGlyphWithExactSoulScimitar',
   'drawGhostScimitarExactSvg',
   'const [drawW,drawH]=__ttdSoulBattle.box',
   'ctx.drawImage(__ttdSoulSaberAttackImage,-drawW*anchorX,-drawH*anchorY,drawW,drawH)',
 ]) if(!soulBridge.includes(marker)) throw new Error(`Soul Saber asset bridge is missing ${marker}.`);
 if(soulBridge.includes('Path2D(')) throw new Error('Soul Saber must use registered artwork, not a traced Path2D recreation.');
+if(/data:image|embedded raster|svgText\.match|URL\.createObjectURL/i.test(soulBridge)) throw new Error('Soul Saber runtime may not silently unwrap raster-wrapped SVGs.');
 
-console.log('V15 runtime verified: source transformation is intact, runtime loads are fresh, Soul Saber icon remains unchanged, and the outlined transparent attack asset is isolated at the approved two-thirds visual scale.');
+console.log('V15 runtime verified: source transformation is intact, runtime loads are fresh, Soul Saber icon remains unchanged, and the pure-vector transparent attack asset is isolated at the approved two-thirds visual scale.');
