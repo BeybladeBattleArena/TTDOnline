@@ -17,6 +17,16 @@
         "battle": { "box": [54, 54], "anchor": [0.5, 0.5], "rotationDegrees": 0 }
       }
     },
+    "soulSaberAttack": {
+      "path": "/assets/soul-saber-attack.svg",
+      "format": "svg",
+      "viewBox": "0 0 128 128",
+      "width": 128,
+      "height": 128,
+      "usage": {
+        "battle": { "box": [49, 49], "anchor": [0.5, 0.5], "rotationDegrees": 0 }
+      }
+    },
     "soulScimitarMaster": {
       "path": "/assets/soul-scimitar-traced-master.svg",
       "format": "svg",
