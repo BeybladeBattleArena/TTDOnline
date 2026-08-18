@@ -6,6 +6,7 @@ const loader=fs.readFileSync('online/game-loader.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 const soulSvg=fs.readFileSync('assets/soul-scimitar-spectral.svg','utf8');
 const soulBridge=fs.readFileSync('online/soul-scimitar-svg-v14.js','utf8');
+const assetManifest=JSON.parse(fs.readFileSync('assets/game-assets.json','utf8'));
 const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
 
 const bridges=[
@@ -26,8 +27,8 @@ new vm.Script(loader,{filename:'online/game-loader.js'});
 
 if(!loaderHtml.includes('data-mode="loader-v9"')) throw new Error('Loader contract marker must remain loader-v9.');
 if(!loaderHtml.includes('name="ttd-build" content="release-integrity-v15"')) throw new Error('Loader HTML is not marked release-integrity-v15.');
-for(const marker of ['__TTD_BUILD_TOKEN','__TTD_ASSET_URL',"cache:'no-store'","window.__TTD_ASSET_URL('/online/game-loader.js')"]){
-  if(!loaderHtml.includes(marker)) throw new Error(`Loader freshness protection missing: ${marker}`);
+for(const marker of ['__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS',"cache:'no-store'","/assets/game-assets.json","window.__TTD_ASSET_URL('/online/game-loader.js')"]){
+  if(!loaderHtml.includes(marker)) throw new Error(`Loader freshness/asset protection missing: ${marker}`);
 }
 if(!loader.includes("const GAME_PATH='/random-dice-game-33.html?v=34'")) throw new Error('Base runtime source contract changed unexpectedly.');
 
@@ -75,15 +76,22 @@ if(!match) throw new Error('Could not locate V14 collection pointer replacement.
 new vm.Script(match[1].replace(/\\n/g,'\n'),{filename:'inserted-mobile-deck-v14.js'});
 
 if(!catalog.dice?.soulscimitar || catalog.dice.soulscimitar.special?.kind!=='soulScimitar') throw new Error('Soul Scimitar catalog definition is missing.');
+const soulContract=assetManifest.assets?.soulScimitar;
+if(!soulContract || soulContract.path!=='/assets/soul-scimitar-spectral.svg') throw new Error('Soul Scimitar asset manifest entry is missing.');
+if(soulContract.viewBox!=='0 0 128 128' || soulContract.width!==128 || soulContract.height!==128) throw new Error('Soul Scimitar asset dimensions changed without updating the contract.');
+if(!Array.isArray(soulContract.usage?.battle?.box) || soulContract.usage.battle.box.length!==2) throw new Error('Soul Scimitar battle render box is missing.');
+if(!Array.isArray(soulContract.usage?.battle?.anchor) || soulContract.usage.battle.anchor.length!==2) throw new Error('Soul Scimitar battle anchor is missing.');
 if(!soulSvg.includes('viewBox="0 0 128 128"') || !soulSvg.includes('#FAE4D5') || !soulSvg.includes('fill-opacity=".64"')){
   throw new Error('Approved Soul Scimitar SVG no longer has the expected spectral blade artwork.');
 }
 for(const marker of [
-  "__TTD_ASSET_URL('/assets/soul-scimitar-spectral.svg')",
+  'window.__TTD_GAME_ASSETS?.soulScimitar',
+  'window.__TTD_ASSET_URL(__ttdSoulAsset.path)',
   'renderGlyphWithExactSoulScimitar',
   'drawGhostScimitarExactSvg',
-  'ctx.drawImage(__ttdSoulScimitarImage',
-]) if(!soulBridge.includes(marker)) throw new Error(`Exact Soul Scimitar SVG bridge is missing ${marker}.`);
+  'const [drawW,drawH]=__ttdSoulBattle.box',
+  'ctx.drawImage(__ttdSoulScimitarImage,-drawW*anchorX,-drawH*anchorY,drawW,drawH)',
+]) if(!soulBridge.includes(marker)) throw new Error(`Exact Soul Scimitar asset bridge is missing ${marker}.`);
 if(soulBridge.includes('Path2D(')) throw new Error('Soul Scimitar must use the approved SVG, not a traced Path2D recreation.');
 
-console.log('V15 runtime verified: source transformation is intact, runtime loads are freshness-protected, and Soul Scimitar uses the canonical SVG asset path.');
+console.log('V15 runtime verified: source transformation is intact, runtime loads are fresh, and Soul Scimitar file/size/anchor/rotation are manifest-authoritative.');
