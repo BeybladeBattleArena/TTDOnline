@@ -4,7 +4,8 @@ import vm from 'node:vm';
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
-const soulSvg=fs.readFileSync('assets/soul-scimitar-spectral.svg','utf8');
+const soulIconSvg=fs.readFileSync('assets/soul-scimitar-spectral.svg','utf8');
+const soulAttackSvg=fs.readFileSync('assets/soul-saber-attack.svg','utf8');
 const soulBridge=fs.readFileSync('online/soul-scimitar-svg-v14.js','utf8');
 const assetManifest=JSON.parse(fs.readFileSync('assets/game-assets.json','utf8'));
 const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
@@ -75,23 +76,24 @@ const match=loader.match(/const replacement=`([\s\S]*?)`;\n    source=replaceSec
 if(!match) throw new Error('Could not locate V14 collection pointer replacement.');
 new vm.Script(match[1].replace(/\\n/g,'\n'),{filename:'inserted-mobile-deck-v14.js'});
 
-if(!catalog.dice?.soulscimitar || catalog.dice.soulscimitar.special?.kind!=='soulScimitar') throw new Error('Soul Scimitar catalog definition is missing.');
-const soulContract=assetManifest.assets?.soulScimitar;
-if(!soulContract || soulContract.path!=='/assets/soul-scimitar-spectral.svg') throw new Error('Soul Scimitar asset manifest entry is missing.');
-if(soulContract.viewBox!=='0 0 128 128' || soulContract.width!==128 || soulContract.height!==128) throw new Error('Soul Scimitar asset dimensions changed without updating the contract.');
-if(!Array.isArray(soulContract.usage?.battle?.box) || soulContract.usage.battle.box.length!==2) throw new Error('Soul Scimitar battle render box is missing.');
-if(!Array.isArray(soulContract.usage?.battle?.anchor) || soulContract.usage.battle.anchor.length!==2) throw new Error('Soul Scimitar battle anchor is missing.');
-if(!soulSvg.includes('viewBox="0 0 128 128"') || !soulSvg.includes('#FAE4D5') || !soulSvg.includes('fill-opacity=".64"')){
-  throw new Error('Approved Soul Scimitar SVG no longer has the expected spectral blade artwork.');
-}
+if(!catalog.dice?.soulscimitar || catalog.dice.soulscimitar.special?.kind!=='soulScimitar') throw new Error('Soul Saber catalog definition is missing.');
+const iconContract=assetManifest.assets?.soulScimitar;
+const attackContract=assetManifest.assets?.soulSaberAttack;
+if(!iconContract || iconContract.path!=='/assets/soul-scimitar-spectral.svg') throw new Error('Soul Saber icon asset manifest entry is missing.');
+if(!attackContract || attackContract.path!=='/assets/soul-saber-attack.svg') throw new Error('Soul Saber attack asset manifest entry is missing.');
+if(JSON.stringify(attackContract.usage?.battle?.box)!=='[49,49]') throw new Error('Soul Saber attack size is not the approved two-thirds visual scale.');
+if(!soulIconSvg.includes('viewBox="0 0 128 128"') || !soulIconSvg.includes('#FAE4D5')) throw new Error('Existing Soul Saber icon asset changed unexpectedly.');
+if(!soulAttackSvg.includes('viewBox="0 0 128 128"') || !soulAttackSvg.includes('data:image/png;base64,')) throw new Error('Outlined transparent Soul Saber attack SVG is missing its embedded exact artwork.');
 for(const marker of [
   'window.__TTD_GAME_ASSETS?.soulScimitar',
-  'window.__TTD_ASSET_URL(__ttdSoulAsset.path)',
+  'window.__TTD_GAME_ASSETS?.soulSaberAttack',
+  'window.__TTD_ASSET_URL(__ttdSoulIconAsset.path)',
+  'window.__TTD_ASSET_URL(__ttdSoulAttackAsset.path)',
   'renderGlyphWithExactSoulScimitar',
   'drawGhostScimitarExactSvg',
   'const [drawW,drawH]=__ttdSoulBattle.box',
-  'ctx.drawImage(__ttdSoulScimitarImage,-drawW*anchorX,-drawH*anchorY,drawW,drawH)',
-]) if(!soulBridge.includes(marker)) throw new Error(`Exact Soul Scimitar asset bridge is missing ${marker}.`);
-if(soulBridge.includes('Path2D(')) throw new Error('Soul Scimitar must use the approved SVG, not a traced Path2D recreation.');
+  'ctx.drawImage(__ttdSoulSaberAttackImage,-drawW*anchorX,-drawH*anchorY,drawW,drawH)',
+]) if(!soulBridge.includes(marker)) throw new Error(`Soul Saber asset bridge is missing ${marker}.`);
+if(soulBridge.includes('Path2D(')) throw new Error('Soul Saber must use registered artwork, not a traced Path2D recreation.');
 
-console.log('V15 runtime verified: source transformation is intact, runtime loads are fresh, and Soul Scimitar file/size/anchor/rotation are manifest-authoritative.');
+console.log('V15 runtime verified: source transformation is intact, runtime loads are fresh, Soul Saber icon remains unchanged, and the outlined transparent attack asset is isolated at the approved two-thirds visual scale.');
