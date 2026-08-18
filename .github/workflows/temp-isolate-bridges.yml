@@ -38,7 +38,7 @@ jobs:
 
           p=Path('scripts/check-online-loader-v15.mjs')
           s=p.read_text()
-          marker="const loader = fs.readFileSync('online/game-loader.js','utf8');"
+          marker="const loader=fs.readFileSync('online/game-loader.js','utf8');"
           if marker not in s: raise SystemExit('loader checker marker missing')
           addition="\nif(!loader.includes('const isolatedSources=sources.map') || !loader.includes('failed without blocking later bridges.')) throw new Error('Injected online bridges are not runtime-isolated; one bridge could block later bridges such as Deck Editor.');\n"
           if addition.strip() not in s:
