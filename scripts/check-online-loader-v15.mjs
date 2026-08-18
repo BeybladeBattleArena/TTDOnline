@@ -4,6 +4,7 @@ import vm from 'node:vm';
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
+const mobileBridge=fs.readFileSync('online/mobile-input-bridge-v9.js','utf8');
 const soulIconSvg=fs.readFileSync('assets/soul-scimitar-spectral.svg','utf8');
 const soulAttackSvg=fs.readFileSync('assets/soul-saber-attack.svg','utf8');
 const soulBridge=fs.readFileSync('online/soul-scimitar-svg-v14.js','utf8');
@@ -63,6 +64,26 @@ for(const marker of [
   'transformed=installMobileDeckRuntime(transformed)',
 ]) if(!loader.includes(marker)) throw new Error(`Missing mobile deck runtime marker: ${marker}`);
 
+for(const marker of [
+  '#collectionViewport{',
+  'grid-template-columns:minmax(0,1fr) 34px',
+  'grid-template-columns:repeat(3,minmax(0,1fr))',
+  'grid-auto-rows:calc((100% - 20px)/3)',
+  'overflow:hidden!important',
+  'touch-action:none!important',
+  '#collectionScrollSlider{writing-mode:vertical-lr',
+  '#deckFooter{grid-row:6',
+  'function installCollectionSlider(grid)',
+  "slider.addEventListener('input'",
+  'grid.scrollTop = max * ((Number(slider.value) || 0) / 1000)',
+  "grid.addEventListener('wheel', (event) => event.preventDefault(), {passive:false})",
+  "grid.addEventListener('touchmove', (event) => event.preventDefault(), {passive:false})",
+  'if (sliderOwnsScroll)',
+  'grid.scrollTop = lastAllowedScrollTop',
+  'installCollectionSlider(collectionGrid)',
+]) if(!mobileBridge.includes(marker)) throw new Error(`Missing 3x3 slider-only collection marker: ${marker}`);
+if(/#collectionGrid\{[^}]*overflow-y\s*:\s*auto/i.test(mobileBridge)) throw new Error('Final collection bridge may not re-enable direct collection scrolling.');
+
 for(const needle of [
   '  /* ---------- DECK ---------- */\n  .deckTabs{',
   '  #collectionGrid{flex:1; padding:12px; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-content:start;}',
@@ -100,4 +121,4 @@ for(const marker of [
 if(soulBridge.includes('Path2D(')) throw new Error('Soul Saber must use registered artwork, not a traced Path2D recreation.');
 if(/data:image|embedded raster|svgText\.match|URL\.createObjectURL/i.test(soulBridge)) throw new Error('Soul Saber runtime may not silently unwrap raster-wrapped SVGs.');
 
-console.log('V15 runtime verified: source transformation is intact, runtime loads are fresh, Soul Saber icon remains unchanged, and the pure-vector transparent attack asset is isolated at the approved two-thirds visual scale.');
+console.log('V15 runtime verified: source transformation is intact, collection is a fixed 3x3 with slider-only scrolling and always-visible Save footer, runtime loads are fresh, and registered Soul Saber art remains pure vector.');
