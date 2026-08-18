@@ -2,10 +2,11 @@
   'use strict';
 
   const el = (id) => document.getElementById(id);
-  const bar = el('onlineBar');
   const collapseBtn = el('barCollapseBtn');
   const accountBtn = el('accountDropdownBtn');
   const menu = el('accountDropdown');
+  const signedIn = el('signedIn');
+  const signedOutBrand = el('signedOutBrand');
   const redeemMenuBtn = el('redeemCodeMenuBtn');
   const redeemModal = el('redeemModal');
   const redeemClose = el('redeemModalClose');
@@ -30,10 +31,21 @@
       collapseBtn.setAttribute('aria-label', collapsed ? 'Show account bar' : 'Hide account bar');
       collapseBtn.title = collapsed ? 'Show account bar' : 'Hide account bar';
     }
+    if (menu) menu.style.top = collapsed ? '18px' : (innerWidth <= 520 ? '39px' : '41px');
     if (persist) {
       try { localStorage.setItem('ttd_bar_collapsed_v1', collapsed ? '1' : '0'); } catch (_) {}
     }
     if (collapsed) closeAccountMenu();
+  }
+
+  function syncAuthBar() {
+    const authed = !!signedIn && !signedIn.hidden;
+    if (signedOutBrand) signedOutBrand.hidden = authed;
+    if (collapseBtn) collapseBtn.hidden = !authed;
+    if (!authed) {
+      closeAccountMenu();
+      setCollapsed(false, false);
+    }
   }
 
   function openAccountMenu() {
@@ -103,6 +115,13 @@
     }).observe(v6Modal, {childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
   }
 
+  if (signedIn) {
+    new MutationObserver(syncAuthBar).observe(signedIn, {attributes:true,attributeFilter:['hidden']});
+  }
+  window.addEventListener('resize', () => {
+    if (menu) menu.style.top = collapsed ? '18px' : (innerWidth <= 520 ? '39px' : '41px');
+  }, {passive:true});
+
   // Hide the bar automatically while an actual battle is running. It no longer steals vertical
   // gameplay space, and the small chevron remains available if the player wants the account HUD.
   window.addEventListener('message', (event) => {
@@ -156,4 +175,5 @@
 
   // Restore a manual preference only when not actively entering a battle.
   try { setCollapsed(localStorage.getItem('ttd_bar_collapsed_v1') === '1', false); } catch (_) { setCollapsed(false, false); }
+  syncAuthBar();
 })();
