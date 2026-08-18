@@ -16,14 +16,17 @@ const bridges=[
   'online/merge-bridge-v6.js',
   'online/run-ui-bridge-v6.js',
   'online/refresh-bridge-v6.js',
+  'online/mobile-input-bridge-v9.js',
+  'online/interaction-effects-v10.js',
+  'online/interaction-fixes-v11.js',
 ];
 
 for(const path of bridges) new vm.Script(fs.readFileSync(path,'utf8'),{filename:path});
 new vm.Script(loader,{filename:'online/game-loader.js'});
 
-if(!loaderHtml.includes('data-mode="loader-v8"')) throw new Error('Online loader HTML is not marked loader-v8.');
-if(!loaderHtml.includes('/online/game-loader.js?v=8')) throw new Error('Online loader HTML is not pinned to v8.');
-if(catalog.schemaVersion!==1 || !catalog.dice || !catalog.dice.soulscimitar || !catalog.dice.slithervine) throw new Error('dicefile.json is missing the v8 custom dice catalog.');
+if(!loaderHtml.includes('data-mode="loader-v9"')) throw new Error('Online loader HTML is not marked loader-v9.');
+if(!loaderHtml.includes('/online/game-loader.js?v=9')) throw new Error('Online loader HTML is not pinned to v9.');
+if(catalog.schemaVersion!==1 || !catalog.dice || !catalog.dice.soulscimitar || !catalog.dice.slithervine) throw new Error('dicefile.json is missing the custom dice catalog.');
 if(Object.keys(catalog.dice).length<37) throw new Error('dicefile.json unexpectedly lost legacy dice definitions.');
 if(JSON.stringify(generated.dice)!==JSON.stringify(catalog.dice)) throw new Error('functions/dicefile.generated.json is not synchronized with dicefile.json.');
 
@@ -36,6 +39,9 @@ const expectedBridgeUrls=[
   '/online/merge-bridge-v6.js?v=6',
   '/online/run-ui-bridge-v6.js?v=6',
   '/online/refresh-bridge-v6.js?v=6',
+  '/online/mobile-input-bridge-v9.js?v=9',
+  '/online/interaction-effects-v10.js?v=10',
+  '/online/interaction-fixes-v11.js?v=11',
 ];
 for(const url of expectedBridgeUrls) if(!loader.includes(url)) throw new Error(`Loader does not include ${url}.`);
 if(!loader.includes("const DICE_PATH='/dicefile.json?v=2'")) throw new Error('Loader is not fetching canonical dicefile v2.');
@@ -94,7 +100,7 @@ const startScript=transformed.lastIndexOf('<script>',idx);
 const endScript=transformed.indexOf('</script>',idx);
 if(startScript<0||endScript<0) throw new Error('Could not isolate the composed v33 runtime script.');
 const runtime=transformed.slice(startScript+'<script>'.length,endScript);
-new vm.Script(runtime,{filename:'composed-v33-online-v8.js'});
+new vm.Script(runtime,{filename:'composed-v33-online-v9.js'});
 
 for(const required of [
   'const DICE = __TTD_DICEFILE.dice;',
@@ -114,6 +120,8 @@ for(const required of [
   "send('ttd:v6-ready'",
   'onlineV6Merge',
   'onlineEnchantAttempt',
+  'attachInstanceCardEventsV11',
+  'ttdDragLocked',
 ]) if(!runtime.includes(required)) throw new Error(`Composed runtime is missing ${required}.`);
 
 const soul=catalog.dice.soulscimitar;
@@ -137,4 +145,4 @@ const main=fs.readFileSync('functions/main-v6.js','utf8');
 if(!main.includes("require('./catalog-gacha-v7')")) throw new Error('Cloud Functions main is not loading catalog gacha.');
 if(main.lastIndexOf('...catalogGacha')<main.lastIndexOf('...singleplayer')) throw new Error('Catalog gacha must override earlier gacha exports.');
 
-console.log(`Online v8 composition is syntactically valid with ${Object.keys(catalog.dice).length} canonical dice, including Soul Scimitar and Slither Vine.`);
+console.log(`Online v9 composition is syntactically valid with ${Object.keys(catalog.dice).length} canonical dice, including Soul Scimitar and Slither Vine.`);
