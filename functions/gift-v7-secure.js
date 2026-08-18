@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
+const catalog = require('./dicefile.generated.json');
 
 const db = getFirestore();
 const REGION = 'us-central1';
@@ -9,12 +10,11 @@ const JEWELS = new Set([
   'power','cooldown','physDef','specDef','hp','critChance','critBoost','spGen','experience','luck','insight','potency',
   ...ELEMENTS.map((element) => `elem_${element}`),
 ]);
-const DICE = new Map([
-  ...['fire','ice','wind','poison','broken'].map((key) => [key,'common']),
-  ...['electric','iron','arrow','light','crack','magnet','shuriken'].map((key) => [key,'rare']),
-  ...['laser','teleport','mine','mimic','absorb','goldrush','blackwind','bubble','haunt','bubblebeam','devilshadow'].map((key) => [key,'unique']),
-  ...['growth','joker','gun','blizzard','nuclear','luckylucky','heavensfist','asclepius','comet','hitman','crossinggate','bruteforceblizzard','soulscimitar'].map((key) => [key,'legendary']),
-]);
+const DICE = new Map(
+  Object.entries(catalog.dice || {})
+    .filter(([, die]) => die && typeof die.rarity === 'string')
+    .map(([key, die]) => [key, die.rarity]),
+);
 
 // Readable development fixtures. These are intentionally not secret.
 const DEV_CODES = Object.freeze({
@@ -36,6 +36,13 @@ const DEV_CODES = Object.freeze({
   'TTD-SOUL-C5': { label:'Soul Scimitar C5 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:5 }] } },
   'TTD-SOUL-C6': { label:'Soul Scimitar C6 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:6 }] } },
   'TTD-SOUL-C7': { label:'Soul Scimitar C7 Test Grant', reward:{ dice:[{ key:'soulscimitar', cls:7 }] } },
+  'TTD-SLITHER-C1': { label:'Slither Vine C1 Test Grant', reward:{ dice:[{ key:'slithervine', cls:1 }] } },
+  'TTD-SLITHER-C2': { label:'Slither Vine C2 Test Grant', reward:{ dice:[{ key:'slithervine', cls:2 }] } },
+  'TTD-SLITHER-C3': { label:'Slither Vine C3 Test Grant', reward:{ dice:[{ key:'slithervine', cls:3 }] } },
+  'TTD-SLITHER-C4': { label:'Slither Vine C4 Test Grant', reward:{ dice:[{ key:'slithervine', cls:4 }] } },
+  'TTD-SLITHER-C5': { label:'Slither Vine C5 Test Grant', reward:{ dice:[{ key:'slithervine', cls:5 }] } },
+  'TTD-SLITHER-C6': { label:'Slither Vine C6 Test Grant', reward:{ dice:[{ key:'slithervine', cls:6 }] } },
+  'TTD-SLITHER-C7': { label:'Slither Vine C7 Test Grant', reward:{ dice:[{ key:'slithervine', cls:7 }] } },
 });
 
 // Production promo definitions contain no plaintext player-facing code. The incoming
