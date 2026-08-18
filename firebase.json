@@ -20,7 +20,7 @@
     "rewrites": [
       {
         "source": "/",
-        "destination": "/random-dice-game-33.html"
+        "destination": "/online.html"
       }
     ],
     "headers": [
