@@ -14,6 +14,7 @@ new vm.Script(functions,{filename:'functions/deck-social-v18.js'});
 const requireMarkers=(text,markers,label)=>{for(const marker of markers)if(!text.includes(marker))throw new Error(`${label} missing: ${marker}`);};
 
 requireMarkers(loader,["'/online/collection-portrait-fit-v16.js?v=16'","'/online/deck-editor-v18.js?v=18'"],'loader');
+requireMarkers(loader,['const isolatedSources=sources.map','failed without blocking later bridges.','bridge-runtime-error'],'bridge isolation');
 if(loader.indexOf("'/online/deck-editor-v18.js?v=18'")<loader.indexOf("'/online/collection-portrait-fit-v16.js?v=16'"))throw new Error('Deck editor must load after Collection authority.');
 
 requireMarkers(editor,[
