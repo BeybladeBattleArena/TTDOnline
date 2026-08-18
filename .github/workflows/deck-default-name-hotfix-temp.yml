@@ -1,0 +1,50 @@
+name: Deck default name hotfix temporary
+on:
+  push:
+    branches:
+      - agent/deck-default-name-hotfix
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/deck-default-name-hotfix
+      - name: Apply compatibility fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('functions/deck-social-v18.js')
+          s=p.read_text()
+          old="""  const name = cleanString(value, 12);\n  if (!CUSTOM_DECK_NAME.test(name)) {"""
+          new="""  const name = cleanString(value, 12);\n  if (name === defaultDeckName(index)) return name;\n  if (!CUSTOM_DECK_NAME.test(name)) {"""
+          if old not in s: raise SystemExit('server deck-name marker missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('online/deck-editor-v18.js')
+          s=p.read_text()
+          old="if(!/^[A-Za-z0-9]{1,12}$/.test(name)){notice('Invalid Deck Name','Deck names must use 1 to 12 letters or numbers only.');return;}"
+          new="if(name!==defaultName(index)&&!/^[A-Za-z0-9]{1,12}$/.test(name)){notice('Invalid Deck Name','Deck names must use 1 to 12 letters or numbers only.');return;}"
+          if old not in s: raise SystemExit('client deck-name marker missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('scripts/check-deck-social-v18.mjs')
+          s=p.read_text()
+          old="  '/^[A-Za-z0-9]{1,12}$/',\n"
+          new="  '/^[A-Za-z0-9]{1,12}$/',\n  'name!==defaultName(index)&&!/^[A-Za-z0-9]{1,12}$/.test(name)',\n"
+          if old not in s: raise SystemExit('editor test marker missing')
+          s=s.replace(old,new,1)
+          old="  \"const CUSTOM_DECK_NAME = /^[A-Za-z0-9]{1,12}$/;\",\n"
+          new="  \"const CUSTOM_DECK_NAME = /^[A-Za-z0-9]{1,12}$/;\",\n  'if (name === defaultDeckName(index)) return name;',\n"
+          if old not in s: raise SystemExit('server test marker missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add functions/deck-social-v18.js online/deck-editor-v18.js scripts/check-deck-social-v18.mjs
+          git commit -m 'Accept untouched default Deck labels during explicit save'
+          git push origin HEAD:agent/deck-default-name-hotfix
