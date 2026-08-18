@@ -264,7 +264,10 @@
 
     const markerIndex=transformed.lastIndexOf(IIFE_END_MARKER);
     if(markerIndex<0)throw new Error('The v33 game closure marker could not be located.');
-    const isolatedSources=sources.map((source,index)=>`\ntry {\n${source}\n} catch (__ttdBridgeErr) {\n  console.error('Online bridge '+BRIDGES[index]+' failed without blocking later bridges.',__ttdBridgeErr);\n  send('ttd:bridge-phase',{phase:'bridge-runtime-error',bridge:BRIDGES[index],message:String(__ttdBridgeErr?.message||__ttdBridgeErr)});\n}\n`);
+    const isolatedSources=sources.map((source,index)=>{
+      const bridgeLiteral=JSON.stringify(BRIDGES[index]);
+      return `\ntry {\n${source}\n} catch (__ttdBridgeErr) {\n  console.error('Online bridge '+${bridgeLiteral}+' failed without blocking later bridges.',__ttdBridgeErr);\n  send('ttd:bridge-phase',{phase:'bridge-runtime-error',bridge:${bridgeLiteral},message:String(__ttdBridgeErr?.message||__ttdBridgeErr)});\n}\n`;
+    });
     transformed=transformed.slice(0,markerIndex)
       +'\n\n  /* ================= ONLINE CLOUD COMPLETION BRIDGES ================= */\n'
       +isolatedSources.join('\n')
