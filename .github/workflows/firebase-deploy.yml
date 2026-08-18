@@ -1,0 +1,62 @@
+name: Firebase Production Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+# There is exactly one production deploy lane. A newer deploy always cancels an older one,
+# regardless of which change produced it.
+concurrency:
+  group: firebase-production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ttd-online-b8c0f
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - run: npm install
+      - run: npm --prefix functions install
+      - run: npm run check
+
+      - name: Stamp exact production build
+        run: |
+          printf '{"commit":"%s","ref":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$GITHUB_REF_NAME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
+
+      - name: Deploy Hosting
+        run: npx firebase-tools deploy --only hosting --project ttd-online-b8c0f --non-interactive --force
+
+      - name: Verify exact commit is live
+        env:
+          LIVE_URL: https://ttd-online-b8c0f.web.app
+        run: |
+          for attempt in {1..20}; do
+            body="$(curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL/build.json?verify=$GITHUB_SHA-$attempt" || true)"
+            if [[ "$body" == *"\"commit\":\"$GITHUB_SHA\""* ]]; then
+              echo "Verified production Hosting commit $GITHUB_SHA"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Production verification failed: Hosting is not serving $GITHUB_SHA"
+          exit 1
+
+      - name: Deploy Firestore and Functions
+        run: npx firebase-tools deploy --only firestore,functions --project ttd-online-b8c0f --non-interactive --force

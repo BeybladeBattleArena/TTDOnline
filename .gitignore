@@ -1,0 +1,8 @@
+node_modules/
+functions/node_modules/
+functions/dicefile.generated.json
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+gha-creds-*.json
+.DS_Store

@@ -1,0 +1,17 @@
+{
+  "name": "ttd-functions",
+  "private": true,
+  "main": "main-v6.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "lint": "node ../scripts/sync-dice-catalog.mjs && node --check index.js && node --check progression-v5.js && node --check singleplayer-v6.js && node --check gift-v7-secure.js && node --check social-v6-fix.js && node --check catalog-gacha-v7.js && node --check onboarding-v9.js && node --check main-v6.js",
+    "serve": "node ../scripts/sync-dice-catalog.mjs && firebase emulators:start --only functions",
+    "deploy": "node ../scripts/sync-dice-catalog.mjs && firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  }
+}

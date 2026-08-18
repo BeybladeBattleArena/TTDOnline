@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <g stroke="#050507" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- handle / pommel -->
+    <path d="M8 68 L14 61 L22 62 L30 67 L29 73 L20 78 L12 76 Z" fill="#28262b"/>
+    <path d="M14 62 L17 76 M20 63 L23 75 M26 65 L27 73" fill="none" stroke="#9e7539" stroke-width="2.2"/>
+    <path d="M7 68 L10 63 L14 62 L15 76 L11 76 Z" fill="#611520"/>
+    <!-- guard -->
+    <path d="M27 56 L38 59 L42 54 L47 58 L43 65 L50 69 L44 74 L47 81 L41 84 L36 78 L27 82 L24 76 L30 70 L23 64 Z" fill="#8b1d2b"/>
+    <path d="M31 61 L38 64 L39 72 L33 76 L29 71 Z" fill="#332d33"/>
+    <!-- blade main -->
+    <path d="M37 61
+             C55 48 77 39 101 34
+             C109 32 116 31 121 31
+             C118 41 113 50 106 57
+             C99 64 90 69 80 72
+             C93 73 106 77 118 82
+             C101 85 84 86 67 84
+             C56 83 46 80 38 75
+             L33 69 Z" fill="#cfd3d8"/>
+    <!-- dark inner spine -->
+    <path d="M39 62
+             C55 53 72 47 91 43
+             C83 49 74 56 67 63
+             C62 68 54 72 45 73
+             L36 69 Z" fill="#24242a"/>
+    <!-- sharpened edge -->
+    <path d="M41 75 C57 81 77 83 97 81 C105 81 112 82 118 82" fill="none" stroke="#f6f7f8" stroke-width="3.2"/>
+    <path d="M45 58 C61 48 79 42 98 38" fill="none" stroke="#edf0f2" stroke-width="2.1"/>
+    <!-- mechanical plate -->
+    <path d="M42 61 L57 57 L65 62 L60 71 L47 74 L39 69 Z" fill="#4b4b53"/>
+    <path d="M45 63 L55 60 L61 63 L57 69 L48 71 L42 68 Z" fill="#17171c"/>
+    <!-- eye -->
+    <path d="M44 67 C48 62 55 62 59 66 C55 71 48 72 44 67 Z" fill="#d32838"/>
+    <ellipse cx="52" cy="67" rx="2.6" ry="3.1" fill="#f6c48a" stroke-width="1.5"/>
+    <ellipse cx="52.2" cy="67" rx="0.9" ry="2.1" fill="#0a0607" stroke="none"/>
+    <!-- blade cutouts -->
+    <path d="M73 50 L88 44 L82 52 L69 58 Z" fill="#15151a"/>
+    <path d="M88 58 L104 48 L98 58 L84 65 Z" fill="#19191e"/>
+  </g>
+</svg>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <title>Time to Die — Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preload" href="/random-dice-game-33.html?v=33" as="fetch" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{color-scheme:dark;--bg:#0a0c14;--panel:#171c34;--panel2:#12162a;--line:#2a3160;--gold:#d9b26a;--gold-glow:#f3d491;--astra:#8fc4e8;--astra-glow:#d4ecfa;--muted:#97a0bd;--good:#7bd994;--bad:#ff7770}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:#ece7da;font-family:Inter,system-ui,sans-serif;overscroll-behavior:none}
+    body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+    input,textarea{-webkit-user-select:text;user-select:text}
+    button,input,select{font:inherit}
+    button{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#202746;color:#fff;cursor:pointer;touch-action:manipulation}
+    button.primary{background:linear-gradient(#f3d491,#d9b26a);color:#0a0c14;border:0;font-weight:800}
+    button.google{background:#fff;color:#1f1f1f;border:0;font-weight:700}
+    button:disabled{opacity:.48;cursor:default}
+    input,select{width:100%;border:1px solid var(--line);border-radius:9px;background:#0d1020;color:#fff;padding:10px;outline:none}
+    input:focus,select:focus{border-color:#5660a0}
+    [hidden]{display:none!important}
+
+    .shell{height:100dvh;min-height:100vh;display:grid;grid-template-rows:44px minmax(0,1fr);overflow:hidden;background:var(--bg);transition:grid-template-rows .16s ease}
+    .shell.barCollapsed{grid-template-rows:18px minmax(0,1fr)}
+    .bar{grid-row:1;position:relative;z-index:40;min-width:0;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#12162a,#0f1327);display:flex;align-items:center;padding:5px 7px;box-shadow:0 2px 10px rgba(0,0,0,.28);overflow:visible}
+    .signedOutBrand{font:700 11px Cinzel,serif;color:var(--gold-glow);letter-spacing:.05em;padding-left:6px}
+    .account{display:flex;align-items:center;width:100%;min-width:0;gap:6px}
+    .currencyHud{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+    .goldPill,.astraPill{display:flex;align-items:center;justify-content:center;gap:6px;min-width:62px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:17px;background:#171c34;font:700 11px 'Space Mono',monospace}
+    .goldPill{color:var(--gold-glow)}.goldPill::before{content:'';width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--gold-glow),var(--gold) 70%)}
+    .astraPill{color:var(--astra-glow)}.astraPill::before{content:'';width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid var(--astra-glow);filter:drop-shadow(0 2px 1px var(--astra))}
+    .accountSpacer{flex:1 1 auto;min-width:4px}
+    .accountTrigger{max-width:48vw;height:32px;display:flex;align-items:center;gap:6px;padding:0 9px;background:#171c34;border-color:var(--line);border-radius:17px;color:#ece7da;min-width:0}
+    .accountTrigger .accountName{font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .accountTrigger .chev{font-size:10px;color:var(--muted);flex:0 0 auto}
+    .collapseBtn{flex:0 0 28px;width:28px;height:32px;padding:0;border:0;background:transparent;color:var(--muted);font-size:17px;line-height:1}
+    .barCollapsed .account,.barCollapsed .signedOutBrand{visibility:hidden;pointer-events:none}
+    .barCollapsed .bar{justify-content:flex-end;padding:0 4px;border-bottom-color:rgba(42,49,96,.5);background:rgba(15,19,39,.82)}
+    .barCollapsed .collapseBtn{height:18px;font-size:15px;color:var(--gold-glow)}
+
+    .accountDropdown{position:fixed;top:41px;right:6px;z-index:80;width:min(230px,calc(100vw - 12px));padding:7px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(160deg,#171c34,#101426);box-shadow:0 14px 36px rgba(0,0,0,.55)}
+    .accountDropdown button{width:100%;display:flex;align-items:center;justify-content:flex-start;border:0;border-radius:8px;background:transparent;padding:10px 11px;font-size:11px;text-align:left}
+    .accountDropdown button:active{background:#242b4d}
+    .accountDropdown .danger{color:#ffaaa4;border-top:1px solid var(--line);border-radius:0 0 8px 8px;margin-top:3px;padding-top:11px}
+    .barCollapsed + .accountDropdown{top:18px}
+
+    #accountArea,.game{grid-row:2;grid-column:1;min-height:0;min-width:0;overflow:hidden;background:var(--bg)}
+    #accountArea{overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+    .game{height:100%;width:100%}
+    iframe{display:block;width:100%;height:100%;min-height:0;border:0!important;outline:0!important;box-shadow:none!important;background:#0a0c14;overflow:hidden}
+    iframe:focus{outline:0!important}
+    .panel{margin:12px auto;width:min(760px,calc(100% - 24px));padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+    h2{font-size:16px;margin:0 0 10px;color:var(--gold-glow)}p{font-size:12px;line-height:1.45;color:var(--muted)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 180px}
+    .tiny,.micro{font-size:10px;color:var(--muted)}
+    .status{padding:10px 16px;text-align:center;font-size:12px;color:var(--muted)}.status[data-kind=ok]{color:var(--good)}.status[data-kind=error]{color:var(--bad)}
+
+    .modalShade{position:fixed;inset:0;z-index:100;background:rgba(4,6,14,.78);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:14px}
+    .modalCard{position:relative;width:min(410px,96vw);max-height:88dvh;overflow:auto;background:linear-gradient(160deg,#171c34,#101426);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:18px;touch-action:pan-y}
+    .modalCard h2{font-family:Cinzel,serif}.modalCard p{margin:4px 0 12px}
+    .modalX{position:absolute;right:10px;top:9px;width:32px;height:32px;padding:0;border-radius:50%;font-size:20px}
+    .redeemRow{display:flex;gap:7px;margin-top:10px}.redeemRow input{min-width:0}.redeemRow button{flex:0 0 auto}
+    .giftStatus{font-size:10px;min-height:16px;color:var(--muted);margin-top:7px}
+    .rewardNoticeCard{text-align:center}.rewardNoticeIcon{font-size:34px;margin:4px 0 8px}.rewardNoticeCard button{width:100%;margin-top:10px}
+
+    .v6Modal{position:fixed;inset:0;z-index:90;background:rgba(4,6,14,.74);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:14px}
+    .v6ModalCard{position:relative;width:min(420px,96vw);max-height:88dvh;overflow:auto;background:linear-gradient(160deg,#171c34,#101426);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:18px;touch-action:pan-y}
+    .v6ModalCard.wide{width:min(720px,96vw)}.v6ModalCard h2{font-family:Cinzel,serif}.v6ModalCard h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:17px 0 7px}
+    .socialSelf{display:grid;gap:7px;padding:11px;border:1px solid var(--line);border-radius:10px;background:#0d1020}.socialSelf label{font-size:10px;color:var(--muted);font-weight:700}
+    .inlineRow,.friendCode,.addFriend{display:flex;gap:6px;align-items:center}.friendCode{justify-content:space-between;font-family:'Space Mono',monospace;background:#11162b;padding:7px 9px;border-radius:8px}.addFriend{margin-top:10px}
+    .friendRow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;margin:6px 0;border:1px solid var(--line);border-radius:9px;background:#11162b;touch-action:pan-y;user-select:none}.friendRow strong{display:block;font-size:12px}.friendRow small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.friendIncoming{border-color:#6d5d35}.friendAccepted{cursor:pointer}
+    .supportBadge{font-size:8px;font-weight:800;color:#0a0c14;background:var(--gold-glow);padding:4px 6px;border-radius:7px}.sharedDiePreview{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0d1020;margin:10px 0}.friendMenuButtons{display:grid;gap:7px}.friendMenuButtons .danger{color:#ffaaa4;border-color:#6b3238}.emptyText{text-align:center;padding:18px}
+    .progressRow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0d1020;margin:6px 0}.progressRow.ready{border-color:#7f6a34;box-shadow:inset 0 0 16px rgba(217,178,106,.06)}.progressRow.claimed{opacity:.62}.progressRow strong,.progressRow small{display:block}.progressRow strong{font-size:11px}.progressRow small{font-size:9px;color:var(--muted);margin-top:3px}.progressReward{display:flex;align-items:center;gap:7px;white-space:nowrap;font:700 9px 'Space Mono',monospace;color:var(--gold-glow)}.progressReward button{font:700 9px Inter,sans-serif;padding:6px 8px}
+
+    @media(max-width:520px){
+      .shell{grid-template-rows:42px minmax(0,1fr)}.goldPill,.astraPill{height:30px;min-width:58px;padding:0 8px;font-size:10px}.accountTrigger{height:30px;max-width:43vw;padding:0 8px}.collapseBtn{height:30px;width:24px;flex-basis:24px}.accountDropdown{top:39px}.panel{margin:8px auto}.progressRow{align-items:flex-start}.progressReward{flex-direction:column;align-items:flex-end}.redeemRow{flex-direction:column}.redeemRow button{width:100%}
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header id="onlineBar" class="bar">
+    <div id="signedOutBrand" class="signedOutBrand">TIME TO DIE — ONLINE</div>
+    <div id="signedIn" class="account" hidden>
+      <div class="currencyHud" aria-label="Online currencies"><span id="cloudPips" class="goldPill">0</span><span id="cloudAstras" class="astraPill">0</span></div>
+      <span id="cloudEconomy" hidden></span>
+      <span class="accountSpacer"></span>
+      <button id="accountDropdownBtn" class="accountTrigger" type="button" aria-haspopup="menu" aria-expanded="false"><span id="accountLabel" class="accountName"></span><span class="chev">▼</span></button>
+    </div>
+    <button id="barCollapseBtn" class="collapseBtn" type="button" aria-label="Hide account bar" title="Hide account bar">⌃</button>
+  </header>
+
+  <div id="accountDropdown" class="accountDropdown" role="menu" hidden>
+    <button id="gameSettings" type="button" role="menuitem">Settings</button>
+    <button id="redeemCodeMenuBtn" type="button" role="menuitem">Redeem Code</button>
+    <button id="friendsBtn" type="button" role="menuitem">Friends</button>
+    <button id="progressBtn" type="button" role="menuitem">Quests</button>
+    <button id="signOut" class="danger" type="button" role="menuitem">Log Out</button>
+  </div>
+
+  <main id="accountArea">
+    <div id="status" class="status">Loading Firebase…</div>
+    <section id="signedOut" class="panel" hidden>
+      <h2>Sign in to play</h2>
+      <p>Your Time to Die account and progression are stored securely online.</p>
+      <form id="emailSignIn"><div class="row"><input id="email" type="email" autocomplete="email" placeholder="Email" required><input id="password" type="password" autocomplete="current-password" placeholder="Password" required></div><div class="row" style="margin-top:8px"><button class="primary" type="submit">Sign in</button><button id="createAccount" type="button">Create account</button><button id="googleSignIn" class="google" type="button">Continue with Google</button></div></form>
+      <button id="resetPassword" type="button" style="margin-top:8px">Forgot password</button>
+    </section>
+  </main>
+
+  <div class="game"><iframe id="gameFrame" title="Time to Die online game" src="about:blank" tabindex="-1" hidden></iframe></div>
+</div>
+
+<div id="redeemModal" class="modalShade" hidden>
+  <div class="modalCard">
+    <button id="redeemModalClose" class="modalX" type="button" aria-label="Close">×</button>
+    <h2>Redeem Code</h2>
+    <p>Enter a Time to Die reward code.</p>
+    <div class="redeemRow"><input id="onlineGiftCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter code"><button id="onlineGiftRedeem" class="primary" type="button">Redeem</button></div>
+    <div id="onlineGiftStatus" class="giftStatus" aria-live="polite"></div>
+  </div>
+</div>
+
+<div id="rewardNotice" class="modalShade" hidden>
+  <div class="modalCard rewardNoticeCard">
+    <div class="rewardNoticeIcon">✦</div>
+    <h2>Reward Redeemed</h2>
+    <p id="rewardNoticeText"></p>
+    <button id="rewardNoticeClose" class="primary" type="button">OK</button>
+  </div>
+</div>
+
+<div id="v6Modal" class="v6Modal" hidden><div id="v6ModalCard" class="v6ModalCard"></div></div>
+
+<script type="module" src="/online/firebase-client-v4.js?v=4"></script>
+<script type="module" src="/online/progression-client-v5.js?v=5"></script>
+<script type="module" src="/online/singleplayer-client-v6.js?v=6"></script>
+<script src="/online/shell-ui-v9.js?v=9" defer></script>
+</body>
+</html>

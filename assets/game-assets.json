@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "contract": {
+    "rule": "Game art is consumed from the exact registered file. Runtime code may scale, translate, rotate, and apply opacity, but may not redraw or approximate registered art.",
+    "svg": "SVG assets must declare the registered viewBox and intrinsic width/height.",
+    "cache": "Runtime asset URLs must be generated through the build-token asset URL helper; fixed manual ?v= asset URLs are forbidden."
+  },
+  "assets": {
+    "soulScimitar": {
+      "path": "/assets/soul-scimitar-spectral.svg",
+      "format": "svg",
+      "viewBox": "0 0 128 128",
+      "width": 128,
+      "height": 128,
+      "usage": {
+        "icon": { "box": [128, 128], "fit": "contain", "rotationDegrees": 0 },
+        "battle": { "box": [54, 54], "anchor": [0.5, 0.5], "rotationDegrees": 0 }
+      }
+    },
+    "soulScimitarMaster": {
+      "path": "/assets/soul-scimitar-traced-master.svg",
+      "format": "svg",
+      "viewBox": "0 0 128 128",
+      "width": 128,
+      "height": 128,
+      "usage": {
+        "reference": { "box": [128, 128], "fit": "contain", "rotationDegrees": 0 }
+      }
+    }
+  }
+}
