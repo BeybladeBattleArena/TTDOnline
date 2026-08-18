@@ -1,0 +1,54 @@
+  /* ================= SOUL SCIMITAR EXACT SVG V14 =================
+     Uses the approved in-game SVG directly. No traced Path2D approximation.
+  */
+  const __TTD_SOUL_SCIMITAR_SVG_URL = '/assets/soul-scimitar-spectral.svg?v=14';
+  const __ttdSoulBaseRenderGlyph = renderGlyph;
+  const __ttdSoulScimitarImage = new Image();
+  __ttdSoulScimitarImage.decoding = 'async';
+  __ttdSoulScimitarImage.src = __TTD_SOUL_SCIMITAR_SVG_URL;
+
+  renderGlyph = function renderGlyphWithExactSoulScimitar(key, color){
+    if(key === 'scimitar'){
+      return `<svg class="soulScimitarExactGlyph" viewBox="0 0 128 128" aria-hidden="true"><image href="${__TTD_SOUL_SCIMITAR_SVG_URL}" x="0" y="0" width="128" height="128" preserveAspectRatio="xMidYMid meet"/></svg>`;
+    }
+    return __ttdSoulBaseRenderGlyph(key, color);
+  };
+
+  (function installExactSoulScimitarGlyphStyle(){
+    if(document.getElementById('ttdSoulScimitarExactSvgStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'ttdSoulScimitarExactSvgStyle';
+    style.textContent = `
+      .soulScimitarExactGlyph{width:100%!important;height:100%!important;display:block;overflow:visible;}
+      .soulScimitarExactGlyph image{pointer-events:none;}
+    `;
+    document.head.appendChild(style);
+  })();
+
+  drawGhostScimitar = function drawGhostScimitarExactSvg(x,y,angle,scale=1,alpha=1){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(angle);
+    ctx.scale(scale,scale);
+    ctx.globalAlpha *= alpha;
+
+    // Keep the small spectral wake, but the weapon itself is the exact approved SVG.
+    const wake=ctx.createLinearGradient(-34,0,4,0);
+    wake.addColorStop(0,'rgba(250,228,213,0)');
+    wake.addColorStop(1,'rgba(250,228,213,.24)');
+    ctx.fillStyle=wake;
+    ctx.beginPath();
+    ctx.moveTo(-36,-5);
+    ctx.lineTo(2,-7);
+    ctx.lineTo(7,7);
+    ctx.lineTo(-36,5);
+    ctx.closePath();
+    ctx.fill();
+
+    if(__ttdSoulScimitarImage.complete && __ttdSoulScimitarImage.naturalWidth){
+      // The approved art occupies about 114/128 of its viewBox horizontally. 54px canvas width
+      // therefore yields ~48px visible weapon width: roughly two-thirds of the old ~72px sketch.
+      ctx.drawImage(__ttdSoulScimitarImage,-27,-27,54,54);
+    }
+    ctx.restore();
+  };
