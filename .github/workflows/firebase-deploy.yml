@@ -9,6 +9,12 @@ permissions:
   contents: read
   id-token: write
 
+# Rapid game iteration can produce several pushes within seconds. Without concurrency,
+# older Firebase deploys may finish after newer ones and put stale Hosting back online.
+concurrency:
+  group: firebase-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -29,4 +35,12 @@ jobs:
       - run: npm install
       - run: npm --prefix functions install
       - run: npm run check
-      - run: npx firebase-tools deploy --project ttd-online-b8c0f --non-interactive --force
+
+      # Publish the playable site before slower backend deployments. If a Cloud Functions
+      # update fails, the newest verified Hosting build is still live instead of leaving an
+      # older/broken frontend in place.
+      - name: Deploy Hosting
+        run: npx firebase-tools deploy --only hosting --project ttd-online-b8c0f --non-interactive --force
+
+      - name: Deploy Firestore and Functions
+        run: npx firebase-tools deploy --only firestore,functions --project ttd-online-b8c0f --non-interactive --force
