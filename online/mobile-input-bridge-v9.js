@@ -28,6 +28,15 @@
   }
 
   function clearTransientDragUi() {
+    // If a battle gesture owns pointer capture, cancel it through its own lifecycle first so
+    // its dynamic listeners cannot fire later with a cleared global drag object.
+    try {
+      if (drag && typeof drag.__mobileCancel === 'function') {
+        const cancel = drag.__mobileCancel;
+        drag.__mobileCancel = null;
+        cancel();
+      }
+    } catch (_) {}
     document.querySelectorAll('.die-ghost,.instGhost,.chargeSpinner,.holdSpinner').forEach((el) => el.remove());
     document.querySelectorAll('.dragging,.drop-ok,.drop-merge,.dropHover,.mergeHover,.lifting').forEach((el) => {
       el.classList.remove('dragging','drop-ok','drop-merge','dropHover','mergeHover','lifting');
@@ -107,6 +116,7 @@
         chargeRaf:null,
         chargeSpinner:null,
         holdTimer:null,
+        __mobileCancel:null,
       };
       drag = gesture;
 
@@ -119,6 +129,7 @@
       const finish = (upEvent, cancelled=false) => {
         if (gesture.finished) return;
         gesture.finished = true;
+        gesture.__mobileCancel = null;
         clearTimeout(gesture.holdTimer);
         cancelCharge(gesture);
 
@@ -164,12 +175,20 @@
         if (!gesture.finished && lostEvent.pointerId === gesture.pointerId) finish(lostEvent, true);
       };
 
+      gesture.__mobileCancel = () => finish({
+        pointerId:gesture.pointerId,
+        clientX:gesture.startX,
+        clientY:gesture.startY,
+      }, true);
+
       tile.addEventListener('pointermove', onMove, {passive:false});
       tile.addEventListener('pointerup', onUp);
       tile.addEventListener('pointercancel', onCancel);
       tile.addEventListener('lostpointercapture', onLostCapture);
     }, {passive:false});
   }
+
+  installMobileCss();
 
   // Replace the v33 tile listener before rebuilding the 15 board nodes. This leaves all game
   // rules untouched; it only replaces the fragile mobile pointer lifecycle.
