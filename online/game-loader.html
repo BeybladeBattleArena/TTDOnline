@@ -35,6 +35,28 @@
         return nativeFetch(input,init);
       };
 
+      // Final Collection authority is also injected after the transformed game document exists.
+      // This is deliberately independent of the synchronous bridge chain: an earlier bridge error
+      // can no longer prevent the portrait layout, visible scrollbar, or Save footer from loading.
+      let collectionAuthorityAttempts=0;
+      const ensureCollectionAuthority=()=>{
+        collectionAuthorityAttempts+=1;
+        const ready=document.getElementById('deckScreen')&&document.getElementById('collectionGrid');
+        if(ready){
+          if(!document.getElementById('ttdCollectionAuthorityScript')){
+            const authority=document.createElement('script');
+            authority.id='ttdCollectionAuthorityScript';
+            authority.src=window.__TTD_ASSET_URL('/online/collection-portrait-fit-v16.js');
+            authority.async=false;
+            document.head.appendChild(authority);
+          }
+          return;
+        }
+        if(collectionAuthorityAttempts<200)setTimeout(ensureCollectionAuthority,25);
+        else console.error('Final Collection authority could not find the transformed game document.');
+      };
+      setTimeout(ensureCollectionAuthority,0);
+
       try{
         const manifestResponse=await nativeFetch(window.__TTD_ASSET_URL('/assets/game-assets.json'),{cache:'no-store'});
         if(!manifestResponse.ok) throw new Error(`asset manifest returned HTTP ${manifestResponse.status}`);
