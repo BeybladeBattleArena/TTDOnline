@@ -4,6 +4,9 @@ import vm from 'node:vm';
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 if(!loader.includes('const isolatedSources=sources.map') || !loader.includes('failed without blocking later bridges.')) throw new Error('Injected online bridges are not runtime-isolated; one bridge could block later bridges such as Deck Editor.');
+const isolationBlock=loader.slice(loader.indexOf('const isolatedSources=sources.map'),loader.indexOf('transformed=transformed.slice',loader.indexOf('const isolatedSources=sources.map')));
+if(isolationBlock.includes("send('ttd:bridge-phase'")) throw new Error('Bridge runtime isolation incorrectly depends on loader-scope send() after document.write.');
+if(!isolationBlock.includes('window.parent?.postMessage')) throw new Error('Bridge runtime isolation does not use document-scope-safe error reporting.');
 
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 const mobileBridge=fs.readFileSync('online/mobile-input-bridge-v9.js','utf8');
