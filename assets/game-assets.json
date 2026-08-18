@@ -19,12 +19,15 @@
     },
     "soulSaberAttack": {
       "path": "/assets/soul-saber-attack.svg",
+      "source": "/assets/source/soul-saber-attack.svg.gz.b64",
+      "generatedBy": "scripts/materialize-game-assets.mjs",
       "format": "svg",
-      "viewBox": "0 0 128 128",
-      "width": 128,
-      "height": 128,
+      "vectorOnly": true,
+      "viewBox": "0 0 1536 1536",
+      "width": 1536,
+      "height": 1536,
       "usage": {
-        "battle": { "box": [49, 49], "anchor": [0.5, 0.5], "rotationDegrees": 0 }
+        "battle": { "box": [54, 54], "anchor": [0.5, 0.5], "rotationDegrees": 0, "artScale": 0.66667 }
       }
     },
     "soulScimitarMaster": {
