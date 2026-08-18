@@ -1,0 +1,49 @@
+name: Temporary isolate bridge runtime
+on:
+  push:
+    branches:
+      - agent/deck-bridge-isolation
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/deck-bridge-isolation
+      - name: Isolate injected bridge execution
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('online/game-loader.js')
+          s=p.read_text()
+          old="""    transformed=transformed.slice(0,markerIndex)\n      +'\\n\\n  /* ================= ONLINE CLOUD COMPLETION BRIDGES ================= */\\n'\n      +sources.join('\\n\\n')\n      +'\\n'\n      +transformed.slice(markerIndex);"""
+          new="""    const isolatedSources=sources.map((source,index)=>`\\ntry {\\n${source}\\n} catch (__ttdBridgeErr) {\\n  console.error('Online bridge '+BRIDGES[index]+' failed without blocking later bridges.',__ttdBridgeErr);\\n  send('ttd:bridge-phase',{phase:'bridge-runtime-error',bridge:BRIDGES[index],message:String(__ttdBridgeErr?.message||__ttdBridgeErr)});\\n}\\n`);\n    transformed=transformed.slice(0,markerIndex)\n      +'\\n\\n  /* ================= ONLINE CLOUD COMPLETION BRIDGES ================= */\\n'\n      +isolatedSources.join('\\n')\n      +'\\n'\n      +transformed.slice(markerIndex);"""
+          if old not in s: raise SystemExit('bridge assembly marker missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('scripts/check-deck-social-v18.mjs')
+          s=p.read_text()
+          anchor="requireMarkers(loader,[\"'/online/collection-portrait-fit-v16.js?v=16'\",\"'/online/deck-editor-v18.js?v=18'\"],'loader');\n"
+          addition="requireMarkers(loader,['const isolatedSources=sources.map','failed without blocking later bridges.','bridge-runtime-error'],'bridge isolation');\n"
+          if addition not in s:
+              if anchor not in s: raise SystemExit('deck social loader marker missing')
+              s=s.replace(anchor,anchor+addition,1)
+          p.write_text(s)
+
+          p=Path('scripts/check-online-loader-v15.mjs')
+          s=p.read_text()
+          marker="const loader = fs.readFileSync('online/game-loader.js','utf8');"
+          if marker not in s: raise SystemExit('loader checker marker missing')
+          addition="\nif(!loader.includes('const isolatedSources=sources.map') || !loader.includes('failed without blocking later bridges.')) throw new Error('Injected online bridges are not runtime-isolated; one bridge could block later bridges such as Deck Editor.');\n"
+          if addition.strip() not in s:
+              s=s.replace(marker,marker+addition,1)
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add online/game-loader.js scripts/check-deck-social-v18.mjs scripts/check-online-loader-v15.mjs
+          git commit -m 'Isolate injected bridge runtime failures'
+          git push origin HEAD:agent/deck-bridge-isolation
