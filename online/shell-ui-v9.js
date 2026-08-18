@@ -15,6 +15,7 @@
   const rewardNoticeClose = el('rewardNoticeClose');
   const giftStatus = el('onlineGiftStatus');
   const gameFrame = el('gameFrame');
+  const gameHost = gameFrame?.closest('.game') || null;
   const v6Modal = el('v6Modal');
   const shell = document.querySelector('.shell');
 
@@ -22,6 +23,21 @@
   let pendingBack = false;
   let backGuardArmed = false;
   const isTouchDevice = matchMedia('(pointer:coarse)').matches || navigator.maxTouchPoints > 0;
+
+  // The iframe and account area share the same grid cell. The iframe itself can be hidden while
+  // its parent .game layer remains opaque, which covered the entire sign-in/loading UI after a
+  // genuinely fresh browser load. Keep the parent visibility locked to the iframe visibility.
+  function syncGameHostVisibility() {
+    if (!gameFrame || !gameHost) return;
+    gameHost.hidden = gameFrame.hidden;
+  }
+  if (gameFrame && gameHost) {
+    syncGameHostVisibility();
+    new MutationObserver(syncGameHostVisibility).observe(gameFrame, {
+      attributes:true,
+      attributeFilter:['hidden'],
+    });
+  }
 
   function setCollapsed(next, persist=true) {
     collapsed = !!next;
