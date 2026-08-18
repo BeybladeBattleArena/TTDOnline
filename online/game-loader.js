@@ -14,6 +14,7 @@
     '/online/refresh-bridge-v6.js?v=6',
     '/online/mobile-input-bridge-v9.js?v=9',
     '/online/interaction-effects-v10.js?v=10',
+    '/online/interaction-fixes-v11.js?v=11',
     '/online/interaction-fixes-v12.js?v=12',
   ];
   const IIFE_END_MARKER='\n})();\n</'+'script>';
