@@ -15,6 +15,7 @@
     '/online/refresh-bridge-v6.js?v=6',
     '/online/mobile-input-bridge-v9.js?v=9',
     '/online/interaction-effects-v10.js?v=10',
+    '/online/collection-portrait-fit-v16.js?v=16',
   ];
   const IIFE_END_MARKER='\n})();\n</'+'script>';
   const DICE_START='  const DICE = {';

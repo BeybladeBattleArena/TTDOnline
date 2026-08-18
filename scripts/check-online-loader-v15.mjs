@@ -5,6 +5,7 @@ const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 const mobileBridge=fs.readFileSync('online/mobile-input-bridge-v9.js','utf8');
+const portraitBridge=fs.readFileSync('online/collection-portrait-fit-v16.js','utf8');
 const soulIconSvg=fs.readFileSync('assets/soul-scimitar-spectral.svg','utf8');
 const soulAttackSvg=fs.readFileSync('assets/soul-saber-attack.svg','utf8');
 const soulBridge=fs.readFileSync('online/soul-scimitar-svg-v14.js','utf8');
@@ -23,6 +24,7 @@ const bridges=[
   'online/refresh-bridge-v6.js',
   'online/mobile-input-bridge-v9.js',
   'online/interaction-effects-v10.js',
+  'online/collection-portrait-fit-v16.js',
 ];
 for(const file of bridges) new vm.Script(fs.readFileSync(file,'utf8'),{filename:file});
 new vm.Script(loader,{filename:'online/game-loader.js'});
@@ -46,10 +48,14 @@ const expectedUrls=[
   '/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9',
   '/online/interaction-effects-v10.js?v=10',
+  '/online/collection-portrait-fit-v16.js?v=16',
 ];
 for(const url of expectedUrls) if(!loader.includes(url)) throw new Error(`Missing runtime bridge ${url}.`);
 for(const stale of ['interaction-fixes-v11.js','interaction-fixes-v12.js','soul-scimitar-art-v13.js']){
   if(loader.includes(stale)) throw new Error(`Stale competing override is still injected: ${stale}.`);
+}
+if(loader.indexOf('/online/collection-portrait-fit-v16.js?v=16') < loader.indexOf('/online/interaction-effects-v10.js?v=10')){
+  throw new Error('Portrait collection authority must load after interaction-effects-v10 so no later bridge can re-enable swipe scrolling or move the footer.');
 }
 
 for(const marker of [
@@ -81,8 +87,30 @@ for(const marker of [
   'if (sliderOwnsScroll)',
   'grid.scrollTop = lastAllowedScrollTop',
   'installCollectionSlider(collectionGrid)',
-]) if(!mobileBridge.includes(marker)) throw new Error(`Missing 3x3 slider-only collection marker: ${marker}`);
-if(/#collectionGrid\{[^}]*overflow-y\s*:\s*auto/i.test(mobileBridge)) throw new Error('Final collection bridge may not re-enable direct collection scrolling.');
+]) if(!mobileBridge.includes(marker)) throw new Error(`Missing base 3x3 slider-only collection marker: ${marker}`);
+if(/#collectionGrid\{[^}]*overflow-y\s*:\s*auto/i.test(mobileBridge)) throw new Error('Mobile bridge may not re-enable direct collection scrolling.');
+
+for(const marker of [
+  '#deckScreen.active{',
+  'height:100dvh!important',
+  '--ttd-small-card-w:clamp(62px,calc((100vw - 54px)/4),76px)',
+  '--ttd-small-card-h:76px',
+  'grid-template-columns:repeat(3,var(--ttd-small-card-w))',
+  'grid-auto-rows:var(--ttd-small-card-h)',
+  '#collectionScrollRail{',
+  '#ttdCollectionVisibleTrack{',
+  '#ttdCollectionVisibleThumb{',
+  '#deckFooter{',
+  '#saveDeckBtn{',
+  'attachInstanceCardEvents=function attachInstanceCardEventsPortrait',
+  'interaction-effects-v10 is loaded immediately before this bridge',
+  "grid.addEventListener('wheel',event=>event.preventDefault(),{passive:false})",
+  "grid.addEventListener('touchmove',event=>event.preventDefault(),{passive:false})",
+  "slider.dispatchEvent(new Event('input',{bubbles:true}))",
+  "if(deckScreen.classList.contains('active'))renderCollectionGrid()",
+]) if(!portraitBridge.includes(marker)) throw new Error(`Missing final portrait collection contract marker: ${marker}`);
+if(/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(portraitBridge)) throw new Error('Portrait authority may not stretch dice cards to fill three columns; cards must retain the smaller fixed-size scale.');
+if(/scrollHost\.scrollTop|ttdManualScrolling/.test(portraitBridge)) throw new Error('Portrait authority may not implement collection swipe scrolling.');
 
 for(const needle of [
   '  /* ---------- DECK ---------- */\n  .deckTabs{',
@@ -121,4 +149,4 @@ for(const marker of [
 if(soulBridge.includes('Path2D(')) throw new Error('Soul Saber must use registered artwork, not a traced Path2D recreation.');
 if(/data:image|embedded raster|svgText\.match|URL\.createObjectURL/i.test(soulBridge)) throw new Error('Soul Saber runtime may not silently unwrap raster-wrapped SVGs.');
 
-console.log('V15 runtime verified: source transformation is intact, collection is a fixed 3x3 with slider-only scrolling and always-visible Save footer, runtime loads are fresh, and registered Soul Saber art remains pure vector.');
+console.log('V15 runtime verified: portrait Collection keeps small fixed-size cards, the visible right rail is the only scroll control, Save Deck stays inside the dynamic viewport, final bridge ordering prevents regressions, and registered Soul Saber art remains pure vector.');
