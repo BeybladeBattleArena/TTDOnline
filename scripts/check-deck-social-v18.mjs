@@ -22,7 +22,7 @@ requireMarkers(editor,[
   'id="deckEquipV18"',
   'Save Deck',
   'Equip this Deck',
-  'has not saved your latest edits',
+  'have not saved your latest edits',
   'Unsaved Deck Changes',
   "label:'No'",
   "label:'Cancel'",
