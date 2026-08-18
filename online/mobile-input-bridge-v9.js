@@ -23,6 +23,18 @@
       .tile,.die,.deckSlot,.instGhost,.die-ghost { touch-action:none!important; }
       img,svg { -webkit-user-drag:none; }
       .die-ghost,.instGhost { pointer-events:none!important; }
+
+      /* Collection is deliberately a fixed 3x3 viewport. The rail on the right is the only scroll control. */
+      #deckScreen.active{display:grid!important;grid-template-rows:auto auto auto auto minmax(0,1fr) auto!important;min-height:0!important;overflow:hidden!important;}
+      #collectionViewport{min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:8px;padding:8px 10px 8px 12px;background:var(--ink-950);}
+      #collectionGrid{height:100%!important;min-height:0!important;overflow:hidden!important;overscroll-behavior:none!important;touch-action:none!important;padding:8px 4px 6px!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:calc((100% - 20px)/3)!important;gap:10px!important;align-content:start!important;scrollbar-width:none!important;}
+      #collectionGrid::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}
+      #collectionGrid.ttdDiePointerActive{overflow:hidden!important;touch-action:none!important;}
+      #collectionGrid .colCard{height:100%;min-height:0;overflow:visible;touch-action:none!important;}
+      #collectionScrollRail{min-height:0;display:flex;align-items:stretch;justify-content:center;padding:5px 3px;border:1px solid var(--ink-700);border-radius:10px;background:linear-gradient(180deg,var(--ink-900),var(--ink-850));box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);}
+      #collectionScrollSlider{writing-mode:vertical-lr;width:100%;height:100%;min-height:0;margin:0;accent-color:var(--gold-glow);touch-action:none;cursor:pointer;}
+      #collectionScrollSlider:disabled{opacity:.28;cursor:default;}
+      #deckFooter{grid-row:6;position:relative!important;z-index:12;margin:0!important;flex-shrink:0!important;}
     `;
     document.head.appendChild(style);
   }
@@ -188,6 +200,93 @@
     }, {passive:false});
   }
 
+  function installCollectionSlider(grid) {
+    if (!grid) return;
+    let viewport = document.getElementById('collectionViewport');
+    let slider = document.getElementById('collectionScrollSlider');
+    if (!viewport) {
+      viewport = document.createElement('div');
+      viewport.id = 'collectionViewport';
+      const parent = grid.parentNode;
+      parent.insertBefore(viewport, grid);
+      viewport.appendChild(grid);
+
+      const rail = document.createElement('div');
+      rail.id = 'collectionScrollRail';
+      slider = document.createElement('input');
+      slider.id = 'collectionScrollSlider';
+      slider.type = 'range';
+      slider.min = '0';
+      slider.max = '1000';
+      slider.step = '1';
+      slider.value = '0';
+      slider.setAttribute('orient','vertical');
+      slider.setAttribute('aria-label','Scroll collection');
+      rail.appendChild(slider);
+      viewport.appendChild(rail);
+    }
+    if (!slider || slider.dataset.ttdBound === '1') return;
+    slider.dataset.ttdBound = '1';
+
+    let sliderOwnsScroll = false;
+    let lastAllowedScrollTop = 0;
+    let syncRaf = 0;
+
+    const maxScroll = () => Math.max(0, grid.scrollHeight - grid.clientHeight);
+    const syncSlider = () => {
+      const max = maxScroll();
+      if (lastAllowedScrollTop > max) lastAllowedScrollTop = max;
+      sliderOwnsScroll = true;
+      grid.scrollTop = lastAllowedScrollTop;
+      const actual = grid.scrollTop;
+      lastAllowedScrollTop = actual;
+      slider.value = String(max > 0 ? Math.round((actual / max) * 1000) : 0);
+      slider.disabled = max <= 0;
+      slider.setAttribute('aria-valuetext', max > 0 ? `${Math.round((actual / max) * 100)}%` : 'Top');
+      requestAnimationFrame(() => { sliderOwnsScroll = false; });
+    };
+    const queueSync = () => {
+      if (syncRaf) cancelAnimationFrame(syncRaf);
+      syncRaf = requestAnimationFrame(() => { syncRaf = 0; syncSlider(); });
+    };
+
+    slider.addEventListener('input', () => {
+      const max = maxScroll();
+      sliderOwnsScroll = true;
+      grid.scrollTop = max * ((Number(slider.value) || 0) / 1000);
+      lastAllowedScrollTop = grid.scrollTop;
+      slider.setAttribute('aria-valuetext', max > 0 ? `${Math.round((lastAllowedScrollTop / max) * 100)}%` : 'Top');
+      requestAnimationFrame(() => { sliderOwnsScroll = false; });
+    });
+
+    // Any attempted collection scroll that did not originate from the slider is immediately rejected.
+    grid.addEventListener('scroll', () => {
+      if (sliderOwnsScroll) {
+        lastAllowedScrollTop = grid.scrollTop;
+        return;
+      }
+      if (Math.abs(grid.scrollTop - lastAllowedScrollTop) > 0.5) {
+        sliderOwnsScroll = true;
+        grid.scrollTop = lastAllowedScrollTop;
+        requestAnimationFrame(() => { sliderOwnsScroll = false; });
+      }
+    }, {passive:true});
+    grid.addEventListener('wheel', (event) => event.preventDefault(), {passive:false});
+    grid.addEventListener('touchmove', (event) => event.preventDefault(), {passive:false});
+    grid.addEventListener('keydown', (event) => {
+      if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(event.key)) event.preventDefault();
+    });
+
+    const mutationObserver = new MutationObserver(queueSync);
+    mutationObserver.observe(grid, {childList:true});
+    if (window.ResizeObserver) {
+      const resizeObserver = new ResizeObserver(queueSync);
+      resizeObserver.observe(grid);
+      resizeObserver.observe(viewport);
+    }
+    queueSync();
+  }
+
   installMobileCss();
 
   // Replace the v33 tile listener before rebuilding the 15 board nodes. This leaves all game
@@ -199,6 +298,7 @@
   // Collection/deck already has the desired long-hold interaction. Give its existing handler
   // real pointer capture so Chrome cannot strand the ghost when a finger leaves the element.
   const collectionGrid = document.getElementById('collectionGrid');
+  installCollectionSlider(collectionGrid);
   collectionGrid?.addEventListener('pointerdown', (event) => {
     const card = event.target.closest?.('.colCard[data-key][data-inst-id],.colCard[data-key][data-instid]') || event.target.closest?.('.colCard[data-key]');
     if (!card || event.target.closest?.('.favBtn')) return;
