@@ -4,11 +4,14 @@ import vm from 'node:vm';
 const gameHtml=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
+const soulSvg=fs.readFileSync('assets/soul-scimitar-spectral.svg','utf8');
+const soulSvgBridge=fs.readFileSync('online/soul-scimitar-svg-v14.js','utf8');
 const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
 const generated=JSON.parse(fs.readFileSync('functions/dicefile.generated.json','utf8'));
 
 const bridges=[
   'online/dice-catalog-bridge-v7.js',
+  'online/soul-scimitar-svg-v14.js',
   'online/slither-vine-bridge-v8.js',
   'online/game-bridge-inner.js',
   'online/progression-bridge-v5.js',
@@ -18,20 +21,21 @@ const bridges=[
   'online/refresh-bridge-v6.js',
   'online/mobile-input-bridge-v9.js',
   'online/interaction-effects-v10.js',
-  'online/interaction-fixes-v11.js',
 ];
 
 for(const path of bridges) new vm.Script(fs.readFileSync(path,'utf8'),{filename:path});
 new vm.Script(loader,{filename:'online/game-loader.js'});
 
 if(!loaderHtml.includes('data-mode="loader-v9"')) throw new Error('Online loader HTML is not marked loader-v9.');
-if(!loaderHtml.includes('/online/game-loader.js?v=9')) throw new Error('Online loader HTML is not pinned to v9.');
+if(!loaderHtml.includes('name="ttd-build" content="interaction-v14"')) throw new Error('Online loader HTML is not marked interaction-v14.');
+if(!loaderHtml.includes('/online/game-loader.js?v=9&build=14')) throw new Error('Online loader HTML is not cache-busted to build 14.');
 if(catalog.schemaVersion!==1 || !catalog.dice || !catalog.dice.soulscimitar || !catalog.dice.slithervine) throw new Error('dicefile.json is missing the custom dice catalog.');
 if(Object.keys(catalog.dice).length<37) throw new Error('dicefile.json unexpectedly lost legacy dice definitions.');
 if(JSON.stringify(generated.dice)!==JSON.stringify(catalog.dice)) throw new Error('functions/dicefile.generated.json is not synchronized with dicefile.json.');
 
 const expectedBridgeUrls=[
   '/online/dice-catalog-bridge-v7.js?v=7',
+  '/online/soul-scimitar-svg-v14.js?v=14',
   '/online/slither-vine-bridge-v8.js?v=8',
   '/online/game-bridge-inner.js?v=4',
   '/online/progression-bridge-v5.js?v=5',
@@ -41,10 +45,38 @@ const expectedBridgeUrls=[
   '/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9',
   '/online/interaction-effects-v10.js?v=10',
-  '/online/interaction-fixes-v11.js?v=11',
 ];
 for(const url of expectedBridgeUrls) if(!loader.includes(url)) throw new Error(`Loader does not include ${url}.`);
+for(const stale of ['interaction-fixes-v11.js','interaction-fixes-v12.js','soul-scimitar-art-v13.js']){
+  if(loader.includes(stale)) throw new Error(`Loader still injects stale override ${stale}.`);
+}
+if(!loader.includes("const GAME_PATH='/random-dice-game-33.html?v=34'")) throw new Error('Loader is not fetching the cache-busted v33 source.');
 if(!loader.includes("const DICE_PATH='/dicefile.json?v=2'")) throw new Error('Loader is not fetching canonical dicefile v2.');
+
+for(const marker of [
+  'function installMobileDeckRuntime(source)',
+  'TTD_MOBILE_DECK_RUNTIME_V14',
+  'grid-template-rows:auto auto auto auto minmax(0,1fr) auto',
+  'min-height:0; overflow-y:auto',
+  'ttdDiePointerActive',
+  'const LIFT_MS = 360',
+  'const INFO_MS = 1100',
+  'function attachInstanceCardEvents(card, key, instId)',
+  "card.setPointerCapture(ev.pointerId)",
+]) if(!loader.includes(marker)) throw new Error(`Loader is missing mobile deck runtime marker: ${marker}`);
+
+const replacementMatch=loader.match(/const replacement=`([\s\S]*?)`;\n    source=replaceSection/);
+if(!replacementMatch) throw new Error('Could not extract the pre-execution collection pointer replacement.');
+new vm.Script(replacementMatch[1],{filename:'mobile-deck-runtime-v14-fragment.js'});
+
+if(!soulSvg.includes('viewBox="0 0 128 128"') || !soulSvg.includes('#FAE4D5') || !soulSvg.includes('fill-opacity=".64"')){
+  throw new Error('Approved Soul Scimitar SVG lost its expected 128px spectral blade contract.');
+}
+if(!soulSvgBridge.includes("'/assets/soul-scimitar-spectral.svg?v=14'")) throw new Error('Soul Scimitar bridge is not using the approved SVG asset.');
+if(!soulSvgBridge.includes('renderGlyphWithExactSoulScimitar') || !soulSvgBridge.includes('drawGhostScimitarExactSvg') || !soulSvgBridge.includes('ctx.drawImage(__ttdSoulScimitarImage')){
+  throw new Error('Soul Scimitar bridge is not using the exact SVG for both glyph and projectile rendering.');
+}
+if(soulSvgBridge.includes('Path2D(')) throw new Error('Soul Scimitar V14 must not redraw the approved SVG with Path2D approximations.');
 
 const DICE_START='  const DICE = {';
 const DICE_KEYS='  const DICE_KEYS = Object.keys(DICE);';
@@ -100,7 +132,7 @@ const startScript=transformed.lastIndexOf('<script>',idx);
 const endScript=transformed.indexOf('</script>',idx);
 if(startScript<0||endScript<0) throw new Error('Could not isolate the composed v33 runtime script.');
 const runtime=transformed.slice(startScript+'<script>'.length,endScript);
-new vm.Script(runtime,{filename:'composed-v33-online-v9.js'});
+new vm.Script(runtime,{filename:'composed-v33-online-v14.js'});
 
 for(const required of [
   'const DICE = __TTD_DICEFILE.dice;',
@@ -108,7 +140,8 @@ for(const required of [
   'function fireSoulScimitar(',
   'function updateSoulScimitars(',
   'function drawSoulScimitars(',
-  'GLYPHS.scimitar',
+  'renderGlyphWithExactSoulScimitar',
+  'drawGhostScimitarExactSvg',
   "case 'slitherVine':",
   'function fireSlitherVine(',
   'function updateSlitherVines(',
@@ -120,8 +153,6 @@ for(const required of [
   "send('ttd:v6-ready'",
   'onlineV6Merge',
   'onlineEnchantAttempt',
-  'attachInstanceCardEventsV11',
-  'ttdDragLocked',
 ]) if(!runtime.includes(required)) throw new Error(`Composed runtime is missing ${required}.`);
 
 const soul=catalog.dice.soulscimitar;
@@ -145,4 +176,4 @@ const main=fs.readFileSync('functions/main-v6.js','utf8');
 if(!main.includes("require('./catalog-gacha-v7')")) throw new Error('Cloud Functions main is not loading catalog gacha.');
 if(main.lastIndexOf('...catalogGacha')<main.lastIndexOf('...singleplayer')) throw new Error('Catalog gacha must override earlier gacha exports.');
 
-console.log(`Online v9 composition is syntactically valid with ${Object.keys(catalog.dice).length} canonical dice, including Soul Scimitar and Slither Vine.`);
+console.log(`Online v14 composition is syntactically valid with ${Object.keys(catalog.dice).length} canonical dice, exact Soul Scimitar SVG art, and pre-execution mobile deck input patching.`);
