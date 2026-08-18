@@ -3,6 +3,8 @@ import vm from 'node:vm';
 
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
+if(!loader.includes('const isolatedSources=sources.map') || !loader.includes('failed without blocking later bridges.')) throw new Error('Injected online bridges are not runtime-isolated; one bridge could block later bridges such as Deck Editor.');
+
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 const mobileBridge=fs.readFileSync('online/mobile-input-bridge-v9.js','utf8');
 const portraitBridge=fs.readFileSync('online/collection-portrait-fit-v16.js','utf8');
