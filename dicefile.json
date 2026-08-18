@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "2026.08.17-1",
+  "catalogVersion": "2026.08.17-2",
   "runtime": {
     "description": "Canonical die definitions loaded by the online game. The die key is permanent; display names may change.",
     "source": "dicefile.json"
@@ -41,12 +41,17 @@
     "crossinggate": {"name":"Crossing Gate","rarity":"legendary","glyph":"gate","color":"#c9463f","glow":"#ffd8d4","target":"front","category":"special","affinities":{"metal":1.0},"dmg":0,"atk":3.0,"hp":50,"special":{"kind":"crossingGate","gateHp":121,"dmgTakenMult":1.15,"lowerDur":1.5,"cooldown":3.12,"bigBossDmg":14,"monsterLenGap":60}},
     "bruteforceblizzard": {"name":"Brute Force Blizzard","rarity":"legendary","chestExclusive":true,"glyph":"fist","color":"#6fb8e0","glow":"#dcf2ff","target":"front","category":"physical","affinities":{"ice":1.0},"dmg":34,"atk":4.85,"hp":70,"special":{"kind":"dualSkill","skill1":{"cooldown":4.85,"range":"mid","category":"physical","affinities":{"ice":1.0},"dmgPunch":58,"dmgRing":20,"dmgTremor":5,"stunDur":1.0,"tremorPauseDur":0.35,"ringGap":0.45,"ringLife":0.95,"ringInner":24,"ringOuter":48,"shockwaveMax":84,"bounceKnock":26},"skill2":{"cooldown":4.75,"range":"close","dmgIce":31,"dmgArcane":3.4,"dotTick":4,"dotInterval":0.35,"chargeTime":1.0,"holdStart":0.12,"sweepDur":0.6,"holdEnd":0.12,"coneHalfAngle":0.2,"freezeExtend":2.7,"dmgCrystalExplosion":16,"crystalRadius":14}}},
     "devilshadow": {"name":"Devil Shadow","rarity":"unique","glyph":"devilhead","color":"#5a1c26","glow":"#c9384a","target":"random","category":"special","affinities":{"shadow":1.0},"dmg":16,"atk":4.2,"hp":46,"special":{"kind":"devilShadow","range":"midfar","dmgSwarm":16,"stunDur":1.5,"dmgClaw":12,"clawKnock":8,"dotTick":4,"dotInterval":0.3,"coneHalfAngle":0.3,"classCooldownSteps":[{"atClass":2,"mult":0.94}]}},
-    "soulscimitar": {"name":"Soul Scimitar","rarity":"legendary","glyph":"scimitar","color":"#821d2d","glow":"#ff6b72","target":"random","category":"special","affinities":{"arcane":1.0},"dmg":14,"atk":4.3,"hp":56,"range":"map","special":{"kind":"soulScimitar","skillType":"projectile","baseBladeCount":2,"class3ExtraBlades":2,"class7ExtraBlades":2,"healClass":4,"healFraction":0.25,"targetSlowClass":5,"targetSlowChance":0.15,"slowAmount":0.35,"slowDuration":2.0,"pierceClass":6,"pierceDamageMult":0.3,"pierceSlowClass":7,"pierceSlowChance":0.07,"summonDuration":0.92,"travelMin":0.48,"travelMax":0.78,"collisionRadius":14}}
+    "soulscimitar": {"name":"Soul Scimitar","rarity":"legendary","glyph":"scimitar","color":"#821d2d","glow":"#ff6b72","target":"random","category":"special","affinities":{"arcane":1.0},"dmg":14,"atk":4.3,"hp":56,"range":"map","special":{"kind":"soulScimitar","skillType":"projectile","baseBladeCount":2,"class3ExtraBlades":2,"class7ExtraBlades":2,"healClass":4,"healFraction":0.25,"targetSlowClass":5,"targetSlowChance":0.15,"slowAmount":0.35,"slowDuration":2.0,"pierceClass":6,"pierceDamageMult":0.3,"pierceSlowClass":7,"pierceSlowChance":0.07,"summonDuration":0.92,"travelMin":0.48,"travelMax":0.78,"collisionRadius":14}},
+    "slithervine": {"name":"Slither Vine","rarity":"unique","glyph":"slithervine","color":"#3d8d4b","glow":"#b8e96c","target":"fastest","category":"physical","affinities":{"nature":1.0},"dmg":12,"atk":4.84,"hp":52,"range":"map","special":{"kind":"slitherVine","skillType":"melee","sectionCount":4,"classCooldownSteps":[{"atClass":2,"mult":0.94}],"baseDamageReduction":0.02,"class3SectionHpMult":1.10,"class3DamageReductionBonus":0.03,"barbsClass":4,"barbDamage":2.2,"barbKnockback":8,"mainDamageBoostClass":5,"class5MainDamageMult":1.18,"barbDamageBoostClass":5,"class5BarbDamageMult":1.35,"class5SectionHpMult":1.05,"class5DamageReductionBonus":0.02,"statusClass":6,"mainConfusionChance":0.20,"barbSilenceChance":0.12,"statusDuration":2.0,"glowClass":6,"persistClass":7,"class7SectionHpMult":1.12,"class7DamageReductionBonus":0.02,"travelDuration":0.82,"windupDuration":0.58,"strikeDuration":0.14,"headHoldDuration":1.2,"bodyDissolveDuration":0.8,"sectionCollisionRadius":19,"enemyBarrierDamageMult":0.30,"jewelDefenseCarry":0.65,"enemyAttackInterval":0.58,"bossAttackInterval":0.40,"barrierHoldKnockback":2.3,"mainKnockback":12}}
   },
   "lore": {
     "soulscimitar": {
       "flavor": "A blade called through a circle that should have stayed closed.",
       "desc": "Summons paired ghostly scimitars from the far edges of the battlefield. They choose targets independently, then grow into additional blades, life-steal, Slow, and piercing attacks as the die classes up."
+    },
+    "slithervine": {
+      "flavor": "A patient root can become a wall. A hungry one grows teeth.",
+      "desc": "Targets the fastest enemy, breaking speed ties by current HP. Four destructible vine sections stitch across its route and force enemies to fight through them. Class growth hardens the barrier, adds barbs and control effects, and ultimately leaves surviving sections rooted between casts."
     }
   },
   "design": {
@@ -75,6 +80,22 @@
           "C6": ["Blades pierce overlapping non-target enemies for 30% blade damage; pierced damage cannot heal and does not Slow."],
           "C7": ["Increase damage through normal class damage scaling; summon 2 additional blades (6 total); pierced enemies have a 7% chance to Slow for 2 seconds."]
         }
+      }]
+    },
+    "slithervine": {
+      "skills": [{
+        "id":"skill1",
+        "name":"Slither Vine",
+        "type":"melee",
+        "damageCategory":"physical",
+        "affinities":{"nature":1.0},
+        "cooldown":4.84,
+        "range":"map",
+        "targeting":{"mode":"fastest_then_highest_current_hp","speedUsesCurrentSlowMultiplier":true},
+        "spawn":{"pattern":"bottom_center_near_dice_tray","sectionCount":4},
+        "visual":{"summon":"Casting die and conjuring point glow green, followed by a small shockwave, dirt spray, and translucent green motes.","travel":"Three serpentine head vines repeatedly dive into and erupt from the ground while leaving four large continuous barrier sections behind them.","impact":"The three heads rear back, hesitate, then lance into the target. The heads remain extended for 1.2 seconds before dissolving; the body normally dissolves backward over 0.8 seconds.","destruction":"Broken sections splatter vine chunks, dirt, and green energy in the direction enemies are pushing through."},
+        "barrier":{"sectionBaseHp":"one third of casting die max HP","baseDamageReduction":0.02,"damageReductionExceptions":["fire","ice","metal"],"inheritsCastingDieHp":true,"inheritsDefensiveJewelSupport":true,"brokenBeforeImpactMainDamageMultiplier":0.5},
+        "tiers":{"C1":["Basic skill: four destructible body sections and a three-head strike."],"C2":["Reduce base cooldown by 6%."],"C3":["Each section gains 10% HP and +3 percentage points damage reduction."],"C4":["Add yellow-green barbs that deal minor contact damage and slight knockback."],"C5":["Main strike gains 18% damage; barbs gain 35% damage; sections gain 5% HP and +2 percentage points damage reduction."],"C6":["Sections gain a faint yellow-green glow. Main hit has 20% Confusion chance; barb damage has 12% Silence chance; both last 2 seconds before Potency/resistance modifiers."],"C7":["Sections gain 12% HP and +2 percentage points damage reduction. Surviving body sections remain after the heads dissolve and are instantly dissolved when that same die casts again."]}
       }]
     }
   }
