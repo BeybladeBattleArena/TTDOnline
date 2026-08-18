@@ -22,11 +22,16 @@ for(const [key,asset] of Object.entries(manifest.assets)){
     if(/<script\b|javascript:/i.test(svg)) fail(`${key}: executable content is forbidden in game SVG assets.`);
   }
   if(!asset.usage || typeof asset.usage!=='object' || !Object.keys(asset.usage).length) fail(`${key}: at least one usage contract is required.`);
+  for(const [usageName,usage] of Object.entries(asset.usage)){
+    if(!Array.isArray(usage.box) || usage.box.length!==2 || usage.box.some((n)=>!Number.isFinite(n)||n<=0)) fail(`${key}.${usageName}: usage box must contain two positive numbers.`);
+    if(usage.anchor && (!Array.isArray(usage.anchor) || usage.anchor.length!==2 || usage.anchor.some((n)=>!Number.isFinite(n)))) fail(`${key}.${usageName}: invalid anchor.`);
+    if(usage.rotationDegrees!=null && !Number.isFinite(usage.rotationDegrees)) fail(`${key}.${usageName}: invalid rotationDegrees.`);
+  }
 }
 
 const loaderHtml=read('online/game-loader.html');
-for(const marker of ['release-integrity-v15','__TTD_BUILD_TOKEN','__TTD_ASSET_URL','cache:\'no-store\'']){
-  if(!loaderHtml.includes(marker)) fail(`Runtime loader freshness protection is missing: ${marker}`);
+for(const marker of ['release-integrity-v15','__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS','/assets/game-assets.json','cache:\'no-store\'']){
+  if(!loaderHtml.includes(marker)) fail(`Runtime loader freshness/asset protection is missing: ${marker}`);
 }
 
 const firebase=JSON.parse(read('firebase.json'));
@@ -56,7 +61,14 @@ for(const name of fs.readdirSync(onlineDir)){
 }
 
 const soulBridge=read('online/soul-scimitar-svg-v14.js');
-if(!soulBridge.includes("__TTD_ASSET_URL('/assets/soul-scimitar-spectral.svg')")) fail('Soul Scimitar must render the registered canonical SVG through the asset URL helper.');
+for(const marker of [
+  'window.__TTD_GAME_ASSETS?.soulScimitar',
+  'window.__TTD_ASSET_URL(__ttdSoulAsset.path)',
+  'const [drawW,drawH]=__ttdSoulBattle.box',
+  'const [anchorX,anchorY]=__ttdSoulBattle.anchor || [0.5,0.5]',
+  'rotationDegrees',
+]) if(!soulBridge.includes(marker)) fail(`Soul Scimitar runtime is not manifest-authoritative: ${marker}`);
 if(soulBridge.includes('Path2D(')) fail('Registered Soul Scimitar art may not be redrawn as Path2D.');
+if(/drawImage\([^\n]*,\s*-27\s*,\s*-27\s*,\s*54\s*,\s*54\s*\)/.test(soulBridge)) fail('Soul Scimitar render dimensions must come from the asset manifest, not hardcoded values.');
 
-console.log(`Release integrity verified: ${registeredPaths.size} registered assets, cache-safe runtime loading, single production branch, and live-commit deployment verification.`);
+console.log(`Release integrity verified: ${registeredPaths.size} registered assets, manifest-authoritative art geometry, cache-safe runtime loading, single production branch, and live-commit deployment verification.`);
