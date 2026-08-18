@@ -17,6 +17,18 @@ requireMarkers(loader,["'/online/collection-portrait-fit-v16.js?v=16'","'/online
 requireMarkers(loader,['const isolatedSources=sources.map','failed without blocking later bridges.','bridge-runtime-error'],'bridge isolation');
 if(loader.indexOf("'/online/deck-editor-v18.js?v=18'")<loader.indexOf("'/online/collection-portrait-fit-v16.js?v=16'"))throw new Error('Deck editor must load after Collection authority.');
 
+const isolationExpression=loader.match(/const isolatedSources=(sources\.map\(\(source,index\)=>`[\s\S]*?`\));\n    transformed=/);
+if(!isolationExpression)throw new Error('Could not extract the actual bridge-isolation expression for runtime testing.');
+const isolationContext={
+  console:{error(){}},
+  send(){},
+  BRIDGES:['synthetic-first-bridge','synthetic-deck-editor'],
+  sources:["(()=>{throw new Error('synthetic bridge failure');})();","globalThis.__deckEditorSurvived=true;"],
+};
+vm.runInNewContext(`const isolatedSources=${isolationExpression[1]};globalThis.__assembled=isolatedSources.join('\\n');`,isolationContext);
+vm.runInNewContext(isolationContext.__assembled,isolationContext);
+if(isolationContext.__deckEditorSurvived!==true)throw new Error('A failing earlier bridge still prevents a later Deck Editor bridge from executing.');
+
 requireMarkers(editor,[
   '#deckFooter{display:none!important',
   'id="deckSaveV18"',
@@ -75,4 +87,4 @@ requireMarkers(functions,[
 ],'deck/social functions');
 if(!functionsEntry.includes("const deckSocial = require('./deck-social-v18');")||!functionsEntry.includes('...deckSocial'))throw new Error('Cloud entrypoint does not export deck/social v18 services.');
 
-console.log('Deck/social v18 verified: explicit Save and Equip, 12-character alphanumeric names, guarded unsaved exits, friend active decks/messages/shared dice, and levels 1-100 are wired end to end.');
+console.log('Deck/social v18 verified: explicit Save and Equip, 12-character alphanumeric names, guarded unsaved exits, bridge-failure isolation, friend active decks/messages/shared dice, and levels 1-100 are wired end to end.');
