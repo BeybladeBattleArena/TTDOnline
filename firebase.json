@@ -25,16 +25,7 @@
     ],
     "headers": [
       {
-        "source": "**/*.@(html|js|css)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
-          }
-        ]
-      },
-      {
-        "source": "/dicefile.json",
+        "source": "**/*.@(html|js|css|json|svg|png|jpg|jpeg|webp)",
         "headers": [
           {
             "key": "Cache-Control",
