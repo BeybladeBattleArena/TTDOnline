@@ -19,7 +19,7 @@
     },
     "soulSaberAttack": {
       "path": "/assets/soul-saber-attack.svg",
-      "source": "/assets/source/soul-saber-attack.svg.gz.b64",
+      "source": "/assets/source/soul-saber-attack/parts.json",
       "generatedBy": "scripts/materialize-game-assets.mjs",
       "format": "svg",
       "vectorOnly": true,
