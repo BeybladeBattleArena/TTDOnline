@@ -34,6 +34,9 @@ if(!loaderHtml.includes('name="ttd-build" content="release-integrity-v15"')) thr
 for(const marker of ['__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS',"cache:'no-store'","/assets/game-assets.json","window.__TTD_ASSET_URL('/online/game-loader.js')"]){
   if(!loaderHtml.includes(marker)) throw new Error(`Loader freshness/asset protection missing: ${marker}`);
 }
+for(const marker of ['ensureCollectionAuthority','ttdCollectionAuthorityScript',"window.__TTD_ASSET_URL('/online/collection-portrait-fit-v16.js')",'collectionAuthorityAttempts<200']){
+  if(!loaderHtml.includes(marker)) throw new Error(`Post-load Collection authority fallback missing: ${marker}`);
+}
 if(!loader.includes("const GAME_PATH='/random-dice-game-33.html?v=34'")) throw new Error('Base runtime source contract changed unexpectedly.');
 
 const expectedUrls=[
@@ -55,7 +58,7 @@ for(const stale of ['interaction-fixes-v11.js','interaction-fixes-v12.js','soul-
   if(loader.includes(stale)) throw new Error(`Stale competing override is still injected: ${stale}.`);
 }
 if(loader.indexOf('/online/collection-portrait-fit-v16.js?v=16') < loader.indexOf('/online/interaction-effects-v10.js?v=10')){
-  throw new Error('Portrait collection authority must load after interaction-effects-v10 so no later bridge can re-enable swipe scrolling or move the footer.');
+  throw new Error('Synchronous portrait authority must remain after interaction-effects-v10.');
 }
 
 for(const marker of [
@@ -91,26 +94,25 @@ for(const marker of [
 if(/#collectionGrid\{[^}]*overflow-y\s*:\s*auto/i.test(mobileBridge)) throw new Error('Mobile bridge may not re-enable direct collection scrolling.');
 
 for(const marker of [
+  '__TTD_COLLECTION_PORTRAIT_AUTHORITY_V17',
   '#deckScreen.active{',
-  'height:100dvh!important',
-  '--ttd-small-card-w:clamp(62px,calc((100vw - 54px)/4),76px)',
-  '--ttd-small-card-h:76px',
-  'grid-template-columns:repeat(3,var(--ttd-small-card-w))',
-  'grid-auto-rows:var(--ttd-small-card-h)',
+  'height:100%!important;max-height:100%!important',
+  '--ttd-card-w:clamp(58px,calc((100vw - 54px)/4),76px)',
+  '--ttd-card-h:min(76px,calc((100% - 16px)/3))',
+  'grid-template-columns:repeat(3,var(--ttd-card-w))',
+  'grid-auto-rows:var(--ttd-card-h)',
   '#collectionScrollRail{',
   '#ttdCollectionVisibleTrack{',
   '#ttdCollectionVisibleThumb{',
-  '#deckFooter{',
+  'position:relative!important;left:auto!important;right:auto!important;bottom:auto!important',
   '#saveDeckBtn{',
-  'attachInstanceCardEvents=function attachInstanceCardEventsPortrait',
-  'interaction-effects-v10 is loaded immediately before this bridge',
-  "grid.addEventListener('wheel',event=>event.preventDefault(),{passive:false})",
-  "grid.addEventListener('touchmove',event=>event.preventDefault(),{passive:false})",
+  "grid.addEventListener('wheel',e=>e.preventDefault(),{passive:false})",
+  "grid.addEventListener('touchmove',e=>e.preventDefault(),{passive:false})",
   "slider.dispatchEvent(new Event('input',{bubbles:true}))",
-  "if(deckScreen.classList.contains('active'))renderCollectionGrid()",
-]) if(!portraitBridge.includes(marker)) throw new Error(`Missing final portrait collection contract marker: ${marker}`);
-if(/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(portraitBridge)) throw new Error('Portrait authority may not stretch dice cards to fill three columns; cards must retain the smaller fixed-size scale.');
-if(/scrollHost\.scrollTop|ttdManualScrolling/.test(portraitBridge)) throw new Error('Portrait authority may not implement collection swipe scrolling.');
+  'setTimeout(retry,0)',
+]) if(!portraitBridge.includes(marker)) throw new Error(`Missing self-contained portrait Collection authority marker: ${marker}`);
+if(/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(portraitBridge)) throw new Error('Final portrait authority may not stretch dice cards to fill three columns.');
+if(/attachInstanceCardEvents\s*=/.test(portraitBridge)) throw new Error('Final portrait authority must not become another die-gesture implementation.');
 
 for(const needle of [
   '  /* ---------- DECK ---------- */\n  .deckTabs{',
@@ -149,4 +151,4 @@ for(const marker of [
 if(soulBridge.includes('Path2D(')) throw new Error('Soul Saber must use registered artwork, not a traced Path2D recreation.');
 if(/data:image|embedded raster|svgText\.match|URL\.createObjectURL/i.test(soulBridge)) throw new Error('Soul Saber runtime may not silently unwrap raster-wrapped SVGs.');
 
-console.log('V15 runtime verified: portrait Collection keeps small fixed-size cards, the visible right rail is the only scroll control, Save Deck stays inside the dynamic viewport, final bridge ordering prevents regressions, and registered Soul Saber art remains pure vector.');
+console.log('V15 runtime verified: Collection portrait authority is self-contained, re-injected after the transformed document independently of the synchronous bridge chain, keeps small cards, exposes one visible scrollbar, and pins Save inside the iframe viewport.');
