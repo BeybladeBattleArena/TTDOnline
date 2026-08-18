@@ -38,7 +38,7 @@ for(const [key,asset] of Object.entries(manifest.assets)){
 
 const attack=manifest.assets?.soulSaberAttack;
 if(!attack?.source || attack.generatedBy!=='scripts/materialize-game-assets.mjs' || attack.vectorOnly!==true) fail('Soul Saber attack must remain generated from its canonical vector source.');
-if(!fs.existsSync(attack.source.slice(1))) fail('Canonical Soul Saber vector source is missing.');
+if(!fs.existsSync(attack.source.slice(1))) fail('Canonical Soul Saber vector source manifest is missing.');
 
 const loaderHtml=read('online/game-loader.html');
 for(const marker of ['__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS','/assets/game-assets.json',"cache:'no-store'"]){
@@ -56,11 +56,15 @@ for(const marker of ['group: firebase-production-deploy','cancel-in-progress: tr
 }
 
 const verify=read('.github/workflows/verify.yml');
-if(!verify.includes('pull_request:')) fail('Verification must run on finished pull-request candidates.');
-if(/\bpush\s*:/.test(verify)) fail('Verification must not run on development-branch pushes; that recreates half-updated CI failures.');
-for(const marker of ['group: verify-${{ github.event.pull_request.number }}','cancel-in-progress: true']){
-  if(!verify.includes(marker)) fail(`PR verification concurrency protection is missing ${marker}.`);
-}
+if(!verify.includes('pull_request:')) fail('Verification must run on explicitly presented pull-request candidates.');
+if(/\bpush\s*:/.test(verify)) fail('Verification must not run on development-branch pushes.');
+if(!verify.includes('types: [opened, reopened, ready_for_review]')) fail('Verification must not run on pull-request synchronize events.');
+if(verify.includes('synchronize')) fail('Verification may not opt back into synchronize events.');
+for(const marker of [
+  'group: verify-${{ github.event.pull_request.number }}',
+  'cancel-in-progress: true',
+  'if: ${{ github.event.pull_request.draft == false }}',
+]) if(!verify.includes(marker)) fail(`PR verification safety is missing ${marker}.`);
 
 const pkg=JSON.parse(read('package.json'));
 if(pkg.scripts?.['check:loader']!=='node scripts/check-online-loader.mjs') fail('package.json must use the stable loader checker entrypoint.');
@@ -77,4 +81,4 @@ for(const name of fs.readdirSync('online')){
   }
 }
 
-console.log(`Release integrity verified: ${registeredPaths.size} registered assets, vector-only enforcement, PR-only verification, and exact live-commit deployment proof.`);
+console.log(`Release integrity verified: ${registeredPaths.size} registered assets, vector-only enforcement, finished-candidate-only verification, and exact live-commit deployment proof.`);
