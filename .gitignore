@@ -6,3 +6,6 @@ firebase-debug.log
 firebase-debug.*.log
 gha-creds-*.json
 .DS_Store
+
+# Generated from the canonical vector source before verification/deployment.
+assets/soul-saber-attack.svg

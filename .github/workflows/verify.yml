@@ -2,18 +2,21 @@ name: Verify
 
 on:
   pull_request:
+    types: [opened, reopened, ready_for_review]
 
 permissions:
   contents: read
 
-# Development branches are assembled before a PR is opened. If a PR is updated,
-# only the newest complete candidate matters; stale verification runs are cancelled.
+# A development branch may contain many intermediate commits. Do not verify on
+# pull-request synchronize/push events. Verify only when a complete candidate is
+# explicitly presented for review.
 concurrency:
   group: verify-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   syntax:
+    if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
