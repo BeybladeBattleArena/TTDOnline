@@ -2,11 +2,15 @@ name: Verify
 
 on:
   pull_request:
-  push:
-    branches-ignore: [main]
 
 permissions:
   contents: read
+
+# Development branches are assembled before a PR is opened. If a PR is updated,
+# only the newest complete candidate matters; stale verification runs are cancelled.
+concurrency:
+  group: verify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   syntax:
