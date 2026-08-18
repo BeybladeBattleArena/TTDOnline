@@ -1,6 +1,8 @@
   /* ================= SOUL SABER EXACT ASSET RUNTIME =================
      Collection/shop glyph keeps the existing spectral icon.
-     Attack animation uses the separately registered user-provided Soul Saber artwork.
+     Attack animation uses the separately registered Soul Saber artwork.
+     The loader tolerates legacy SVG wrappers by unwrapping embedded raster data directly,
+     preventing the browser's broken-image glyph while the canonical vector asset is restored.
   */
   const __ttdSoulIconAsset = window.__TTD_GAME_ASSETS?.soulScimitar;
   const __ttdSoulAttackAsset = window.__TTD_GAME_ASSETS?.soulSaberAttack;
@@ -24,7 +26,35 @@
   const __ttdSoulBaseRenderGlyph = renderGlyph;
   const __ttdSoulSaberAttackImage = new Image();
   __ttdSoulSaberAttackImage.decoding = 'async';
-  __ttdSoulSaberAttackImage.src = __TTD_SOUL_ATTACK_URL;
+  let __ttdSoulSaberAttackLoadError = null;
+  __ttdSoulSaberAttackImage.onerror = () => {
+    __ttdSoulSaberAttackLoadError = new Error('Soul Saber attack artwork failed to decode.');
+    console.error(__ttdSoulSaberAttackLoadError);
+  };
+
+  async function __ttdLoadSoulSaberAttackArtwork(){
+    try{
+      const response=await fetch(__TTD_SOUL_ATTACK_URL,{cache:'no-store'});
+      if(!response.ok) throw new Error(`Soul Saber asset returned HTTP ${response.status}.`);
+      const svgText=await response.text();
+      const embedded=svgText.match(/<image\b[^>]*\bhref=["'](data:image\/(?:png|jpeg|webp);base64,[^"']+)["']/i);
+      if(embedded){
+        // SVGs loaded as image resources are not allowed to fetch nested subresources reliably.
+        // Legacy raster-wrapped SVGs therefore display a broken-image glyph. Load the embedded
+        // image itself instead of asking the browser to resolve it as an SVG subresource.
+        __ttdSoulSaberAttackImage.src=embedded[1];
+        return;
+      }
+      const blob=new Blob([svgText],{type:'image/svg+xml'});
+      const objectUrl=URL.createObjectURL(blob);
+      __ttdSoulSaberAttackImage.onload=()=>URL.revokeObjectURL(objectUrl);
+      __ttdSoulSaberAttackImage.src=objectUrl;
+    }catch(err){
+      __ttdSoulSaberAttackLoadError=err;
+      console.error('Soul Saber artwork load failed.',err);
+    }
+  }
+  __ttdLoadSoulSaberAttackArtwork();
 
   renderGlyph = function renderGlyphWithExactSoulScimitar(key, color){
     if(key === 'scimitar'){
