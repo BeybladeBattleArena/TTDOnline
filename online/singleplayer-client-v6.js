@@ -1,5 +1,5 @@
 import './deck-guard-client-v10.js?v=10';
-import './run-client-v6.js?v=6';
+import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
 import './run-start-client-v19.js?v=19';
 import './singleplayer-client-v9-core.js?v=9';
