@@ -1,4 +1,4 @@
-import './typography-client-v23.js?v=23';
+import './typography-client-v24.js?v=24';
 import './deck-guard-client-v10.js?v=10';
 import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
