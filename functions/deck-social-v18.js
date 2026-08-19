@@ -1,12 +1,13 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
+const progressionV21 = require('./account-progression-core-v21');
 
 const db = getFirestore();
 const REGION = 'us-central1';
 const MIN_DECKS = 3;
 const MAX_DECKS = 5;
-const LEVEL_CAP = 100;
+const LEVEL_CAP = progressionV21.LEVEL_CAP;
 const MAX_MESSAGE_LENGTH = 280;
 const CUSTOM_DECK_NAME = /^[A-Za-z0-9]{1,12}$/;
 
@@ -60,34 +61,24 @@ function publicSlots(value) {
   return slots.map((slot) => slot && typeof slot === 'object' && typeof slot.key === 'string' && typeof slot.instId === 'string'
     ? { key: slot.key, instId: slot.instId } : null);
 }
-function xpThresholdForLevel(level) {
-  if (level <= 1) return 0;
-  const step = level - 1;
-  return step * step * 100;
-}
-function levelFromXp(xp) {
-  const safeXp = Number.isSafeInteger(xp) && xp >= 0 ? xp : 0;
-  let level = 1;
-  while (level < LEVEL_CAP && safeXp >= xpThresholdForLevel(level + 1)) level += 1;
-  return level;
-}
-function publicLevel(data = {}) {
-  const xp = Number.isSafeInteger(data.xp) && data.xp >= 0 ? data.xp : 0;
-  const level = levelFromXp(xp);
-  return {
-    level,
-    xp,
-    nextLevelXp: level < LEVEL_CAP ? xpThresholdForLevel(level + 1) : null,
-    maxLevel: LEVEL_CAP,
-  };
-}
+function xpThresholdForLevel(level) { return progressionV21.xpThresholdForLevel(level); }
+function levelFromXp(xp) { return progressionV21.levelFromXp(xp); }
+function publicLevel(data = {}) { return progressionV21.publicLevel(data); }
 async function ensureLevel(uid) {
   const ref = db.doc(`users/${uid}/game/accountLevel`);
   const snap = await ref.get();
-  if (snap.exists) return publicLevel(snap.data());
-  const state = { schemaVersion: 1, xp: 0, level: 1, updatedAt: FieldValue.serverTimestamp() };
-  await ref.set(state);
-  return publicLevel(state);
+  const existing = snap.exists ? snap.data() || {} : {};
+  const level = progressionV21.publicLevel(existing);
+  if (!snap.exists || existing.schemaVersion !== 21 || existing.level !== level.level) {
+    await ref.set({
+      schemaVersion:21,
+      xp:level.xp,
+      level:level.level,
+      claimedRewards:Array.isArray(existing.claimedRewards) ? existing.claimedRewards : [],
+      updatedAt:FieldValue.serverTimestamp(),
+    }, { merge:true });
+  }
+  return level;
 }
 async function validateOwnedSlots(tx, uid, slots) {
   const reads = slots.map((slot) => tx.get(db.doc(`users/${uid}/dice/${slot.instId}`)));
@@ -116,7 +107,7 @@ async function readDeckManager(uid) {
     deckCount: count,
     decks,
     level,
-    levelCurve: { minLevel: 1, maxLevel: LEVEL_CAP, formula: '100 * (level - 1)^2' },
+    levelCurve: progressionV21.curveSummary(),
   };
 }
 async function acceptedFriend(uid, friendUid) {
