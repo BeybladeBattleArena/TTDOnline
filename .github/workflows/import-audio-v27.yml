@@ -1,9 +1,9 @@
 name: Import TTD Audio Assets v27
 
 on:
-  push:
-    branches: [agent/music-routing-v27]
-    paths: [.github/workflows/import-audio-v27.yml]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   import-audio:
+    if: github.event.pull_request.head.ref == 'agent/music-routing-v27'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,5 +55,9 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add assets/audio
+          if git diff --cached --quiet; then
+            echo 'Audio assets are already present.'
+            exit 0
+          fi
           git commit -m 'Import game music and welcome audio assets'
           git push origin HEAD:agent/music-routing-v27
