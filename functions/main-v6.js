@@ -7,5 +7,6 @@ const catalogGacha = require('./catalog-gacha-v7');
 const onboarding = require('./onboarding-v9');
 const deckSocial = require('./deck-social-v18');
 const runStart = require('./run-start-v19');
+const accountProgression = require('./account-progression-v21');
 
-module.exports = { ...base, ...progression, ...singleplayer, ...secureGift, ...socialFix, ...catalogGacha, ...onboarding, ...deckSocial, ...runStart };
+module.exports = { ...base, ...progression, ...singleplayer, ...secureGift, ...socialFix, ...catalogGacha, ...onboarding, ...deckSocial, ...runStart, getAccountProgressionV21:accountProgression.getAccountProgressionV21 };
