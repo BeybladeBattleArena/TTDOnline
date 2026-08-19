@@ -1,0 +1,49 @@
+name: Temporary progression v21 retroactive patch
+on:
+  push:
+    branches:
+      - agent/account-progression-v21
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/account-progression-v21
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('functions/singleplayer-v6.js')
+          s=p.read_text()
+          old="""    const levelsGained = progressionV21.levelsCrossed(previousLevel.xp, nextXp);
+              const rewardEffects = levelRewardsV21._applyConfiguredLevelRewards(
+                tx, auth.uid, levelsGained, levelSnap.exists ? levelSnap.data()?.claimedRewards : []
+              );"""
+          new="""    const levelsGained = progressionV21.levelsCrossed(previousLevel.xp, nextXp);
+              // Check every level already earned, not only levels crossed this run. This makes future
+              // reward-table additions retroactive and idempotent for players who already passed them.
+              const rewardEligibleLevels = Array.from({ length:nextLevel.level }, (_, index) => index + 1);
+              const rewardEffects = levelRewardsV21._applyConfiguredLevelRewards(
+                tx, auth.uid, rewardEligibleLevels, levelSnap.exists ? levelSnap.data()?.claimedRewards : []
+              );"""
+          if old not in s: raise SystemExit('singleplayer reward eligibility marker missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('scripts/check-account-progression-v21.mjs')
+          s=p.read_text()
+          s=s.replace("  'levelRewardsV21._applyConfiguredLevelRewards',\n", "  'const rewardEligibleLevels = Array.from({ length:nextLevel.level }',\n  'levelRewardsV21._applyConfiguredLevelRewards',\n")
+          old="markers(runClient,['xpAwarded','renderLevel(data.level)','ttd:account-progression-v21'],'run EXP client');"
+          new="markers(runClient,['renderLevel(data.level)','ttd:account-progression-v21',\"type:'ttd:v6-run-finish-result'\",'...data'],'run EXP client');"
+          if old not in s: raise SystemExit('run-client regression marker missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add functions/singleplayer-v6.js scripts/check-account-progression-v21.mjs
+          git commit -m 'Make level rewards retroactive and fix progression check'
+          git push origin HEAD:agent/account-progression-v21
