@@ -1,3 +1,4 @@
+import './typography-client-v22.js?v=22';
 import './deck-guard-client-v10.js?v=10';
 import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
