@@ -3,10 +3,12 @@ import vm from 'node:vm';
 
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
-if(!loader.includes('const isolatedSources=sources.map') || !loader.includes('failed without blocking later bridges.')) throw new Error('Injected online bridges are not runtime-isolated; one bridge could block later bridges such as Deck Editor.');
-const isolationBlock=loader.slice(loader.indexOf('const isolatedSources=sources.map'),loader.indexOf('transformed=transformed.slice',loader.indexOf('const isolatedSources=sources.map')));
+if(!loader.includes('const isolatedSources=sources.slice(3).map') || !loader.includes('failed without blocking later bridges.')) throw new Error('Non-combat online bridges are not runtime-isolated; one bridge could block later bridges such as Deck Editor.');
+const isolationStart=loader.indexOf('const isolatedSources=sources.slice(3).map');
+const isolationBlock=loader.slice(isolationStart,loader.indexOf('const battleHookSubsystem=',isolationStart));
 if(isolationBlock.includes("send('ttd:bridge-phase'")) throw new Error('Bridge runtime isolation incorrectly depends on loader-scope send() after document.write.');
 if(!isolationBlock.includes('window.parent?.postMessage')) throw new Error('Bridge runtime isolation does not use document-scope-safe error reporting.');
+if(!loader.includes('TTD_BATTLE_HOOK_SCOPE_V20') || !loader.includes('__TTD_BATTLE_HOOKS.updateSoulScimitars(dt)') || !loader.includes('__TTD_BATTLE_HOOKS.updateSlitherVines(dt)')) throw new Error('Catalog combat hooks are not exported safely to the transformed first-frame battle loop.');
 
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 const mobileBridge=fs.readFileSync('online/mobile-input-bridge-v9.js','utf8');
