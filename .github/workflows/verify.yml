@@ -4,10 +4,9 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
-# Development branches are assembled before a PR is opened. If a PR is updated,
-# only the newest complete candidate matters; stale verification runs are cancelled.
 concurrency:
   group: verify-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -17,6 +16,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Authenticate audio importer
+        if: hashFiles('assets/audio/main-menu.webm') == ''
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ttd-online-b8c0f
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+
+      - name: Import game audio binaries
+        if: hashFiles('assets/audio/main-menu.webm') == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/audio
+          TOKEN="$(gcloud auth print-access-token)"
+          fetch_drive() {
+            local id="$1" out="$2"
+            curl --fail --silent --show-error --location -H "Authorization: Bearer ${TOKEN}" \
+              "https://www.googleapis.com/drive/v3/files/${id}?alt=media" --output "${out}"
+            test -s "${out}"
+          }
+          fetch_drive 1rGeuuwDgXdCvejmrlybuOXyL9U9ztNYm assets/audio/main-menu.webm
+          fetch_drive 14wBNlUE4m7tDV-xelfTcWP0lXzZBEJBz assets/audio/shop-remix.webm
+          fetch_drive 1KwSIP1gyD9lsbMA6FzXBUXS2D2YyU0DF assets/audio/deck-construction.webm
+          fetch_drive 1nqKZzkCPAQkHKaOfl7Y4AEvxkI2-bFGP assets/audio/welcome-rng-1.mp3
+          fetch_drive 1y0eYk0QsVK92VH18AKQVzwVpTWtORj3h assets/audio/welcome-rng-2.mp3
+          fetch_drive 1j5xzbbJY0ArqB57vHPea2Q0303Xyue4P assets/audio/welcome-rng-3.mp3
+          fetch_drive 17fiTf-JPKAP-FUA3rNMQPm2an6bqEjRt assets/audio/welcome-rng-4.mp3
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/audio
+          git commit -m 'Import game music and welcome audio assets'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
