@@ -8,7 +8,7 @@ const serverEntry=fs.readFileSync('functions/main-v6.js','utf8');
 const requireMarkers=(text,markers,label)=>{for(const marker of markers)if(!text.includes(marker))throw new Error(`${label} missing: ${marker}`);};
 
 requireMarkers(client,[
-  "m.type!=='ttd:v6-run-begin-request'",
+  "message.type!=='ttd:v6-run-begin-request'",
   'event.stopImmediatePropagation()',
   "httpsCallable(functions,'beginRun')",
   "type:'ttd:v6-run-begin-result'",
