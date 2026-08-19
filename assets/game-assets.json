@@ -36,6 +36,41 @@
       "usage": {
         "reference": { "box": [128, 128], "fit": "contain", "rotationDegrees": 0 }
       }
+    },
+    "mainMenuMusic": {
+      "path": "/assets/audio/main-menu.webm",
+      "format": "audio/webm",
+      "usage": { "playback": { "box": [1, 1] } }
+    },
+    "shopRemixMusic": {
+      "path": "/assets/audio/shop-remix.webm",
+      "format": "audio/webm",
+      "usage": { "playback": { "box": [1, 1] } }
+    },
+    "deckConstructionMusic": {
+      "path": "/assets/audio/deck-construction.webm",
+      "format": "audio/webm",
+      "usage": { "playback": { "box": [1, 1] } }
+    },
+    "welcomeRng1": {
+      "path": "/assets/audio/welcome-rng-1.mp3",
+      "format": "audio/mpeg",
+      "usage": { "playback": { "box": [1, 1] } }
+    },
+    "welcomeRng2": {
+      "path": "/assets/audio/welcome-rng-2.mp3",
+      "format": "audio/mpeg",
+      "usage": { "playback": { "box": [1, 1] } }
+    },
+    "welcomeRng3": {
+      "path": "/assets/audio/welcome-rng-3.mp3",
+      "format": "audio/mpeg",
+      "usage": { "playback": { "box": [1, 1] } }
+    },
+    "welcomeRng4": {
+      "path": "/assets/audio/welcome-rng-4.mp3",
+      "format": "audio/mpeg",
+      "usage": { "playback": { "box": [1, 1] } }
     }
   }
 }
