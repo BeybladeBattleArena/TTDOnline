@@ -6,6 +6,7 @@
   const PIPS_MS = 700;
   const EXP_MS = 700;
   const BETWEEN_MS = 90;
+  const EXP_WAIT_MS = 15000;
   let currentModeKey = '';
   let pending = null;
   let pollTimer = null;
@@ -126,34 +127,35 @@
     if (!pending || pending.sequenceStarted) return;
     const block = ensureRewardBlock();
     if (!block) return;
-    const sequence = pending;
-    sequence.sequenceStarted = true;
+    const run = pending;
+    run.sequenceStarted = true;
 
-    // Let the player visually register the finished-run stats before the reward bank starts moving.
+    // Keep 000 visible briefly so the player registers the completed-run stats before rewards bank.
     await new Promise((resolve) => setTimeout(resolve, START_DELAY_MS));
-    if (pending !== sequence) return;
+    if (pending !== run) return;
 
     const pipsEl = block.querySelector('#ttdRewardPipsV26');
     const expEl = block.querySelector('#ttdRewardExpV26');
     const levelEl = block.querySelector('#ttdRewardLevelV26');
-    const pipsTarget = Number.isFinite(sequence.actualPips) ? sequence.actualPips : sequence.predictedPips;
+    const pipsTarget = Number.isFinite(run.actualPips) ? run.actualPips : run.predictedPips;
     await animateLine(pipsEl, pipsTarget, 'Pips banked!', PIPS_MS);
-    if (pending !== sequence) return;
-    sequence.pipsDone = true;
+    if (pending !== run) return;
+    run.pipsDone = true;
 
-    while (pending === sequence && sequence.xp == null) {
+    const waitStarted = performance.now();
+    while (pending === run && run.xp == null && performance.now() - waitStarted < EXP_WAIT_MS) {
       await new Promise((resolve) => setTimeout(resolve, 35));
       readLegacyResult();
     }
-    if (pending !== sequence) return;
+    if (pending !== run || run.xp == null) return;
     await new Promise((resolve) => setTimeout(resolve, BETWEEN_MS));
-    if (pending !== sequence) return;
-    await animateLine(expEl, sequence.xp, 'EXP earned!', EXP_MS);
-    if (pending !== sequence) return;
-    sequence.expDone = true;
-    if (levelEl && sequence.levelText) levelEl.textContent = sequence.levelText;
+    if (pending !== run) return;
+    await animateLine(expEl, run.xp, 'EXP earned!', EXP_MS);
+    if (pending !== run) return;
+    run.expDone = true;
+    if (levelEl && run.levelText) levelEl.textContent = run.levelText;
     setTimeout(() => {
-      if (pending === sequence && sequence.expDone) {
+      if (pending === run && run.expDone) {
         clearInterval(pollTimer);
         pollTimer = null;
       }
@@ -189,6 +191,7 @@
     pending = null;
     const doc = gameDocument();
     doc?.getElementById('ttdRunRewardsV26')?.remove();
+    doc?.getElementById('ttd-result-summary-hide-v26')?.remove();
   }
 
   window.addEventListener('message', (event) => {
@@ -202,12 +205,5 @@
     if (message.type === 'ttd:v6-run-finish-request') beginResult(message);
   }, true);
 
-  frame?.addEventListener('load', () => {
-    resetForNewRun();
-    const install = () => ensureLegacyHideStyle(gameDocument());
-    install();
-    setTimeout(install, 100);
-    setTimeout(install, 500);
-    setTimeout(install, 1200);
-  });
+  frame?.addEventListener('load', resetForNewRun);
 })();
