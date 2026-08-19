@@ -1,0 +1,114 @@
+name: Temporary fix run start stall
+on:
+  push:
+    branches:
+      - agent/fix-run-start-stall
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-run-start-stall
+      - name: Repair shared run start path
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('functions/singleplayer-v6.js')
+          s=p.read_text()
+          old="""function gamePublic(data = {}) {
+  return {
+    schemaVersion: Number(data.schemaVersion || 1),
+    revision: Number.isSafeInteger(data.revision) ? data.revision : 1,
+    economy: {
+      pips: Number.isSafeInteger(data?.economy?.pips) ? data.economy.pips : 0,
+      astras: Number.isSafeInteger(data?.economy?.astras) ? data.economy.astras : 0,
+    },
+    activeDeckIdx: Number.isSafeInteger(data.v6ActiveDeckIdx)
+      ? data.v6ActiveDeckIdx
+      : (Number.isSafeInteger(data.activeDeckIdx) ? data.activeDeckIdx : 0),
+    deckCount: Math.max(MIN_DECKS, Math.min(MAX_DECKS, Number(data.deckCount || MIN_DECKS))),
+  };
+}"""
+          new="""function gamePublic(data = {}) {
+  // TTD_RUN_ACTIVE_DECK_CLAMP_V19: never expose an active deck index outside the unlocked deck range.
+  const countCandidate = Number(data.deckCount);
+  const deckCount = Number.isSafeInteger(countCandidate) && countCandidate >= MIN_DECKS && countCandidate <= MAX_DECKS
+    ? countCandidate : MIN_DECKS;
+  const activeCandidate = Number.isSafeInteger(data.v6ActiveDeckIdx)
+    ? data.v6ActiveDeckIdx
+    : (Number.isSafeInteger(data.activeDeckIdx) ? data.activeDeckIdx : 0);
+  const activeDeckIdx = Math.max(0, Math.min(deckCount - 1, activeCandidate));
+  return {
+    schemaVersion: Number(data.schemaVersion || 1),
+    revision: Number.isSafeInteger(data.revision) ? data.revision : 1,
+    economy: {
+      pips: Number.isSafeInteger(data?.economy?.pips) ? data.economy.pips : 0,
+      astras: Number.isSafeInteger(data?.economy?.astras) ? data.economy.astras : 0,
+    },
+    activeDeckIdx,
+    deckCount,
+  };
+}"""
+          if old not in s: raise SystemExit('gamePublic marker missing')
+          s=s.replace(old,new,1)
+          old="""  const game = gameSnap.data();
+  if (!Number.isSafeInteger(game.deckCount) || game.deckCount < MIN_DECKS || game.deckCount > MAX_DECKS) {
+    batch.set(gameRef, { deckCount: MIN_DECKS, v6ActiveDeckIdx: Number.isSafeInteger(game.activeDeckIdx) ? game.activeDeckIdx : 0 }, { merge:true });
+  } else if (!Number.isSafeInteger(game.v6ActiveDeckIdx)) {
+    batch.set(gameRef, { v6ActiveDeckIdx: Number.isSafeInteger(game.activeDeckIdx) ? game.activeDeckIdx : 0 }, { merge:true });
+  }"""
+          new="""  const game = gameSnap.data();
+  // TTD_RUN_ACTIVE_DECK_REPAIR_V19: repair stale server indices that the mobile UI previously clamped only locally.
+  const publicGame = gamePublic(game);
+  const gameRepair = {};
+  if (game.deckCount !== publicGame.deckCount) gameRepair.deckCount = publicGame.deckCount;
+  if (game.v6ActiveDeckIdx !== publicGame.activeDeckIdx) gameRepair.v6ActiveDeckIdx = publicGame.activeDeckIdx;
+  if (!Number.isSafeInteger(game.activeDeckIdx) || game.activeDeckIdx < 0 || game.activeDeckIdx > 2) {
+    gameRepair.activeDeckIdx = Math.min(2, publicGame.activeDeckIdx);
+  }
+  if (Object.keys(gameRepair).length) batch.set(gameRef, gameRepair, { merge:true });"""
+          if old not in s: raise SystemExit('ensureV6 active deck repair marker missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          p=Path('online/singleplayer-client-v9-core.js')
+          s=p.read_text()
+          old="""    else if(m.type==='ttd:v6-run-begin-request'){
+      const data=await call('beginRun',{modeKey:m.modeKey,difficultyKey:m.difficultyKey||null,campaign:!!m.campaign});
+      postToGame({type:'ttd:v6-run-begin-result',requestId:rid,...data});
+    }else if(m.type==='ttd:v6-run-finish-request'){"""
+          new="""    else if(m.type==='ttd:v6-run-begin-request'){
+      // TTD_RUN_BEGIN_ERROR_RESPONSE_V19: operation() always answers success OR error so the game can never remain stuck in Starting online run….
+      await operation('beginRun',{modeKey:m.modeKey,difficultyKey:m.difficultyKey||null,campaign:!!m.campaign},'ttd:v6-run-begin-result',rid);
+    }else if(m.type==='ttd:v6-run-finish-request'){"""
+          if old not in s: raise SystemExit('run begin client marker missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          p=Path('scripts/check-deck-social-v18.mjs')
+          s=p.read_text()
+          anchor="const functionsEntry=fs.readFileSync('functions/main-v6.js','utf8');\n"
+          addition="const runClient=fs.readFileSync('online/singleplayer-client-v9-core.js','utf8');\nconst singleplayerFunctions=fs.readFileSync('functions/singleplayer-v6.js','utf8');\n"
+          if addition not in s:
+            if anchor not in s: raise SystemExit('deck-social check import marker missing')
+            s=s.replace(anchor,anchor+addition,1)
+          marker="new vm.Script(functions,{filename:'functions/deck-social-v18.js'});\n"
+          checks="""requireMarkers(runClient,['TTD_RUN_BEGIN_ERROR_RESPONSE_V19',\"operation('beginRun'\",\"'ttd:v6-run-begin-result'\"],'run start client');
+requireMarkers(singleplayerFunctions,['TTD_RUN_ACTIVE_DECK_CLAMP_V19','TTD_RUN_ACTIVE_DECK_REPAIR_V19','Math.min(deckCount - 1, activeCandidate)'],'run start server');
+if(singleplayerFunctions.includes('? data.v6ActiveDeckIdx\\n      : (Number.isSafeInteger(data.activeDeckIdx)'))throw new Error('Server still exposes an unclamped active deck index.');
+"""
+          if checks not in s:
+            if marker not in s: raise SystemExit('deck-social check script marker missing')
+            s=s.replace(marker,marker+'\n'+checks,1)
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add functions/singleplayer-v6.js online/singleplayer-client-v9-core.js scripts/check-deck-social-v18.mjs
+          git commit -m 'Repair shared run start path'
+          git push origin HEAD:agent/fix-run-start-stall
