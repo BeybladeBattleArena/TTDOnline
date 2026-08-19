@@ -28,7 +28,7 @@ jobs:
           workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
           service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
           token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/drive.readonly
 
       - name: Import game audio binaries
         if: hashFiles('assets/audio/main-menu.webm') == ''
@@ -38,11 +38,22 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$DRIVE_TOKEN"
+          gcloud services enable drive.googleapis.com --project ttd-online-b8c0f || true
           mkdir -p assets/audio
           fetch_drive() {
-            local id="$1" out="$2"
-            curl --fail --silent --show-error --location -H "Authorization: Bearer ${DRIVE_TOKEN}" \
-              "https://www.googleapis.com/drive/v3/files/${id}?alt=media" --output "${out}"
+            local id="$1" out="$2" err
+            err="$(mktemp)"
+            if ! curl --silent --show-error --location -H "Authorization: Bearer ${DRIVE_TOKEN}" \
+              "https://www.googleapis.com/drive/v3/files/${id}?alt=media" --output "${out}" --write-out '%{http_code}' > "${err}"; then
+              cat "${err}"
+              exit 1
+            fi
+            code="$(cat "${err}")"
+            if [[ "$code" != "200" ]]; then
+              echo "Drive download failed with HTTP $code"
+              cat "${out}" || true
+              exit 1
+            fi
             test -s "${out}"
           }
           fetch_drive 1rGeuuwDgXdCvejmrlybuOXyL9U9ztNYm assets/audio/main-menu.webm
