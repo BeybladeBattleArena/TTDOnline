@@ -1,5 +1,6 @@
+import './startup-splash-v26.js?v=26';
 import './typography-client-v24.js?v=24';
-import './result-summary-client-v25.js?v=25';
+import './result-summary-client-v26.js?v=26';
 import './deck-guard-client-v10.js?v=10';
 import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
