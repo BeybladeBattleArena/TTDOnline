@@ -29,18 +29,10 @@
   .scrollY::-webkit-scrollbar-thumb,#collectionGrid::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#2b4777,#7595ca 45%,#38588d)!important;border:2px solid #182746!important;border-radius:8px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 0 5px rgba(76,133,205,.35)!important}
   .bottomNav,.navBar,.footerNav{background:linear-gradient(180deg,#263654 0%,#16233f 28%,#0b1122 100%)!important;border-top:1px solid #536c9a!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 -4px 12px rgba(0,0,0,.4)!important}
   .bottomNav button,.navBar button,.footerNav button{filter:drop-shadow(0 1px 0 #000)}
-  /* Zombie Mode's established gradient is intentionally untouched. */
-  #zombieModeScreen .zombieSub{background:revert-layer!important;box-shadow:revert-layer!important;outline:revert-layer!important;border-color:revert-layer!important}
+  /* Zombie Mode's established gradient is protected by excluding .zombieSub from all card skin rules. */
   @media(max-width:520px){.shopItemCard,.chestCard,.collectionCard,.diceCard,.dieCard,.invCard{border-width:1.5px!important}}
   `;
-  function install(){
-    let doc;try{doc=frame.contentDocument;}catch(_){return;}
-    if(!doc?.head||!doc.getElementById('app'))return;
-    let style=doc.getElementById('ttd-ui-fusion-v29');
-    if(!style){style=doc.createElement('style');style.id='ttd-ui-fusion-v29';doc.head.appendChild(style);}
-    style.textContent=CSS;
-    doc.documentElement.dataset.ttdUi='fusion-v29';
-  }
+  function install(){let doc;try{doc=frame.contentDocument;}catch(_){return}if(!doc?.head||!doc.getElementById('app'))return;let style=doc.getElementById('ttd-ui-fusion-v29');if(!style){style=doc.createElement('style');style.id='ttd-ui-fusion-v29';doc.head.appendChild(style)}style.textContent=CSS;doc.documentElement.dataset.ttdUi='fusion-v29'}
   frame.addEventListener('load',()=>setTimeout(install,60));
-  const timer=setInterval(()=>{install();try{if(frame.contentDocument?.getElementById('ttd-ui-fusion-v29'))clearInterval(timer);}catch(_){}},100);
+  const timer=setInterval(()=>{install();try{if(frame.contentDocument?.getElementById('ttd-ui-fusion-v29'))clearInterval(timer)}catch(_){}},100);
 })();
