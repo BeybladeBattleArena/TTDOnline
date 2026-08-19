@@ -604,8 +604,11 @@ exports.finishRun = onCall({ region:REGION, timeoutSeconds:30 }, async (request)
     const nextXp = Math.max(0, previousLevel.xp + xpAwarded);
     const nextLevel = progressionV21.publicLevel({ xp:nextXp });
     const levelsGained = progressionV21.levelsCrossed(previousLevel.xp, nextXp);
+    // Check every level already earned, not only levels crossed this run. This makes future
+    // reward-table additions retroactive and idempotent for players who already passed them.
+    const rewardEligibleLevels = Array.from({ length:nextLevel.level }, (_, index) => index + 1);
     const rewardEffects = levelRewardsV21._applyConfiguredLevelRewards(
-      tx, auth.uid, levelsGained, levelSnap.exists ? levelSnap.data()?.claimedRewards : []
+      tx, auth.uid, rewardEligibleLevels, levelSnap.exists ? levelSnap.data()?.claimedRewards : []
     );
 
     const pipsEarned = runPipsEarned + rewardEffects.pipsDelta;

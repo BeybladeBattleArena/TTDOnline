@@ -32,6 +32,7 @@ markers(singleplayer,[
   'const levelRef = db.doc(`users/${auth.uid}/game/accountLevel`)',
   'progressionV21.calculateRunXp',
   'progressionV21.levelsCrossed',
+  'const rewardEligibleLevels = Array.from({ length:nextLevel.level }',
   'levelRewardsV21._applyConfiguredLevelRewards',
   'xpAwarded',
   'levelBefore:previousLevel.level',
@@ -50,7 +51,7 @@ markers(rewards,[
 ],'level reward engine');
 markers(deckSocial,['progressionV21.publicLevel','progressionV21.curveSummary()','schemaVersion:21'],'friend/account level source');
 markers(friendClient,['v18FriendLevel','Level ${friend.level?.level||1}','ttd:account-progression-v21'],'friend list/client level UI');
-markers(runClient,['xpAwarded','renderLevel(data.level)','ttd:account-progression-v21'],'run EXP client');
+markers(runClient,['renderLevel(data.level)','ttd:account-progression-v21',"type:'ttd:v6-run-finish-result'",'...data'],'run EXP client');
 markers(runUi,['overlayXpV21','zSummaryXpV21','+${xp} EXP',"family==='adventure'","family==='zombie'"],'run result EXP UI');
 if(!clientEntry.includes("import './run-client-v21.js?v=21';"))throw new Error('Single-player client does not load run-client-v21.');
 if(!loader.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Game loader does not load EXP-aware result bridge v21.');
