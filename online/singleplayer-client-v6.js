@@ -1,4 +1,6 @@
+import './audio-client-v27.js?v=27';
 import './startup-splash-v26.js?v=26';
+import './startup-polish-v27.js?v=27';
 import './typography-client-v24.js?v=24';
 import './result-summary-client-v26.js?v=26';
 import './deck-guard-client-v10.js?v=10';
