@@ -11,7 +11,7 @@
     '/online/progression-bridge-v5.js?v=5',
     '/online/singleplayer-bridge-v6.js?v=6',
     '/online/merge-bridge-v6.js?v=6',
-    '/online/run-ui-bridge-v6.js?v=6',
+    '/online/run-ui-bridge-v21.js?v=21',
     '/online/refresh-bridge-v6.js?v=6',
     '/online/mobile-input-bridge-v9.js?v=9',
     '/online/interaction-effects-v10.js?v=10',

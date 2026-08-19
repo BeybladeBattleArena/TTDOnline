@@ -145,6 +145,11 @@ window.addEventListener('message',(event)=>{
   if(message.type?.startsWith?.('ttd:deck-v18-'))handleDeckRequest(message);
 });
 
+window.addEventListener('ttd:account-progression-v21',(event)=>{
+  const level=event.detail;if(!level||!manager)return;
+  manager={...manager,level};syncManager();
+});
+
 async function start(){
   const app=await waitForApp();auth=getAuth(app);functions=getFunctions(app,REGION);
   onAuthStateChanged(auth,async(user)=>{

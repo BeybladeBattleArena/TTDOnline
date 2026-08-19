@@ -1,6 +1,8 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
+const progressionV21 = require('./account-progression-core-v21');
+const levelRewardsV21 = require('./account-progression-v21');
 
 const db = getFirestore();
 const REGION = 'us-central1';
@@ -561,17 +563,20 @@ exports.finishRun = onCall({ region:REGION, timeoutSeconds:30 }, async (request)
   const wave = clampInt(request.data?.wave || 0, 0, 10000, 'Wave');
   const typhoonDefeated = !!request.data?.typhoonDefeated;
   const luckBonus = Math.max(0, Math.min(0.45, Number(request.data?.luckBonus || 0)));
+  const playSeconds = Math.max(0, Math.min(86400, Number(request.data?.playSeconds || 0)));
   const runRef = db.doc(`users/${auth.uid}/runs/${runId}`);
   const gameRef = db.doc(`users/${auth.uid}/game/state`);
+  const levelRef = db.doc(`users/${auth.uid}/game/accountLevel`);
   const receiptRef = db.collection(`users/${auth.uid}/transactions`).doc();
   let result;
   await db.runTransaction(async (tx) => {
-    const [runSnap, gameSnap] = await Promise.all([tx.get(runRef), tx.get(gameRef)]);
+    const [runSnap, gameSnap, levelSnap] = await Promise.all([tx.get(runRef), tx.get(gameRef), tx.get(levelRef)]);
     if (!runSnap.exists || runSnap.data()?.status !== 'active') throw new HttpsError('failed-precondition', 'That run is no longer active.');
     const run = runSnap.data(); const game = gameSnap.data();
-    let pipsEarned = 0; let chestCount = 0;
+    const modeFamily = progressionV21.inferModeFamily(run.modeKey, run.modeFamily);
+    let runPipsEarned = 0; let chestCount = 0;
     if (run.modeKey === 'adventure') {
-      pipsEarned = Math.round(wave * 10 + kills * 1.2 + coinGold + (typhoonDefeated ? 150 : 0));
+      runPipsEarned = Math.round(wave * 10 + kills * 1.2 + coinGold + (typhoonDefeated ? 150 : 0));
       if (typhoonDefeated && ['normal','hard','hell'].includes(run.difficultyKey)) {
         chestCount = 1 + (randomFloat() < luckBonus ? 1 : 0);
         for (let i = 0; i < chestCount; i++) {
@@ -584,44 +589,71 @@ exports.finishRun = onCall({ region:REGION, timeoutSeconds:30 }, async (request)
         }
       }
     } else if (run.modeKey === 'endlesshorde') {
-      const playSeconds = Math.max(0, Math.min(86400, Number(request.data?.playSeconds || 0)));
-      pipsEarned = Math.round(kills * 2 + playSeconds * 0.15);
+      runPipsEarned = Math.round(kills * 2 + playSeconds * 0.15);
     } else {
       const mult = run.modeKey === 'bossrush' ? 1.3 : run.modeKey === 'sudden' ? 1.6 : 1;
-      pipsEarned = Math.round((completedWaves * 8 + kills + coinGold) * mult);
+      runPipsEarned = Math.round((completedWaves * 8 + kills + coinGold) * mult);
     }
-    pipsEarned = Math.max(0, Math.min(5000000, pipsEarned));
+    runPipsEarned = Math.max(0, Math.min(5000000, runPipsEarned));
+
+    const previousLevel = progressionV21.publicLevel(levelSnap.exists ? levelSnap.data() : {});
+    const xpAwarded = progressionV21.calculateRunXp({
+      modeKey:run.modeKey, modeFamily, difficultyKey:run.difficultyKey,
+      completedWaves, kills, wave, playSeconds, typhoonDefeated,
+    });
+    const nextXp = Math.max(0, previousLevel.xp + xpAwarded);
+    const nextLevel = progressionV21.publicLevel({ xp:nextXp });
+    const levelsGained = progressionV21.levelsCrossed(previousLevel.xp, nextXp);
+    // Check every level already earned, not only levels crossed this run. This makes future
+    // reward-table additions retroactive and idempotent for players who already passed them.
+    const rewardEligibleLevels = Array.from({ length:nextLevel.level }, (_, index) => index + 1);
+    const rewardEffects = levelRewardsV21._applyConfiguredLevelRewards(
+      tx, auth.uid, rewardEligibleLevels, levelSnap.exists ? levelSnap.data()?.claimedRewards : []
+    );
+
+    const pipsEarned = runPipsEarned + rewardEffects.pipsDelta;
+    const astrasEarned = rewardEffects.astrasDelta;
     const revision = Number.isSafeInteger(game.revision) ? game.revision + 1 : 1;
-    tx.update(gameRef, { economy:{ pips:safePips(game) + pipsEarned, astras:safeAstras(game) }, revision, updatedAt:FieldValue.serverTimestamp() });
-    tx.update(runRef, { status:'completed', completedWaves, kills, coinGold, wave, typhoonDefeated, pipsEarned, chestCount, finishedAt:FieldValue.serverTimestamp() });
-    tx.set(receiptRef, { operation:typhoonDefeated ? 'adventure_clear' : 'run_finish', runId, modeKey:run.modeKey, pipsEarned, chestCount, dayKey:utcDayKey(), createdAt:FieldValue.serverTimestamp() });
-    result = { pipsEarned, chestCount, gameState:gamePublic({ ...game, revision, economy:{ pips:safePips(game)+pipsEarned, astras:safeAstras(game) } }) };
+    const nextEconomy = {
+      pips:safePips(game) + pipsEarned,
+      astras:safeAstras(game) + astrasEarned,
+    };
+    tx.update(gameRef, { economy:nextEconomy, revision, updatedAt:FieldValue.serverTimestamp() });
+    tx.set(levelRef, {
+      schemaVersion:21,
+      xp:nextXp,
+      level:nextLevel.level,
+      claimedRewards:rewardEffects.claimedRewards,
+      updatedAt:FieldValue.serverTimestamp(),
+    }, { merge:true });
+    tx.update(runRef, {
+      status:'completed', modeFamily, completedWaves, kills, coinGold, wave, playSeconds, typhoonDefeated,
+      pipsEarned:runPipsEarned, xpAwarded, levelBefore:previousLevel.level, levelAfter:nextLevel.level,
+      chestCount, finishedAt:FieldValue.serverTimestamp(),
+    });
+    tx.set(receiptRef, {
+      operation:typhoonDefeated ? 'adventure_clear' : 'run_finish',
+      runId, modeKey:run.modeKey, modeFamily, pipsEarned:runPipsEarned, xpAwarded,
+      levelBefore:previousLevel.level, levelAfter:nextLevel.level,
+      levelRewardPips:rewardEffects.pipsDelta, levelRewardAstras:rewardEffects.astrasDelta,
+      grantedLevelRewards:rewardEffects.grantedRewards, chestCount, dayKey:utcDayKey(), createdAt:FieldValue.serverTimestamp(),
+    });
+    result = {
+      modeFamily,
+      pipsEarned:runPipsEarned,
+      xpAwarded,
+      level:nextLevel,
+      levelsGained,
+      levelRewards:rewardEffects.grantedRewards,
+      levelRewardPips:rewardEffects.pipsDelta,
+      levelRewardAstras:rewardEffects.astrasDelta,
+      chestCount,
+      gameState:gamePublic({ ...game, revision, economy:nextEconomy }),
+    };
   });
   return { ok:true, ...result, snapshot:await readFullSnapshot(auth.uid) };
 });
 
-async function transactionFacts(uid) {
-  const [txSnap, diceSnap, friendsSnap] = await Promise.all([
-    db.collection(`users/${uid}/transactions`).get(),
-    db.collection(`users/${uid}/dice`).get(),
-    db.collection(`users/${uid}/friends`).where('status','==','accepted').get(),
-  ]);
-  const operations = txSnap.docs.map((doc) => ({ ...doc.data(), _id:doc.id }));
-  return { operations, diceCount:diceSnap.size, friendCount:friendsSnap.size };
-}
-function achievementEligibility(facts) {
-  const count = (op) => facts.operations.filter((row) => row.operation === op).length;
-  return {
-    first_summon: count('gacha') >= 1,
-    collector_25: facts.diceCount >= 25,
-    class_student: count('class_merge') >= 1,
-    class_master: count('class_merge') >= 10,
-    treasure_hunter: count('chest_open') >= 5,
-    jewel_crafter: facts.operations.some((row) => row.operation === 'jewel_enchant' && row.success === true),
-    typhoon_slayer: count('adventure_clear') >= 1,
-    social_link: facts.friendCount >= 1,
-  };
-}
 function dailyEligibility(facts, dayKey) {
   const today = facts.operations.filter((row) => row.dayKey === dayKey);
   return {

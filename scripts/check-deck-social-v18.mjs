@@ -69,10 +69,11 @@ requireMarkers(client,[
 if(!clientEntry.includes("import './deck-social-client-v18.js?v=18';"))throw new Error('singleplayer client does not load deck/social v18 client.');
 
 requireMarkers(functions,[
-  'const LEVEL_CAP = 100;',
+  'const LEVEL_CAP = progressionV21.LEVEL_CAP;',
   "const CUSTOM_DECK_NAME = /^[A-Za-z0-9]{1,12}$/;",
   'if (name === defaultDeckName(index)) return name;',
-  'return step * step * 100;',
+  'progressionV21.publicLevel',
+  'progressionV21.curveSummary()',
   'exports.getDeckManagerState',
   'exports.saveDeckV18',
   'exports.equipDeckV18',
@@ -83,8 +84,8 @@ requireMarkers(functions,[
   'exports.getFriendConversationV18',
   "throw new HttpsError('failed-precondition', 'A full deck of five dice is required.');",
   'v6ActiveDeckIdx: index',
-  "formula: '100 * (level - 1)^2'",
+  'schemaVersion:21',
 ],'deck/social functions');
 if(!functionsEntry.includes("const deckSocial = require('./deck-social-v18');")||!functionsEntry.includes('...deckSocial'))throw new Error('Cloud entrypoint does not export deck/social v18 services.');
 
-console.log('Deck/social v18 verified: explicit Save and Equip, 12-character alphanumeric names, guarded unsaved exits, non-combat bridge-failure isolation, friend active decks/messages/shared dice, and levels 1-100 are wired end to end.');
+console.log('Deck/social v18 verified: explicit Save and Equip, 12-character alphanumeric names, guarded unsaved exits, non-combat bridge-failure isolation, friend active decks/messages/shared dice, and canonical levels 1-100 are wired end to end.');
