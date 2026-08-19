@@ -2,7 +2,7 @@
   "name": "ttd-online",
   "private": true,
   "scripts": {
-    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:loader && npm run check:deck-social && npm run check:run-start",
+    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:battle-loop",
     "check:release": "node scripts/check-release-integrity-v15.mjs",
     "check:catalog": "node scripts/sync-dice-catalog.mjs",
     "check:functions": "node --check functions/index.js && node --check functions/progression-v5.js && node --check functions/singleplayer-v6.js && node --check functions/run-start-v19.js && node --check functions/gift-v7-secure.js && node --check functions/social-v6-fix.js && node --check functions/catalog-gacha-v7.js && node --check functions/onboarding-v9.js && node --check functions/deck-social-v18.js && node --check functions/main-v6.js",
@@ -11,6 +11,7 @@
     "check:loader": "node scripts/check-online-loader-v15.mjs",
     "check:deck-social": "node scripts/check-deck-social-v18.mjs",
     "check:run-start": "node scripts/check-run-start-v19.mjs",
+    "check:battle-loop": "node scripts/check-battle-loop-v20.mjs",
     "emulators": "firebase emulators:start",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
