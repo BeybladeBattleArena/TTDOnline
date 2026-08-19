@@ -37,6 +37,26 @@
         "reference": { "box": [128, 128], "fit": "contain", "rotationDegrees": 0 }
       }
     },
+    "hga1Topdown": {
+      "path": "/assets/hga1-topdown.svg",
+      "format": "svg",
+      "viewBox": "0 0 1375 353",
+      "width": 1375,
+      "height": 353,
+      "usage": {
+        "battle": { "box": [74, 19], "anchor": [0.5, 0.5], "rotationDegrees": 0 }
+      }
+    },
+    "hga1Side": {
+      "path": "/assets/hga1-side.svg",
+      "format": "svg",
+      "viewBox": "0 0 192 129",
+      "width": 192,
+      "height": 129,
+      "usage": {
+        "battle": { "box": [46, 31], "anchor": [0.5, 0.5], "rotationDegrees": 0 }
+      }
+    },
     "mainMenuMusic": {
       "path": "/assets/audio/main-menu.webm",
       "format": "audio/webm",
