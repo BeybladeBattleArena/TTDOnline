@@ -1,0 +1,27 @@
+name: Magma Force Inspect
+
+on:
+  push:
+    branches: [feature/magma-force]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect runtime integration points
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=random-dice-game-33.html
+          echo '=== line count ==='
+          wc -l "$FILE"
+          echo '=== dice/runtime symbols ==='
+          grep -nE "const DICE|let DICE|function .*Attack|case 'asclepiusSyringe'|case 'soulScimitar'|function tickDie|function applySlow|function damageEnemy|function .*enemy|battlefield|battleField|enemy.*point|point.*enemy|classMultFor|dieClass|state =|const state|let state" "$FILE" | head -n 260 || true
+          echo '=== CSS/effect symbols ==='
+          grep -nE "VISUAL EFFECTS|function fx\(|fxLayer|effects|projectile|enemyWrap|enemyEl|monster" "$FILE" | head -n 260 || true
+          echo '=== current catalog tail ==='
+          nl -ba dicefile.json | sed -n '35,70p'
