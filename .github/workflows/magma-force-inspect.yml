@@ -27,7 +27,7 @@ jobs:
           : > "$LOG"
           (
             set -euo pipefail
-            echo '=== correct patcher assertion from first dry run ==='
+            echo '=== correct patcher assertions from dry runs ==='
             python3 - <<'PY'
           from pathlib import Path
           p=Path('scripts/apply-magma-force-v1.py')
@@ -36,7 +36,9 @@ jobs:
           new='    text = text.replace("\'/online/dice-catalog-bridge-v7.js?v=7\'", "\'/online/dice-catalog-bridge-v8.js?v=8\'")'
           if old not in s:
               raise SystemExit('Could not locate first-run catalog URL assertion in patcher.')
-          p.write_text(s.replace(old,new,1))
+          s=s.replace(old,new,1)
+          s=s.replace("text = text.replace('/online/dice-catalog-bridge-v7.js?v=7', '/online/dice-catalog-bridge-v8.js?v=8')", "text = text.replace('/online/dice-catalog-bridge-v8.js?v=7', '/online/dice-catalog-bridge-v8.js?v=8')")
+          p.write_text(s)
           PY
             echo '=== apply Magma Force patch ==='
             python3 scripts/apply-magma-force-v1.py
