@@ -32,12 +32,12 @@ jobs:
       - name: Stage Gacha music
         shell: bash
         run: |
-          mkdir -p assets/audio
+          mkdir -p media
           token="$(gcloud auth print-access-token)"
           curl -fL -H "Authorization: Bearer $token" \
             'https://www.googleapis.com/drive/v3/files/1T-u3CjEt7LT1jEZMyPrXowOmQ0CO11Jr?alt=media' \
-            -o assets/audio/gacha.webm
-          test "$(wc -c < assets/audio/gacha.webm)" -gt 1000000
+            -o media/gacha.webm
+          test "$(wc -c < media/gacha.webm)" -gt 1000000
 
       - uses: actions/setup-node@v4
         with:
