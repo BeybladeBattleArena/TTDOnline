@@ -17,6 +17,7 @@
     '/online/interaction-effects-v10.js?v=10',
     '/online/collection-portrait-fit-v16.js?v=16',
     '/online/deck-editor-v18.js?v=18',
+    '/online/avatar-inventory-v22.js?v=22',
   ];
   const IIFE_END_MARKER='\n})();\n</'+'script>';
   const DICE_START='  const DICE = {';
