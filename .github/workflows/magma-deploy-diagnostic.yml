@@ -1,0 +1,48 @@
+name: Magma Deploy Diagnostic
+
+on:
+  push:
+    branches: [feature/magma-force]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/magma-force
+      - name: Inspect production workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: dcba4cc6e03a53749f90a1290f00407f48fadc48
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${RELEASE_SHA}&per_page=20" > /tmp/runs.json
+          python3 - <<'PY' > deploy-diagnostic.txt
+          import json
+          data=json.load(open('/tmp/runs.json'))
+          runs=data.get('workflow_runs',[])
+          print('run_count=',len(runs))
+          for r in runs:
+              print('run_id=',r.get('id'))
+              print('name=',r.get('name'))
+              print('event=',r.get('event'))
+              print('status=',r.get('status'))
+              print('conclusion=',r.get('conclusion'))
+              print('head_sha=',r.get('head_sha'))
+              print('html_url=',r.get('html_url'))
+              print('created_at=',r.get('created_at'))
+              print('updated_at=',r.get('updated_at'))
+              print('---')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deploy-diagnostic.txt
+          git commit -m 'chore: record Magma Force deploy diagnostic'
+          git push origin HEAD:feature/magma-force
