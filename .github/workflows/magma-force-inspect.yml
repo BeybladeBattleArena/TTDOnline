@@ -5,23 +5,42 @@ on:
     branches: [feature/magma-force]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect runtime integration points
+        with:
+          ref: feature/magma-force
+      - name: Capture runtime integration points
         shell: bash
         run: |
           set -euo pipefail
           FILE=random-dice-game-33.html
-          echo '=== line count ==='
-          wc -l "$FILE"
-          echo '=== dice/runtime symbols ==='
-          grep -nE "const DICE|let DICE|function .*Attack|case 'asclepiusSyringe'|case 'soulScimitar'|function tickDie|function applySlow|function damageEnemy|function .*enemy|battlefield|battleField|enemy.*point|point.*enemy|classMultFor|dieClass|state =|const state|let state" "$FILE" | head -n 260 || true
-          echo '=== CSS/effect symbols ==='
-          grep -nE "VISUAL EFFECTS|function fx\(|fxLayer|effects|projectile|enemyWrap|enemyEl|monster" "$FILE" | head -n 260 || true
-          echo '=== current catalog tail ==='
-          nl -ba dicefile.json | sed -n '35,70p'
+          OUT=magma-inspect.txt
+          {
+            echo '=== line count ==='
+            wc -l "$FILE"
+            echo '=== dice/runtime symbols ==='
+            grep -nE "const DICE|let DICE|function .*Attack|case 'asclepiusSyringe'|case 'soulScimitar'|function tickDie|function applySlow|function damageEnemy|function .*enemy|battlefield|battleField|enemy.*point|point.*enemy|classMultFor|dieClass|state =|const state|let state|freshState|function loop|function update|renderBattle|draw.*enemy|enemyRenderPos|dieTileLaunchPos|laneCanvas|laneWrap|apply.*Slow|knock|launch|statusResist" "$FILE" | head -n 500 || true
+            echo '=== dicefile/loading symbols ==='
+            grep -nE "dicefile|catalog|DICE_KEYS|Object\.assign\(DICE|fetch\(" "$FILE" | head -n 220 || true
+            echo '=== CSS/effect symbols ==='
+            grep -nE "VISUAL EFFECTS|function fx\(|fxLayer|effects|projectile|enemyWrap|enemyEl|monster|laneCanvas|canvas =|getContext" "$FILE" | head -n 400 || true
+            echo '=== attack switch vicinity ==='
+            sed -n '4750,5125p' "$FILE"
+            echo '=== state/update vicinity ==='
+            sed -n '3300,3825p' "$FILE"
+            echo '=== canvas render vicinity ==='
+            sed -n '6450,7140p' "$FILE"
+            echo '=== current catalog tail ==='
+            nl -ba dicefile.json | sed -n '35,70p'
+          } > "$OUT"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$OUT"
+          git commit -m 'chore: save Magma Force integration report'
+          git push origin HEAD:feature/magma-force
