@@ -20,21 +20,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud and Drive
+        id: auth
         uses: google-github-actions/auth@v3
         with:
           project_id: ttd-online-b8c0f
           workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
           service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/drive.readonly
 
       - uses: google-github-actions/setup-gcloud@v3
 
       - name: Stage Gacha music
         shell: bash
+        env:
+          DRIVE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           mkdir -p media
-          token="$(gcloud auth print-access-token)"
-          curl -fL -H "Authorization: Bearer $token" \
+          test -n "$DRIVE_ACCESS_TOKEN"
+          curl -fL -H "Authorization: Bearer $DRIVE_ACCESS_TOKEN" \
             'https://www.googleapis.com/drive/v3/files/1T-u3CjEt7LT1jEZMyPrXowOmQ0CO11Jr?alt=media' \
             -o media/gacha.webm
           test "$(wc -c < media/gacha.webm)" -gt 1000000
