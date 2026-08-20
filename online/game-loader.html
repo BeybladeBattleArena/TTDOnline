@@ -39,7 +39,7 @@
       // game document exists. They are independent of the synchronous bridge chain so an
       // earlier optional bridge error cannot prevent the portrait UI or page-reset contract.
       let authorityAttempts=0;
-      const ensureRuntimeAuthorities=()=>{
+      const ensureCollectionAuthority=()=>{
         authorityAttempts+=1;
         const ready=document.getElementById('deckScreen')&&document.getElementById('collectionGrid');
         if(ready){
@@ -59,10 +59,10 @@
           }
           return;
         }
-        if(authorityAttempts<200)setTimeout(ensureRuntimeAuthorities,25);
+        if(authorityAttempts<200)setTimeout(ensureCollectionAuthority,25);
         else console.error('Final runtime authorities could not find the transformed game document.');
       };
-      setTimeout(ensureRuntimeAuthorities,0);
+      setTimeout(ensureCollectionAuthority,0);
 
       try{
         const manifestResponse=await nativeFetch(window.__TTD_ASSET_URL('/assets/game-assets.json'),{cache:'no-store'});
