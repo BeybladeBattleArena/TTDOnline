@@ -4,7 +4,7 @@
   const GAME_PATH='/random-dice-game-33.html?v=34';
   const DICE_PATH='/dicefile.json?v=2';
   const BRIDGES=[
-    '/online/dice-catalog-bridge-v7.js?v=7',
+    '/online/dice-catalog-bridge-v8.js?v=8',
     '/online/soul-scimitar-svg-v14.js?v=14',
     '/online/slither-vine-bridge-v8.js?v=8',
     '/online/game-bridge-inner.js?v=4',
@@ -55,6 +55,9 @@
     if(!catalog.dice.slithervine || catalog.dice.slithervine?.special?.kind!=='slitherVine'){
       throw new Error('dicefile.json does not contain the Slither Vine runtime definition.');
     }
+    if(!catalog.dice.magmaforce || catalog.dice.magmaforce?.special?.kind!=='magmaForce'){
+      throw new Error('dicefile.json does not contain the Magma Force runtime definition.');
+    }
     const start=source.indexOf(DICE_START);
     const keys=source.indexOf(DICE_KEYS,start);
     if(start<0 || keys<0)throw new Error('The v33 DICE definition block could not be located.');
@@ -67,17 +70,17 @@
     source=replaceOnce(
       source,
       SKILL_SWITCH,
-      `${SKILL_SWITCH}\n      case 'soulScimitar': {\n        __TTD_BATTLE_HOOKS.fireSoulScimitar(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }\n      case 'slitherVine': {\n        __TTD_BATTLE_HOOKS.fireSlitherVine(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }`,
+      `${SKILL_SWITCH}\n      case 'magmaForce': {\n        if(!__TTD_BATTLE_HOOKS.fireMagmaForce(idx, die, d, dmg, dieAff, potencyBonus, isCrit)){\n          die.sinceLastShot = Math.max(die.sinceLastShot, effAtk(die)*0.85);\n        }\n        break;\n      }\n      case 'soulScimitar': {\n        __TTD_BATTLE_HOOKS.fireSoulScimitar(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }\n      case 'slitherVine': {\n        __TTD_BATTLE_HOOKS.fireSlitherVine(idx, die, d, dmg, dieAff, potencyBonus, isCrit);\n        break;\n      }`,
       'die skill dispatcher'
     );
     source=replaceOnce(
       source,
       LOOP_TIME,
-      `${LOOP_TIME}\n    __TTD_BATTLE_HOOKS.updateSoulScimitars(dt);\n    __TTD_BATTLE_HOOKS.updateSlitherVines(dt);`,
+      `${LOOP_TIME}\n    __TTD_BATTLE_HOOKS.updateMagmaForce(dt);\n    __TTD_BATTLE_HOOKS.updateSoulScimitars(dt);\n    __TTD_BATTLE_HOOKS.updateSlitherVines(dt);`,
       'main battle loop time step'
     );
     if(!source.includes(DRAW_LANE))throw new Error('The battle canvas draw call could not be located.');
-    source=source.split(DRAW_LANE).join(`${DRAW_LANE} __TTD_BATTLE_HOOKS.drawSlitherVines(); __TTD_BATTLE_HOOKS.drawSoulScimitars();`);
+    source=source.split(DRAW_LANE).join(`${DRAW_LANE} __TTD_BATTLE_HOOKS.drawSlitherVines(); __TTD_BATTLE_HOOKS.drawSoulScimitars(); __TTD_BATTLE_HOOKS.drawMagmaForceOverlay();`);
     source=replaceOnce(
       source,
       ADVENTURE_SKILLS,
@@ -92,8 +95,14 @@
     );
     source=replaceOnce(
       source,
+      "    for(const e of state.enemies){\n      if(!e.alive) continue;\n      const groundP = enemyRenderPos(e);",
+      "    __TTD_BATTLE_HOOKS.drawMagmaForceGround();\n\n    for(const e of state.enemies){\n      if(!e.alive) continue;\n      const groundP = enemyRenderPos(e);",
+      'Magma Force ground draw pass'
+    );
+    source=replaceOnce(
+      source,
       TARGET_LABEL,
-      "    const targetLabel = {front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', fastest:'Fastest enemy (ties: highest current HP)', none:'Does not attack'}[d.target]||d.target;",
+      "    const targetLabel = d.special?.kind==='magmaForce' ? 'Random battlefield areas' : ({front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', fastest:'Fastest enemy (ties: highest current HP)', none:'Does not attack'}[d.target]||d.target);",
       'die detail target label'
     );
     return source;
@@ -277,12 +286,13 @@
     });
     const battleHookSubsystem=`
   const __TTD_BATTLE_HOOKS = {
+    fireMagmaForce(){return false;}, updateMagmaForce(){}, drawMagmaForceGround(){}, drawMagmaForceOverlay(){},
     fireSoulScimitar(){}, updateSoulScimitars(){}, drawSoulScimitars(){},
     fireSlitherVine(){}, updateSlitherVines(){}, drawSlitherVines(){}
   };
   try {
 ${catalogSource}
-    Object.assign(__TTD_BATTLE_HOOKS,{fireSoulScimitar,updateSoulScimitars,drawSoulScimitars});
+    Object.assign(__TTD_BATTLE_HOOKS,{fireMagmaForce,updateMagmaForce,drawMagmaForceGround,drawMagmaForceOverlay,fireSoulScimitar,updateSoulScimitars,drawSoulScimitars});
     try {
 ${soulAssetSource}
     } catch (__ttdSoulAssetErr) {
@@ -291,7 +301,7 @@ ${soulAssetSource}
     }
   } catch (__ttdSoulCatalogErr) {
     console.error('Soul Saber catalog combat extension failed; no-op hooks preserve the battle loop.',__ttdSoulCatalogErr);
-    try { window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/dice-catalog-bridge-v7.js?v=7',message:String(__ttdSoulCatalogErr?.message||__ttdSoulCatalogErr)}, location.origin); } catch (_) {}
+    try { window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/dice-catalog-bridge-v8.js?v=8',message:String(__ttdSoulCatalogErr?.message||__ttdSoulCatalogErr)}, location.origin); } catch (_) {}
   }
   try {
 ${slitherSource}

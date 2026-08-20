@@ -53,6 +53,19 @@ else {
   if (soul.special?.pierceSlowChance !== 0.07) errors.push('Soul Scimitar C7 pierce Slow chance must be 7%.');
 }
 
+
+const magma = catalog.dice?.magmaforce;
+if (!magma) errors.push('Magma Force is missing.');
+else {
+  if (magma.atk !== 7.2) errors.push('Magma Force base cooldown must remain 7.2 seconds unless its design is intentionally revised.');
+  if (magma.category !== 'physical') errors.push('Magma Force must use Physical damage.');
+  if (Number(magma.affinities?.earth) !== 0.5 || Number(magma.affinities?.fire) !== 0.5) errors.push('Magma Force must remain a 50% Earth / 50% Fire split.');
+  if (magma.special?.kind !== 'magmaForce') errors.push('Magma Force must use the magmaForce runtime handler.');
+  if (magma.special?.baseBoulderCount !== 4 || magma.special?.class4BoulderCount !== 5) errors.push('Magma Force boulder counts must remain C1=4 and C4+=5.');
+  if (magma.special?.slowChance !== 0.20) errors.push('Magma Force C5 Slow chance must remain 20%.');
+  if (magma.special?.averageEnemyLength !== 15) errors.push('Magma Force spacing reference must remain one 15px average-enemy length unless map scale is intentionally revised.');
+}
+
 if (errors.length) {
   console.error(`dicefile.json failed validation with ${errors.length} error(s):`);
   for (const error of errors) console.error(` - ${error}`);

@@ -9,6 +9,7 @@ const isolationBlock=loader.slice(isolationStart,loader.indexOf('const battleHoo
 if(isolationBlock.includes("send('ttd:bridge-phase'")) throw new Error('Bridge runtime isolation incorrectly depends on loader-scope send() after document.write.');
 if(!isolationBlock.includes('window.parent?.postMessage')) throw new Error('Bridge runtime isolation does not use document-scope-safe error reporting.');
 if(!loader.includes('TTD_BATTLE_HOOK_SCOPE_V20') || !loader.includes('__TTD_BATTLE_HOOKS.updateSoulScimitars(dt)') || !loader.includes('__TTD_BATTLE_HOOKS.updateSlitherVines(dt)')) throw new Error('Catalog combat hooks are not exported safely to the transformed first-frame battle loop.');
+for(const marker of ["case 'magmaForce'",'__TTD_BATTLE_HOOKS.updateMagmaForce(dt)','drawMagmaForceGround','drawMagmaForceOverlay','fireMagmaForce,updateMagmaForce']) if(!loader.includes(marker)) throw new Error(`Magma Force loader hook missing: ${marker}`);
 
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 const mobileBridge=fs.readFileSync('online/mobile-input-bridge-v9.js','utf8');
@@ -20,7 +21,7 @@ const assetManifest=JSON.parse(fs.readFileSync('assets/game-assets.json','utf8')
 const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
 
 const bridges=[
-  'online/dice-catalog-bridge-v7.js',
+  'online/dice-catalog-bridge-v8.js',
   'online/soul-scimitar-svg-v14.js',
   'online/slither-vine-bridge-v8.js',
   'online/game-bridge-inner.js',
@@ -47,7 +48,7 @@ for(const marker of ['ensureCollectionAuthority','ttdCollectionAuthorityScript',
 if(!loader.includes("const GAME_PATH='/random-dice-game-33.html?v=34'")) throw new Error('Base runtime source contract changed unexpectedly.');
 
 const expectedUrls=[
-  '/online/dice-catalog-bridge-v7.js?v=7',
+  '/online/dice-catalog-bridge-v8.js?v=8',
   '/online/soul-scimitar-svg-v14.js?v=14',
   '/online/slither-vine-bridge-v8.js?v=8',
   '/online/game-bridge-inner.js?v=4',
