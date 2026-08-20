@@ -1,6 +1,6 @@
 import './audio-client-v27.js?v=30';
 import './startup-splash-v26.js?v=26';
-import './startup-polish-v27.js?v=27';
+import './startup-polish-v28.js?v=28';
 import './typography-client-v24.js?v=24';
 import './ui-fusion-v29.js?v=29';
 import './gacha-atmosphere-v30.js?v=30';
@@ -10,4 +10,5 @@ import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
 import './run-start-client-v19.js?v=19';
 import './singleplayer-client-v9-core.js?v=9';
+import './message-normalizer-v32.js?v=32';
 import './deck-social-client-v18.js?v=18';
