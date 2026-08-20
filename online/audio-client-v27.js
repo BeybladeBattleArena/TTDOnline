@@ -2,7 +2,7 @@
   'use strict';
   if (window.__TTD_AUDIO_V27) return;
   const frame=document.getElementById('gameFrame');
-  const TRACKS=Object.freeze({main:{url:'/assets/audio/main-menu.webm',loopStart:4.49,loopEnd:195.23},shop:{url:'/assets/audio/shop-remix.webm',loopStart:13.02,loopEnd:159.43},deck:{url:'/assets/audio/deck-construction.webm',loopStart:21.18,loopEnd:112.45}});
+  const TRACKS=Object.freeze({main:{url:'/assets/audio/main-menu.webm',loopStart:4.49,loopEnd:195.23},shop:{url:'/assets/audio/shop-remix.webm',loopStart:13.02,loopEnd:159.43},deck:{url:'/assets/audio/deck-construction.webm',loopStart:21.18,loopEnd:112.45},gacha:{url:'/assets/audio/gacha.webm',loopStart:.03,loopEnd:88.63}});
   const WELCOME=Object.freeze(['/assets/audio/welcome-rng-1.mp3','/assets/audio/welcome-rng-2.mp3','/assets/audio/welcome-rng-3.mp3','/assets/audio/welcome-rng-4.mp3']);
   const SILENT_SCREENS=new Set(['gameModesScreen','modeScreen','zombieModeScreen','adventureScreen','stageScreen','missionScreen','gameScreen']);
   const buffers=new Map();let context=null,master=null,musicGain=null,voiceGain=null,current=null,entered=false,lastScreen='';
@@ -14,7 +14,7 @@
   function stopCurrent(fade=.18){const playing=current;if(!playing||!context)return;fadeParam(musicGain.gain,0,fade);const src=playing.source;setTimeout(()=>{try{src.stop();}catch(_){}},Math.ceil((fade+.04)*1000));current=null;}
   async function playTrack(key){if(!entered||!TRACKS[key])return;const ctx=await unlock();if(!ctx)return;if(current)stopCurrent(.16);const track=TRACKS[key];let buffer;try{buffer=await load(track.url);}catch(error){console.error('TTD music load failed',error);return;}if(!entered)return;const source=ctx.createBufferSource();source.buffer=buffer;source.loop=true;source.loopStart=track.loopStart;source.loopEnd=Math.min(track.loopEnd,buffer.duration);source.connect(musicGain);musicGain.gain.cancelScheduledValues(ctx.currentTime);musicGain.gain.setValueAtTime(0,ctx.currentTime);musicGain.gain.linearRampToValueAtTime(.56,ctx.currentTime+.26);source.start(0,0);current={key,track,source,startedAt:ctx.currentTime};}
   function activeScreenId(){try{return frame?.contentDocument?.querySelector('.screen.active')?.id||'';}catch(_){return '';}}
-  function routeFor(screen){if(!entered||!screen)return null;if(screen==='shopScreen')return'shop';if(screen==='deckScreen')return'deck';if(SILENT_SCREENS.has(screen))return null;return'main';}
+  function routeFor(screen){if(!entered||!screen)return null;if(screen==='shopScreen')return'shop';if(screen==='deckScreen')return'deck';if(screen==='gachaScreen')return'gacha';if(SILENT_SCREENS.has(screen))return null;return'main';}
   function syncRoute(force=false){if(!entered)return;const screen=activeScreenId();if(!force&&screen===lastScreen)return;lastScreen=screen;const route=routeFor(screen);if(!route){stopCurrent(.18);return;}playTrack(route).catch(error=>console.error('TTD music route failed',error));}
   async function playWelcome(){const ctx=await unlock();if(!ctx)return;const url=WELCOME[Math.floor(Math.random()*WELCOME.length)];let buffer;try{buffer=await load(url);}catch(error){console.error('TTD welcome voice load failed',error);return;}return new Promise(resolve=>{const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);source.addEventListener('ended',resolve,{once:true});source.start();});}
   async function enterMainMenu(){entered=true;lastScreen='';await playTrack('main');}
