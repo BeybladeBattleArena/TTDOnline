@@ -15,8 +15,6 @@ concurrency:
 
 jobs:
   deploy:
-    # Direct/intermediate main commits never publish. Automatic production deploys require
-    # one deliberate finished release commit. Manual workflow_dispatch remains available.
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +26,18 @@ jobs:
           project_id: ttd-online-b8c0f
           workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
           service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Stage Gacha music
+        shell: bash
+        run: |
+          mkdir -p assets/audio
+          token="$(gcloud auth print-access-token)"
+          curl -fL -H "Authorization: Bearer $token" \
+            'https://www.googleapis.com/drive/v3/files/1T-u3CjEt7LT1jEZMyPrXowOmQ0CO11Jr?alt=media' \
+            -o assets/audio/gacha.webm
+          test "$(wc -c < assets/audio/gacha.webm)" -gt 1000000
 
       - uses: actions/setup-node@v4
         with:
