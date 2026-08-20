@@ -38,9 +38,9 @@
       // Final Collection authority and page-entry polish are injected after the transformed
       // game document exists. They are independent of the synchronous bridge chain so an
       // earlier optional bridge error cannot prevent the portrait UI or page-reset contract.
-      let authorityAttempts=0;
+      let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
-        authorityAttempts+=1;
+        collectionAuthorityAttempts+=1;
         const ready=document.getElementById('deckScreen')&&document.getElementById('collectionGrid');
         if(ready){
           if(!document.getElementById('ttdCollectionAuthorityScript')){
@@ -59,7 +59,7 @@
           }
           return;
         }
-        if(authorityAttempts<200)setTimeout(ensureCollectionAuthority,25);
+        if(collectionAuthorityAttempts<200)setTimeout(ensureCollectionAuthority,25);
         else console.error('Final runtime authorities could not find the transformed game document.');
       };
       setTimeout(ensureCollectionAuthority,0);
