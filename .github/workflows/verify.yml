@@ -4,9 +4,10 @@ on:
   pull_request:
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
+# Development branches are assembled before a PR is opened. If a PR is updated,
+# only the newest complete candidate matters; stale verification runs are cancelled.
 concurrency:
   group: verify-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -16,34 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-      - name: Import Gacha audio once
-        if: ${{ hashFiles('assets/audio/gacha.webm') == '' }}
-        id: auth
-        uses: google-github-actions/auth@v3
-        with:
-          project_id: ttd-online-b8c0f
-          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
-          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
-          token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/drive.readonly,https://www.googleapis.com/auth/cloud-platform
-      - name: Commit Gacha audio into repository
-        if: ${{ hashFiles('assets/audio/gacha.webm') == '' }}
-        shell: bash
-        env:
-          DRIVE_TOKEN: ${{ steps.auth.outputs.access_token }}
-        run: |
-          mkdir -p assets/audio
-          curl -fL -H "Authorization: Bearer $DRIVE_TOKEN" \
-            'https://www.googleapis.com/drive/v3/files/1T-u3CjEt7LT1jEZMyPrXowOmQ0CO11Jr?alt=media' \
-            -o assets/audio/gacha.webm
-          test "$(wc -c < assets/audio/gacha.webm)" -gt 1000000
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/audio/gacha.webm
-          git commit -m 'Import Gacha music binary'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
