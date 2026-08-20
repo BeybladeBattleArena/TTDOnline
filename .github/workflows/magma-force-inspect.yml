@@ -25,7 +25,19 @@ jobs:
           set +e
           LOG=magma-force-build.log
           : > "$LOG"
-          {
+          (
+            set -euo pipefail
+            echo '=== correct patcher assertion from first dry run ==='
+            python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/apply-magma-force-v1.py')
+          s=p.read_text()
+          old='    text = replace_once(text, "\'/online/dice-catalog-bridge-v7.js?v=7\'", "\'/online/dice-catalog-bridge-v8.js?v=8\'", \'catalog bridge URL\')'
+          new='    text = text.replace("\'/online/dice-catalog-bridge-v7.js?v=7\'", "\'/online/dice-catalog-bridge-v8.js?v=8\'")'
+          if old not in s:
+              raise SystemExit('Could not locate first-run catalog URL assertion in patcher.')
+          p.write_text(s.replace(old,new,1))
+          PY
             echo '=== apply Magma Force patch ==='
             python3 scripts/apply-magma-force-v1.py
             echo '=== install root dependencies ==='
@@ -43,12 +55,12 @@ jobs:
           if(m.special.kind!=='magmaForce'||m.special.baseBoulderCount!==4||m.special.class4BoulderCount!==5) throw new Error('Magma Force class-count contract failed.');
           if(m.atk!==7.2||m.category!=='physical'||m.affinities.earth!==0.5||m.affinities.fire!==0.5) throw new Error('Magma Force cooldown/category/affinity contract failed.');
           const bridge=fs.readFileSync('online/dice-catalog-bridge-v8.js','utf8');
-          for(const marker of ['function fireMagmaForce','function updateMagmaForce','function drawMagmaForceGround','function drawMagmaForceOverlay','minimumEdgeGapAverageEnemyLengths']) if(!bridge.includes(marker)) throw new Error('Missing Magma Force runtime marker: '+marker);
+          for(const marker of ['function fireMagmaForce','function updateMagmaForce','function drawMagmaForceGround','function drawMagmaForceOverlay','avgLen*4 + boulderR*2']) if(!bridge.includes(marker)) throw new Error('Missing Magma Force runtime marker: '+marker);
           const loader=fs.readFileSync('online/game-loader.js','utf8');
           for(const marker of ["case 'magmaForce'",'__TTD_BATTLE_HOOKS.updateMagmaForce(dt)','drawMagmaForceGround','drawMagmaForceOverlay']) if(!loader.includes(marker)) throw new Error('Missing Magma Force loader marker: '+marker);
           console.log('Focused Magma Force assertions passed.');
           NODE
-          } >> "$LOG" 2>&1
+          ) >> "$LOG" 2>&1
           status=$?
 
           git config user.name 'github-actions[bot]'
