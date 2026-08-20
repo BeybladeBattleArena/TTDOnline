@@ -35,9 +35,9 @@
         return nativeFetch(input,init);
       };
 
-      // Final Collection authority is also injected after the transformed game document exists.
-      // This is deliberately independent of the synchronous bridge chain: an earlier bridge error
-      // can no longer prevent the portrait layout, visible scrollbar, or Save footer from loading.
+      // Final Collection authority and page-entry polish are injected after the transformed
+      // game document exists. They are independent of the synchronous bridge chain so an
+      // earlier optional bridge error cannot prevent the portrait UI or page-reset contract.
       let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
         collectionAuthorityAttempts+=1;
@@ -50,10 +50,17 @@
             authority.async=false;
             document.head.appendChild(authority);
           }
+          if(!document.getElementById('ttdPagePolishV32Script')){
+            const polish=document.createElement('script');
+            polish.id='ttdPagePolishV32Script';
+            polish.src=window.__TTD_ASSET_URL('/online/page-polish-v32.js');
+            polish.async=false;
+            document.head.appendChild(polish);
+          }
           return;
         }
         if(collectionAuthorityAttempts<200)setTimeout(ensureCollectionAuthority,25);
-        else console.error('Final Collection authority could not find the transformed game document.');
+        else console.error('Final runtime authorities could not find the transformed game document.');
       };
       setTimeout(ensureCollectionAuthority,0);
 
