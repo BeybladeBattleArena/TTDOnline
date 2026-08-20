@@ -1,4 +1,4 @@
-name: Magma Force Inspect
+name: Magma Force Build
 
 on:
   push:
@@ -8,39 +8,63 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  build:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/magma-force
-      - name: Capture runtime integration points
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply, validate, and publish tested candidate
         shell: bash
         run: |
-          set -euo pipefail
-          FILE=random-dice-game-33.html
-          OUT=magma-inspect.txt
+          set +e
+          LOG=magma-force-build.log
+          : > "$LOG"
           {
-            echo '=== line count ==='
-            wc -l "$FILE"
-            echo '=== dice/runtime symbols ==='
-            grep -nE "const DICE|let DICE|function .*Attack|case 'asclepiusSyringe'|case 'soulScimitar'|function tickDie|function applySlow|function damageEnemy|function .*enemy|battlefield|battleField|enemy.*point|point.*enemy|classMultFor|dieClass|state =|const state|let state|freshState|function loop|function update|renderBattle|draw.*enemy|enemyRenderPos|dieTileLaunchPos|laneCanvas|laneWrap|apply.*Slow|knock|launch|statusResist" "$FILE" | head -n 500 || true
-            echo '=== dicefile/loading symbols ==='
-            grep -nE "dicefile|catalog|DICE_KEYS|Object\.assign\(DICE|fetch\(" "$FILE" | head -n 220 || true
-            echo '=== CSS/effect symbols ==='
-            grep -nE "VISUAL EFFECTS|function fx\(|fxLayer|effects|projectile|enemyWrap|enemyEl|monster|laneCanvas|canvas =|getContext" "$FILE" | head -n 400 || true
-            echo '=== attack switch vicinity ==='
-            sed -n '4750,5125p' "$FILE"
-            echo '=== state/update vicinity ==='
-            sed -n '3300,3825p' "$FILE"
-            echo '=== canvas render vicinity ==='
-            sed -n '6450,7140p' "$FILE"
-            echo '=== current catalog tail ==='
-            nl -ba dicefile.json | sed -n '35,70p'
-          } > "$OUT"
+            echo '=== apply Magma Force patch ==='
+            python3 scripts/apply-magma-force-v1.py
+            echo '=== install root dependencies ==='
+            npm install
+            echo '=== install function dependencies ==='
+            npm --prefix functions install
+            echo '=== full repository verification ==='
+            npm run check
+            echo '=== focused Magma Force assertions ==='
+            node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
+          const m=catalog.dice.magmaforce;
+          if(!m) throw new Error('Magma Force missing from canonical catalog.');
+          if(m.special.kind!=='magmaForce'||m.special.baseBoulderCount!==4||m.special.class4BoulderCount!==5) throw new Error('Magma Force class-count contract failed.');
+          if(m.atk!==7.2||m.category!=='physical'||m.affinities.earth!==0.5||m.affinities.fire!==0.5) throw new Error('Magma Force cooldown/category/affinity contract failed.');
+          const bridge=fs.readFileSync('online/dice-catalog-bridge-v8.js','utf8');
+          for(const marker of ['function fireMagmaForce','function updateMagmaForce','function drawMagmaForceGround','function drawMagmaForceOverlay','minimumEdgeGapAverageEnemyLengths']) if(!bridge.includes(marker)) throw new Error('Missing Magma Force runtime marker: '+marker);
+          const loader=fs.readFileSync('online/game-loader.js','utf8');
+          for(const marker of ["case 'magmaForce'",'__TTD_BATTLE_HOOKS.updateMagmaForce(dt)','drawMagmaForceGround','drawMagmaForceOverlay']) if(!loader.includes(marker)) throw new Error('Missing Magma Force loader marker: '+marker);
+          console.log('Focused Magma Force assertions passed.');
+          NODE
+          } >> "$LOG" 2>&1
+          status=$?
+
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$OUT"
-          git commit -m 'chore: save Magma Force integration report'
+
+          if [ "$status" -ne 0 ]; then
+            cp "$LOG" magma-force-build-failure.txt
+            git add magma-force-build-failure.txt
+            git commit -m 'chore: record Magma Force build failure' || true
+            git push origin HEAD:feature/magma-force || true
+            cat "$LOG"
+            exit "$status"
+          fi
+
+          rm -f magma-force-build-failure.txt magma-inspect.txt "$LOG"
+          rm -f scripts/apply-magma-force-v1.py .github/workflows/magma-force-inspect.yml
+          git add -A
+          git commit -m '[release] Add Magma Force die'
           git push origin HEAD:feature/magma-force
