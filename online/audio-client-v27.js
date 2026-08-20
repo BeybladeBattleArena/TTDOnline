@@ -2,7 +2,7 @@
   'use strict';
   if (window.__TTD_AUDIO_V27) return;
   const frame=document.getElementById('gameFrame');
-  const TRACKS=Object.freeze({main:{url:'/assets/audio/main-menu.webm',loopStart:4.49,loopEnd:195.23},shop:{url:'/assets/audio/shop-remix.webm',loopStart:13.02,loopEnd:159.43},deck:{url:'/assets/audio/deck-construction.webm',loopStart:21.18,loopEnd:112.45},gacha:{url:'/media/gacha.webm',loopStart:.03,loopEnd:88.63}});
+  const TRACKS=Object.freeze({main:{url:'/assets/audio/main-menu.webm',loopStart:4.49,loopEnd:195.23},shop:{url:'/assets/audio/shop-remix.webm',loopStart:13.02,loopEnd:159.43},deck:{url:'/assets/audio/deck-construction.webm',loopStart:21.18,loopEnd:112.45},gacha:{url:'/assets/audio/gacha.webm',loopStart:.03,loopEnd:88.63}});
   const WELCOME=Object.freeze(['/assets/audio/welcome-rng-1.mp3','/assets/audio/welcome-rng-2.mp3','/assets/audio/welcome-rng-3.mp3','/assets/audio/welcome-rng-4.mp3']);
   const SILENT_SCREENS=new Set(['gameModesScreen','modeScreen','zombieModeScreen','adventureScreen','stageScreen','missionScreen','gameScreen']);
   const buffers=new Map();let context=null,master=null,musicGain=null,voiceGain=null,current=null,entered=false,lastScreen='';
