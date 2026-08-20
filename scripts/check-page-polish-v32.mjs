@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+const polish=fs.readFileSync('online/page-polish-v32.js','utf8');
+const normalizer=fs.readFileSync('online/message-normalizer-v32.js','utf8');
+const loader=fs.readFileSync('online/game-loader.html','utf8');
+const entry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
+new Function(polish);new Function(normalizer);
+for(const marker of ['ttdGachaHistoryV32','Pull History','slice(0,3)','toLocaleString','pullResults','shopMainTabs','data-shoptab="general"','NEW','data-invtab="rewards"','diffBtn.normal','deckSearch','favoriteClass','deckRarityFilter','deckElementFilter','deckSocketFilter','ttdDeckEditName'])if(!polish.includes(marker))throw new Error(`Page polish v32 missing ${marker}`);
+for(const marker of ['ttd:deck-v18-save-request','ttd:deck-v18-equip-request','delete message.name'])if(!normalizer.includes(marker))throw new Error(`Deck name guard missing ${marker}`);
+if(!loader.includes('/online/page-polish-v32.js'))throw new Error('Game loader does not inject page polish v32.');
+if(!entry.includes("./message-normalizer-v32.js?v=32"))throw new Error('Outer client does not load deck name normalizer v32.');
+if(entry.indexOf('message-normalizer-v32')>entry.indexOf('deck-social-client-v18'))throw new Error('Deck name normalizer must register before deck/social message handling.');
+console.log('Page polish v32 verified: Gacha history, page-entry defaults, adjacent deck rename icon, and save/equip name protection are wired.');
