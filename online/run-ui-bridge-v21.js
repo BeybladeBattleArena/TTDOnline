@@ -62,7 +62,10 @@
         state.__ttdPlatformBonusApplied=false;
         state.__ttdPlatformSlotMemory={};
         state.__ttdPlatformDestroyedSlots=[];
-        if(modeLabel)modeLabel.textContent='Test Map · First Route';
+        if(modeLabel)modeLabel.textContent='Test Map · First Combat Area';
+        /* startAdventure builds its first path before the Test Map flags exist. Rebuild once the
+           authoritative state is present so wave 1 is immediately sectioned inside the real map. */
+        try{buildPath(cw,ch);}catch(err){console.warn('Test Map first combat path could not rebuild.',err);}
         return;
       }
       if(performance.now()-startedAt<25000)requestAnimationFrame(()=>tagAuthorizedTestState(previousState,startedAt));
@@ -86,10 +89,36 @@
       const response=await fetch('/online/adventure-platforming-v2.js?v=2',{cache:'no-store'});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const source=await response.text();
+
+      /* Expose a static battle-frame renderer from inside the traversal module's own lexical
+         scope. Combat therefore uses drawBackground/currentPlatforms/drawPlatform/drawGate/
+         drawHazards from the exact navigation renderer instead of maintaining a second map. */
+      const renderMarker="  if(document.getElementById('adventureScreen')?.classList.contains('active'))renderAdventureList();";
+      const renderInjection=`  function renderBattleBackdrop(g,w,h,area=1,time=0){
+    if(!g||!Number.isFinite(w)||!Number.isFinite(h)||w<1||h<1)return false;
+    const previous=session;
+    const preview={
+      active:false,phase:'battle',nav:null,w,h,cameraX:Number(area)===2?1390:40,time:Number(time)||0,lastTs:0,
+      joyX:0,joyZ:0,checkpoint:{x:80,z:0,y:0},objects:makeInteractables(),drops:[],hazardCd:0,returnAlpha:1,
+    };
+    session=preview;
+    try{
+      drawBackground(g);
+      currentPlatforms(preview.time).sort((a,b)=>a.z1-b.z1).forEach((p)=>drawPlatform(g,p));
+      drawGate(g);drawHazards(g);
+      for(const o of preview.objects){if(o.type==='breakable')drawPillar(g,o);else drawChest(g,o);}
+      return true;
+    }finally{session=previous;}
+  }
+
+${renderMarker}`;
+      const withRenderer=source.replace(renderMarker,renderInjection);
+      if(withRenderer===source)throw new Error('Platform battle renderer exposure marker missing');
+
       const apiMarker="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),get active(){return!!session?.active;}};";
-      const apiReplacement="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex)),get liveBoardIndices(){return liveBoardIndices();},get selecting(){return!!session?.active&&session.phase==='select';},get active(){return!!session?.active;}};";
-      const platformSource=source.replace(apiMarker,apiReplacement);
-      if(platformSource===source)throw new Error('Platform navigator API exposure marker missing');
+      const apiReplacement="window.__TTD_PLATFORM_TEST_API={version:3,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex)),renderBattleBackdrop:(g,w,h,area,time)=>renderBattleBackdrop(g,w,h,area,time),get liveBoardIndices(){return liveBoardIndices();},get selecting(){return!!session?.active&&session.phase==='select';},get active(){return!!session?.active;}};";
+      const platformSource=withRenderer.replace(apiMarker,apiReplacement);
+      if(platformSource===withRenderer)throw new Error('Platform navigator API exposure marker missing');
       eval(`${platformSource}\n//# sourceURL=/online/adventure-platforming-v2.js`);
 
       const selectorResponse=await fetch('/online/adventure-platforming-selector-v6.js?v=6',{cache:'no-store'});
@@ -97,15 +126,24 @@
       const selectorSource=await selectorResponse.text();
       eval(`${selectorSource}\n//# sourceURL=/online/adventure-platforming-selector-v6.js`);
 
-      const worldResponse=await fetch('/online/adventure-pseudo3d-battle-v1.js?v=1',{cache:'no-store'});
-      if(!worldResponse.ok)throw new Error(`Pseudo-3D battle world HTTP ${worldResponse.status}`);
+      const worldResponse=await fetch('/online/adventure-pseudo3d-battle-v1.js?v=3',{cache:'no-store'});
+      if(!worldResponse.ok)throw new Error(`Same-map battle world HTTP ${worldResponse.status}`);
       const worldSource=await worldResponse.text();
       eval(`${worldSource}\n//# sourceURL=/online/adventure-pseudo3d-battle-v1.js`);
 
+      /* This is intentionally installed after every Test Map start wrapper has been established. */
       installPlatformOnlineStartSyncV1();
+
+      /* Presentation is global to every mode. Load it deterministically last rather than from a
+         Test Map renderer, which previously let start-function replacement races drop its wrapper. */
+      const presentationResponse=await fetch('/online/game-presentation-v1.js?v=2',{cache:'no-store'});
+      if(!presentationResponse.ok)throw new Error(`Game presentation HTTP ${presentationResponse.status}`);
+      const presentationSource=await presentationResponse.text();
+      eval(`${presentationSource}\n//# sourceURL=/online/game-presentation-v1.js`);
+      window.TTDGamePresentation?.rebind?.();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v6 + pseudo3d-battle-v1',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v6 + same-map-battle-v3 + presentation-v2',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
   loadAdventurePlatformingV2();
