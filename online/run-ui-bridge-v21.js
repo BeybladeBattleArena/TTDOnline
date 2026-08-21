@@ -87,20 +87,20 @@
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const source=await response.text();
       const apiMarker="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),get active(){return!!session?.active;}};";
-      const apiReplacement="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex)),get selecting(){return!!session?.active&&session.phase==='select';},get active(){return!!session?.active;}};";
+      const apiReplacement="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex)),get liveBoardIndices(){return liveBoardIndices();},get selecting(){return!!session?.active&&session.phase==='select';},get active(){return!!session?.active;}};";
       const platformSource=source.replace(apiMarker,apiReplacement);
       if(platformSource===source)throw new Error('Platform navigator API exposure marker missing');
       eval(`${platformSource}\n//# sourceURL=/online/adventure-platforming-v2.js`);
 
-      const selectorResponse=await fetch('/online/adventure-platforming-selector-v5.js?v=5',{cache:'no-store'});
-      if(!selectorResponse.ok)throw new Error(`Navigator selector v5 HTTP ${selectorResponse.status}`);
+      const selectorResponse=await fetch('/online/adventure-platforming-selector-v6.js?v=6',{cache:'no-store'});
+      if(!selectorResponse.ok)throw new Error(`Navigator selector v6 HTTP ${selectorResponse.status}`);
       const selectorSource=await selectorResponse.text();
-      eval(`${selectorSource}\n//# sourceURL=/online/adventure-platforming-selector-v5.js`);
+      eval(`${selectorSource}\n//# sourceURL=/online/adventure-platforming-selector-v6.js`);
 
       installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v5',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v6',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
   loadAdventurePlatformingV2();
