@@ -72,10 +72,6 @@
       const previousState=state;
       const result=platformStartAdventure(advId,stageIdx,diffKey);
       if(advId!==TEST_ID)return result;
-
-      // The online single-player bridge begins the cloud run first and invokes the legacy starter
-      // only after the server answers. The platform wrapper therefore briefly sees the old state.
-      // Undo those premature prototype flags and tag the newly-created authorized Adventure state.
       if(state===previousState && previousState){
         testFlags.forEach((key)=>{ try{delete previousState[key];}catch(_){} });
       }
@@ -85,10 +81,6 @@
     };
   }
 
-  // This module is fetched separately so the experimental traversal engine can evolve without
-  // touching Al Hata or the 668 KB legacy core. Direct eval is deliberate: this bridge is injected
-  // inside the core game IIFE, so the platform module receives safe lexical access to battle state,
-  // die HP/stat helpers, Adventure routing, and path construction.
   async function loadAdventurePlatformingV2(){
     try{
       const response=await fetch('/online/adventure-platforming-v2.js?v=2',{cache:'no-store'});
@@ -100,18 +92,15 @@
       if(platformSource===source)throw new Error('Platform navigator API exposure marker missing');
       eval(`${platformSource}\n//# sourceURL=/online/adventure-platforming-v2.js`);
 
-      // Navigator selection now uses independent hit targets positioned above each highlighted
-      // summoned die. They call the exact-instance selector directly and do not route through the
-      // battle board's click/drag handlers at all.
-      const hitResponse=await fetch('/online/adventure-platforming-hit-layer-v4.js?v=4',{cache:'no-store'});
-      if(!hitResponse.ok)throw new Error(`Navigator hit layer HTTP ${hitResponse.status}`);
-      const hitSource=await hitResponse.text();
-      eval(`${hitSource}\n//# sourceURL=/online/adventure-platforming-hit-layer-v4.js`);
+      const selectorResponse=await fetch('/online/adventure-platforming-selector-v5.js?v=5',{cache:'no-store'});
+      if(!selectorResponse.ok)throw new Error(`Navigator selector v5 HTTP ${selectorResponse.status}`);
+      const selectorSource=await selectorResponse.text();
+      eval(`${selectorSource}\n//# sourceURL=/online/adventure-platforming-selector-v5.js`);
 
       installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + hit-layer-v4',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v5',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
   loadAdventurePlatformingV2();
