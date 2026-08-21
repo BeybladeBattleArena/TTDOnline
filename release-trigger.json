@@ -1,0 +1,10 @@
+{
+  "release": "2026-08-21-main-map-combat-and-results-presentation",
+  "includes": [
+    "combat stays on the exact traversal map",
+    "MISSION then START timing",
+    "objective CLEAR timing",
+    "preloaded unified Adventure/Zombie result presentation",
+    "MVP die-only blue glow"
+  ]
+}
