@@ -44,6 +44,9 @@ for(const marker of [
   "/online/adventure-platforming-v1.js?v=1",
   "cache:'no-store'",
   "eval(`${source}",
-])if(!runUi.includes(marker))throw new Error(`Platform loader marker missing: ${marker}`);
+  "installPlatformOnlineStartSyncV1()",
+  "state.adventureStage===testStage",
+  "requestAnimationFrame(()=>tagAuthorizedTestState",
+])if(!runUi.includes(marker))throw new Error(`Platform loader/start-sync marker missing: ${marker}`);
 
-console.log('Adventure platforming v1 verified: Test Map is isolated from Al Hata, pauses after wave 2 for navigator selection, provides pseudo-3D double-jump traversal and interactive reward chests, then resumes on a second marching path.');
+console.log('Adventure platforming v1 verified: Test Map is isolated from Al Hata, waits for the authorized online Adventure state, pauses after wave 2 for navigator selection, provides pseudo-3D double-jump traversal and interactive reward chests, then resumes on a second marching path.');
