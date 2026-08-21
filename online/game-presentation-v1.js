@@ -9,15 +9,20 @@
   const CLEAR_HIDE_MS = 1400;
   const CLEAR_REMOVE_MS = 1700;
   const RESULT_REVEAL_MS = 1850;
+  const ZOMBIE_SUPPRESS_MS = 2450;
+
   let missionBusy = false;
   let adventureClearBusy = false;
-  let zombieClearBusy = false;
+  let zombieResultBusy = false;
+  let missionWordStyle = null;
+  let rawZombieSummary = null;
+  let suppressZombieSummaryUntil = 0;
 
   const style = document.createElement('style');
   style.id = 'ttdGamePresentationStyleV1';
   style.textContent = `
     #${SIGNAL_ID}{
-      position:absolute;inset:0;z-index:260;pointer-events:none;
+      position:fixed;inset:0;z-index:1260;pointer-events:none;
       display:flex;align-items:center;justify-content:center;
       background:rgba(5,8,16,.10);opacity:0;
       transition:opacity .24s ease;
@@ -35,10 +40,7 @@
     #${SIGNAL_ID} .ttdSignalWord.in{opacity:1;transform:scale(1);filter:blur(0);}
     #${SIGNAL_ID}.leaving .ttdSignalWord{opacity:0;transform:scale(1.07);filter:blur(2px);transition:opacity .26s ease,transform .28s ease,filter .25s ease;}
 
-    /* The older combined MISSION START overlay is suppressed while V1 owns the cue. */
-    body.ttdMissionCueV1 .missionStartOverlay{display:none!important;}
-
-    /* Adventure and Zombie results use the same reveal motion and surface treatment. */
+    /* Adventure and Zombie results share one presentation surface and reveal motion. */
     #gameOverlay.ttdResultCardV1,
     #zSummaryOverlay.ttdResultCardV1{
       background:rgba(8,9,16,.91)!important;
@@ -55,12 +57,9 @@
       font-family:'Cinzel',serif!important;font-size:24px!important;color:var(--gold-glow,#f3d491)!important;
       letter-spacing:.04em!important;margin:0 0 8px!important;
     }
-    @keyframes ttdResultRevealV1{
-      0%{opacity:0;transform:scale(.985)}
-      100%{opacity:1;transform:scale(1)}
-    }
+    @keyframes ttdResultRevealV1{0%{opacity:0;transform:scale(.985)}100%{opacity:1;transform:scale(1)}}
 
-    /* MVP treatment: deliberately tight to the die itself. */
+    /* MVP treatment stays tight to the die only. */
     #zSummaryCard .ttdMvpLabelV1{
       margin-top:11px!important;color:#8fc4e8!important;
       font:700 11px 'Cinzel',serif!important;letter-spacing:.13em!important;
@@ -88,33 +87,32 @@
   `;
   document.head.appendChild(style);
 
-  function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  function getSignalHost() {
-    return document.getElementById('gameScreen') || document.getElementById('app') || document.body;
+  function snapshotWordStyle(node) {
+    const cs = getComputedStyle(node);
+    return {
+      fontFamily: cs.fontFamily,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      letterSpacing: cs.letterSpacing,
+      color: cs.color,
+      textShadow: cs.textShadow,
+      lineHeight: cs.lineHeight,
+    };
   }
 
-  function titleStyleFromLegacy(word) {
-    const probe = document.createElement('div');
-    probe.className = 'awardTitle';
-    probe.textContent = 'MISSION';
-    probe.style.cssText = 'position:absolute;left:-99999px;top:-99999px;visibility:hidden;';
-    document.body.appendChild(probe);
-    const cs = getComputedStyle(probe);
-    const size = parseFloat(cs.fontSize || '0');
-    if (size >= 20) {
-      word.style.fontFamily = cs.fontFamily;
-      word.style.fontSize = cs.fontSize;
-      word.style.fontWeight = cs.fontWeight;
-      word.style.letterSpacing = cs.letterSpacing;
-      word.style.color = cs.color;
-      word.style.textShadow = cs.textShadow;
-      word.style.lineHeight = cs.lineHeight;
-    }
-    probe.remove();
+  function applyWordStyle(node, snap) {
+    if (!node || !snap) return;
+    const pairs = [
+      ['font-family', snap.fontFamily], ['font-size', snap.fontSize], ['font-weight', snap.fontWeight],
+      ['letter-spacing', snap.letterSpacing], ['color', snap.color], ['text-shadow', snap.textShadow],
+      ['line-height', snap.lineHeight],
+    ];
+    pairs.forEach(([key, value]) => value && node.style.setProperty(key, value, 'important'));
   }
 
-  function makeSignal(words) {
+  function makeSignal(words, lockedStyle = null) {
     document.getElementById(SIGNAL_ID)?.remove();
     const overlay = document.createElement('div');
     overlay.id = SIGNAL_ID;
@@ -124,26 +122,67 @@
       const word = document.createElement('div');
       word.className = 'awardTitle ttdSignalWord';
       word.textContent = text;
-      titleStyleFromLegacy(word);
+      if (lockedStyle) applyWordStyle(word, lockedStyle);
       stack.appendChild(word);
       return word;
     });
     overlay.appendChild(stack);
-    getSignalHost().appendChild(overlay);
+    document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     return { overlay, nodes };
+  }
+
+  function beginLegacyMissionSuppression() {
+    const saved = new Map();
+    const candidates = () => document.querySelectorAll(
+      '.missionStartOverlay,[id*="missionStart" i],[class*="missionStart" i],.awardOverlay,.awardTitle,h1,h2'
+    );
+    const restore = (el) => {
+      const before = saved.get(el); if (!before) return;
+      if (before.visibility) el.style.setProperty('visibility', before.visibility.value, before.visibility.priority);
+      else el.style.removeProperty('visibility');
+      if (before.opacity) el.style.setProperty('opacity', before.opacity.value, before.opacity.priority);
+      else el.style.removeProperty('opacity');
+      saved.delete(el);
+    };
+    const scan = () => {
+      for (const el of candidates()) {
+        if (el.closest?.(`#${SIGNAL_ID}`)) continue;
+        const text = String(el.textContent || '').replace(/\s+/g, ' ').trim();
+        const match = text.length <= 80 && /MISSION\s*START!?/i.test(text);
+        if (match && !saved.has(el)) {
+          saved.set(el, {
+            visibility: el.style.getPropertyValue('visibility') ? { value:el.style.getPropertyValue('visibility'), priority:el.style.getPropertyPriority('visibility') } : null,
+            opacity: el.style.getPropertyValue('opacity') ? { value:el.style.getPropertyValue('opacity'), priority:el.style.getPropertyPriority('opacity') } : null,
+          });
+          el.style.setProperty('visibility', 'hidden', 'important');
+          el.style.setProperty('opacity', '0', 'important');
+        } else if (!match && saved.has(el)) restore(el);
+      }
+    };
+    const observer = new MutationObserver(scan);
+    observer.observe(document.body, { childList:true, subtree:true, characterData:true });
+    scan();
+    return () => { observer.disconnect(); for (const el of [...saved.keys()]) restore(el); };
   }
 
   async function playMissionCue(startFn) {
     if (missionBusy) return;
     missionBusy = true;
-    document.body.classList.add('ttdMissionCueV1');
+    const stopLegacySuppression = beginLegacyMissionSuppression();
     const { overlay, nodes } = makeSignal(['MISSION', 'START!']);
-    requestAnimationFrame(() => requestAnimationFrame(() => nodes[0]?.classList.add('in')));
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      missionWordStyle = snapshotWordStyle(nodes[0]);
+      applyWordStyle(nodes[0], missionWordStyle);
+      applyWordStyle(nodes[1], missionWordStyle);
+      nodes[0]?.classList.add('in');
+    }));
+
     await sleep(MISSION_GAP_MS);
     nodes[1]?.classList.add('in');
 
-    /* START! is the go cue; begin the authoritative run request here. */
+    /* START! is the go cue. The authoritative run request begins here. */
     try { startFn(); } catch (err) { console.error('TTD mission start failed.', err); }
 
     await sleep(MISSION_START_HOLD_MS);
@@ -151,7 +190,9 @@
     overlay.classList.remove('show');
     await sleep(310);
     overlay.remove();
-    document.body.classList.remove('ttdMissionCueV1');
+
+    /* Keep suppressing the legacy combined cue long enough for its own animation to finish. */
+    setTimeout(stopLegacySuppression, 1200);
     missionBusy = false;
   }
 
@@ -168,7 +209,7 @@
   }
 
   function playClearCue() {
-    const { overlay, nodes } = makeSignal(['CLEAR!']);
+    const { overlay, nodes } = makeSignal(['CLEAR!'], missionWordStyle);
     requestAnimationFrame(() => requestAnimationFrame(() => nodes[0]?.classList.add('in')));
     setTimeout(() => {
       overlay.classList.add('leaving');
@@ -178,24 +219,66 @@
   }
 
   function decorateAdventureResult() {
-    const overlay = document.getElementById('gameOverlay');
-    if (overlay) overlay.classList.add('ttdResultCardV1');
+    document.getElementById('gameOverlay')?.classList.add('ttdResultCardV1');
   }
 
-  function decorateZombieResult() {
+  function decorateZombieResult(cardOverride = null) {
     const overlay = document.getElementById('zSummaryOverlay');
     if (overlay) overlay.classList.add('ttdResultCardV1');
-    const card = document.getElementById('zSummaryCard');
+    const card = cardOverride || document.getElementById('zSummaryCard');
     if (!card) return;
     const glyph = card.querySelector('.glyphBig');
-    if (glyph) {
-      glyph.classList.add('ttdMvpDieGlowV1');
-      const label = glyph.previousElementSibling;
-      if (label) {
-        label.textContent = 'MVP';
-        label.classList.add('ttdMvpLabelV1');
-      }
+    if (!glyph) return;
+    glyph.classList.add('ttdMvpDieGlowV1');
+    const label = glyph.previousElementSibling;
+    if (label) {
+      label.textContent = 'MVP';
+      label.classList.add('ttdMvpLabelV1');
     }
+  }
+
+  function revealAdventureResult() {
+    decorateAdventureResult();
+    document.getElementById('gameOverlay')?.classList.add('show');
+  }
+
+  function prepareZombieResult(pipsEarned) {
+    if (typeof rawZombieSummary !== 'function') return null;
+    const overlay = document.getElementById('zSummaryOverlay');
+    const card = document.getElementById('zSummaryCard');
+    if (!overlay || !card) return null;
+
+    rawZombieSummary(pipsEarned);
+    decorateZombieResult(card);
+    overlay.classList.remove('show');
+
+    /* Detach the fully-built card while hidden. Its button listener stays alive, but the
+       reward-counter bridge cannot see it and therefore cannot animate behind the curtain. */
+    const marker = document.createComment('ttd-prepared-zombie-result-v1');
+    card.replaceWith(marker);
+    return { overlay, card, marker };
+  }
+
+  function revealZombieResult(prepared) {
+    if (!prepared) return;
+    if (prepared.marker.parentNode) prepared.marker.replaceWith(prepared.card);
+    decorateZombieResult(prepared.card);
+    void prepared.overlay.offsetWidth;
+    prepared.overlay.classList.add('show');
+  }
+
+  function installSummaryWrapper() {
+    if (typeof window.showZombieSummary !== 'function' || window.showZombieSummary.__ttdResultDecoratedV1) return;
+    rawZombieSummary = window.showZombieSummary;
+    const wrapped = function(...args) {
+      if (performance.now() < suppressZombieSummaryUntil) return;
+      const result = rawZombieSummary.apply(this, args);
+      decorateZombieResult();
+      return result;
+    };
+    wrapped.__ttdResultDecoratedV1 = true;
+    window.showZombieSummary = wrapped;
+    try { showZombieSummary = window.showZombieSummary; } catch (_) {}
   }
 
   function installClearFlow() {
@@ -206,7 +289,7 @@
         adventureClearBusy = true;
         playClearCue();
 
-        /* Build/finish immediately, but keep the prepared card hidden until the cue is over. */
+        /* Finish and build now, then keep the prepared card hidden until after CLEAR. */
         const result = baseCampaignComplete.apply(this, args);
         const overlay = document.getElementById('gameOverlay');
         if (overlay) {
@@ -215,8 +298,7 @@
           void overlay.offsetWidth;
         }
         setTimeout(() => {
-          decorateAdventureResult();
-          document.getElementById('gameOverlay')?.classList.add('show');
+          revealAdventureResult();
           adventureClearBusy = false;
         }, RESULT_REVEAL_MS);
         return result;
@@ -226,46 +308,61 @@
       try { campaignComplete = window.campaignComplete; } catch (_) {}
     }
 
-    if (typeof window.endEndlessHorde === 'function' && !window.endEndlessHorde.__ttdClearWrappedV1) {
+    /* Endless Horde ends on defeat, wipeout, or End Run, so it gets the same preloaded card
+       presentation but deliberately does NOT say CLEAR. Future objective-complete Zombie modes
+       should use the public objective-clear presenter below. */
+    if (typeof window.endEndlessHorde === 'function' && !window.endEndlessHorde.__ttdResultWrappedV1) {
       const baseEndHorde = window.endEndlessHorde;
       const wrappedEndHorde = function(...args) {
-        if (!state?.running || zombieClearBusy) return baseEndHorde.apply(this, args);
-        zombieClearBusy = true;
-        playClearCue();
+        if (!state?.running || zombieResultBusy) return baseEndHorde.apply(this, args);
+        zombieResultBusy = true;
+        const pipsEarned = Math.round((Number(state.kills) || 0) * 2 + (Number(state.zPlayTime) || 0) * .15);
+
         const result = baseEndHorde.apply(this, args);
-        /* Existing Horde summary is intentionally scheduled ~2s later; that is our smooth post-CLEAR reveal. */
-        setTimeout(() => { decorateZombieResult(); zombieClearBusy = false; }, 2020);
+        const prepared = prepareZombieResult(pipsEarned);
+        suppressZombieSummaryUntil = performance.now() + ZOMBIE_SUPPRESS_MS;
+        setTimeout(() => {
+          revealZombieResult(prepared);
+          zombieResultBusy = false;
+        }, RESULT_REVEAL_MS);
         return result;
       };
-      wrappedEndHorde.__ttdClearWrappedV1 = true;
+      wrappedEndHorde.__ttdResultWrappedV1 = true;
       window.endEndlessHorde = wrappedEndHorde;
       try { endEndlessHorde = window.endEndlessHorde; } catch (_) {}
     }
-
-    if (typeof window.showZombieSummary === 'function' && !window.showZombieSummary.__ttdResultDecoratedV1) {
-      const baseShowZombieSummary = window.showZombieSummary;
-      const wrappedShowZombieSummary = function(...args) {
-        const result = baseShowZombieSummary.apply(this, args);
-        decorateZombieResult();
-        return result;
-      };
-      wrappedShowZombieSummary.__ttdResultDecoratedV1 = true;
-      window.showZombieSummary = wrappedShowZombieSummary;
-      try { showZombieSummary = window.showZombieSummary; } catch (_) {}
-    }
   }
+
+  function presentObjectiveClear({ prepare, reveal, delay = RESULT_REVEAL_MS } = {}) {
+    playClearCue();
+    const prepared = typeof prepare === 'function' ? prepare() : undefined;
+    setTimeout(() => { if (typeof reveal === 'function') reveal(prepared); }, Math.max(0, Number(delay) || RESULT_REVEAL_MS));
+    return prepared;
+  }
+
+  window.TTDGamePresentation = Object.freeze({
+    version: 1,
+    missionGapMs: MISSION_GAP_MS,
+    clearHideMs: CLEAR_HIDE_MS,
+    resultRevealMs: RESULT_REVEAL_MS,
+    showClear: playClearCue,
+    presentObjectiveClear,
+    decorateAdventureResult,
+    decorateZombieResult,
+  });
 
   function installAll() {
     wrapStartFunction('startGame');
     wrapStartFunction('startAdventure');
     wrapStartFunction('startAdventureCampaign');
     wrapStartFunction('startEndlessHorde');
+    installSummaryWrapper();
     decorateAdventureResult();
     installClearFlow();
   }
 
   installAll();
-  /* Later bridge layers replace some globals during boot; re-assert wrappers briefly, then stop. */
+  /* Bridge layers replace some globals during boot; re-assert wrappers briefly, then stop. */
   let tries = 0;
   const timer = setInterval(() => {
     installAll();
