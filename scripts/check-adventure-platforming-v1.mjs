@@ -3,13 +3,15 @@ import vm from 'node:vm';
 
 const platform=fs.readFileSync('online/adventure-platforming-v2.js','utf8');
 const selector=fs.readFileSync('online/adventure-platforming-selector-v6.js','utf8');
-const pseudo3d=fs.readFileSync('online/adventure-pseudo3d-battle-v1.js','utf8');
+const mainMapBattle=fs.readFileSync('online/adventure-pseudo3d-battle-v1.js','utf8');
+const presentation=fs.readFileSync('online/game-presentation-v1.js','utf8');
 const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 
 new vm.Script(platform,{filename:'online/adventure-platforming-v2.js'});
 new vm.Script(selector,{filename:'online/adventure-platforming-selector-v6.js'});
-new vm.Script(pseudo3d,{filename:'online/adventure-pseudo3d-battle-v1.js'});
+new vm.Script(mainMapBattle,{filename:'online/adventure-pseudo3d-battle-v1.js'});
+new vm.Script(presentation,{filename:'online/game-presentation-v1.js'});
 new vm.Script(runUi,{filename:'online/run-ui-bridge-v21.js'});
 
 const need=(text,markers,label)=>{for(const marker of markers)if(!text.includes(marker))throw new Error(`${label} marker missing: ${marker}`);};
@@ -45,24 +47,39 @@ need(selector,[
 ],'selector v6');
 if(selector.includes("originalTiles[index]?.classList.contains('ttd-nav-choice')"))throw new Error('Selector v6 must not infer live dice from DOM class timing.');
 
-need(pseudo3d,[
-  "window.__TTD_TEST_PSEUDO3D_BATTLE_V1=true",
-  "const ROUTES={",
-  "const CAMERAS={1:60,2:1450}",
-  "function projectWorld(x,z,y=0,W=cw,H=ch,id=routeId())",
-  "pathPts=route.map(p=>projectWorld",
-  "buildPath=function buildPathWithTestPseudo3D",
-  "drawLane=function drawLaneWithTestPseudo3D",
+need(mainMapBattle,[
+  "window.__TTD_TEST_MAINMAP_BATTLE_V2=true",
+  "const snapshot=document.createElement('canvas')",
+  "state?.__ttdPlatformDone",
+  "g.drawImage(src,0,0)",
+  "ttd-mainmap-combat-v2",
+  "ttdMainMapCombatBackV2",
+  "ttdMainMapCombatFrontV2",
+  "buildPath=function buildPathOnMainMap",
+  "drawLane=function drawLaneOnMainMap",
   "theme.top='rgba(0,0,0,0)'",
-  "ttdPseudoBattleBackV1",
-  "ttdPseudoBattleFrontV1",
-  "PSEUDO-3D · LOWER COURTYARD",
-  "PSEUDO-3D · UPPER COURT",
-  "drawRouteBed",
-  "drawPlatform",
-  "2 pseudo-3D battle waves",
-],'pseudo-3D battle');
-if(pseudo3d.includes('ADVENTURES.al_hata')||pseudo3d.includes('AL_HATA_STAGE'))throw new Error('Pseudo-3D Test Map renderer must not mutate Al Hata.');
+  "Traverse the stage, then fight inside sectioned combat areas on that exact same map.",
+  "/online/game-presentation-v1.js?v=1",
+  "cache:'no-store'",
+],'same-map battle');
+if(mainMapBattle.includes('ADVENTURES.al_hata')||mainMapBattle.includes('AL_HATA_STAGE'))throw new Error('Same-map Test Map renderer must not mutate Al Hata.');
+if(mainMapBattle.includes("const ROUTES={")||mainMapBattle.includes('PSEUDO-3D · LOWER COURTYARD'))throw new Error('Legacy alternate pseudo-3D battle world must not return.');
+
+need(presentation,[
+  'const MISSION_GAP_MS = 1250',
+  'const CLEAR_HIDE_MS = 1400',
+  'const RESULT_REVEAL_MS = 1850',
+  "makeSignal(['MISSION', 'START!'])",
+  "makeSignal(['CLEAR!'], missionWordStyle)",
+  'position:fixed',
+  'prepareZombieResult(pipsEarned)',
+  "card.replaceWith(marker)",
+  'ttdResultCardV1',
+  'ttdMvpDieGlowV1',
+  "label.textContent = 'MVP'",
+  'presentObjectiveClear',
+  'window.TTDGamePresentation',
+],'game presentation');
 
 need(runUi,[
   "/online/adventure-platforming-v2.js?v=2",
@@ -81,4 +98,4 @@ need(loaderHtml,[
   "cache:'no-store'",
 ],'loader');
 
-console.log('Adventure Test Map unified pseudo-3D verified: both battle routes are projected into the traversal world coordinate system, the normal combat engine renders over transparent world canvases, navigator selection still comes from exact live summoned instances, and Al Hata remains untouched.');
+console.log('Adventure Test Map same-map flow verified: combat reuses the exact captured traversal frame instead of an alternate pseudo-3D world, battle paths remain sectioned inside that map, navigator selection still uses exact live summoned instances, MISSION/CLEAR/result timing is syntax-checked, Zombie results preload before reveal without pre-running counters, and Al Hata remains untouched.');
