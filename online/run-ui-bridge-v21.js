@@ -89,17 +89,17 @@
   // touching Al Hata or the 668 KB legacy core. Direct eval is deliberate: this bridge is injected
   // inside the core game IIFE, so the platform module receives safe lexical access to battle state,
   // die HP/stat helpers, Adventure routing, and path construction.
-  async function loadAdventurePlatformingV1(){
+  async function loadAdventurePlatformingV2(){
     try{
-      const response=await fetch('/online/adventure-platforming-v1.js?v=1',{cache:'no-store'});
+      const response=await fetch('/online/adventure-platforming-v2.js?v=2',{cache:'no-store'});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const source=await response.text();
-      eval(`${source}\n//# sourceURL=/online/adventure-platforming-v1.js`);
+      eval(`${source}\n//# sourceURL=/online/adventure-platforming-v2.js`);
       installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v1.js?v=1',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
-  loadAdventurePlatformingV1();
+  loadAdventurePlatformingV2();
 })();
