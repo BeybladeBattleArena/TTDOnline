@@ -114,8 +114,7 @@
   function normalizedText(el){return String(el?.textContent||'').replace(/\s+/g,' ').trim();}
   function isLegacyMissionNode(el){
     if(!el || el.closest?.(`#${SIGNAL_ID}`))return false;
-    const text=normalizedText(el);
-    return text.length<=120 && /MISSION/i.test(text) && /START!?/i.test(text);
+    return /^MISSION\s*START!?$/i.test(normalizedText(el));
   }
   function suppressLegacyMissionNode(el){
     if(!isLegacyMissionNode(el))return;
