@@ -14,7 +14,6 @@
   let missionBusy = false;
   let adventureClearBusy = false;
   let zombieResultBusy = false;
-  let missionWordStyle = null;
   let rawZombieSummary = null;
   let suppressZombieSummaryUntil = 0;
 
@@ -30,15 +29,16 @@
     #${SIGNAL_ID}.show{opacity:1;}
     #${SIGNAL_ID} .ttdSignalStack{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transform:translateY(-3%);}
     #${SIGNAL_ID} .ttdSignalWord{
-      margin:0;padding:0;line-height:1.02;text-align:center;white-space:nowrap;
-      font-family:'Cinzel',serif;font-size:clamp(30px,8vw,54px);font-weight:700;
-      letter-spacing:.055em;color:var(--gold-glow,#f3d491);
-      text-shadow:0 2px 0 rgba(0,0,0,.92),0 0 12px rgba(243,212,145,.42);
-      opacity:0;transform:scale(.76);filter:blur(2px);
+      margin:0!important;padding:0!important;line-height:1.02!important;text-align:center!important;white-space:nowrap!important;
+      font-family:'Russo One',sans-serif!important;font-size:clamp(30px,8vw,54px)!important;font-weight:400!important;
+      letter-spacing:.055em!important;color:var(--gold-glow,#f3d491)!important;
+      text-shadow:0 2px 0 rgba(0,0,0,.92),0 0 12px rgba(243,212,145,.42)!important;
+      visibility:hidden!important;opacity:0!important;transform:scale(.76);filter:blur(2px);
       transition:opacity .20s ease,transform .28s cubic-bezier(.18,.78,.26,1.18),filter .22s ease;
+      animation:none!important;
     }
-    #${SIGNAL_ID} .ttdSignalWord.in{opacity:1;transform:scale(1);filter:blur(0);}
-    #${SIGNAL_ID}.leaving .ttdSignalWord{opacity:0;transform:scale(1.07);filter:blur(2px);transition:opacity .26s ease,transform .28s ease,filter .25s ease;}
+    #${SIGNAL_ID} .ttdSignalWord.in{visibility:visible!important;opacity:1!important;transform:scale(1);filter:blur(0);}
+    #${SIGNAL_ID}.leaving .ttdSignalWord{opacity:0!important;transform:scale(1.07);filter:blur(2px);transition:opacity .26s ease,transform .28s ease,filter .25s ease;}
 
     /* Adventure and Zombie results share one presentation surface and reveal motion. */
     #gameOverlay.ttdResultCardV1,
@@ -54,7 +54,7 @@
       background:transparent!important;box-shadow:none!important;text-align:center!important;
     }
     #zSummaryOverlay.ttdResultCardV1 #zSummaryCard h2{
-      font-family:'Cinzel',serif!important;font-size:24px!important;color:var(--gold-glow,#f3d491)!important;
+      font-family:'Russo One',sans-serif!important;font-size:24px!important;font-weight:400!important;color:var(--gold-glow,#f3d491)!important;
       letter-spacing:.04em!important;margin:0 0 8px!important;
     }
     @keyframes ttdResultRevealV1{0%{opacity:0;transform:scale(.985)}100%{opacity:1;transform:scale(1)}}
@@ -62,7 +62,7 @@
     /* MVP treatment stays tight to the die only. */
     #zSummaryCard .ttdMvpLabelV1{
       margin-top:11px!important;color:#8fc4e8!important;
-      font:700 11px 'Cinzel',serif!important;letter-spacing:.13em!important;
+      font:400 11px 'Russo One',sans-serif!important;letter-spacing:.13em!important;
       text-shadow:0 0 8px rgba(143,196,232,.34)!important;
     }
     #zSummaryCard .ttdMvpDieGlowV1{
@@ -89,30 +89,7 @@
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  function snapshotWordStyle(node) {
-    const cs = getComputedStyle(node);
-    return {
-      fontFamily: cs.fontFamily,
-      fontSize: cs.fontSize,
-      fontWeight: cs.fontWeight,
-      letterSpacing: cs.letterSpacing,
-      color: cs.color,
-      textShadow: cs.textShadow,
-      lineHeight: cs.lineHeight,
-    };
-  }
-
-  function applyWordStyle(node, snap) {
-    if (!node || !snap) return;
-    const pairs = [
-      ['font-family', snap.fontFamily], ['font-size', snap.fontSize], ['font-weight', snap.fontWeight],
-      ['letter-spacing', snap.letterSpacing], ['color', snap.color], ['text-shadow', snap.textShadow],
-      ['line-height', snap.lineHeight],
-    ];
-    pairs.forEach(([key, value]) => value && node.style.setProperty(key, value, 'important'));
-  }
-
-  function makeSignal(words, lockedStyle = null) {
+  function makeSignal(words) {
     document.getElementById(SIGNAL_ID)?.remove();
     const overlay = document.createElement('div');
     overlay.id = SIGNAL_ID;
@@ -120,22 +97,22 @@
     stack.className = 'ttdSignalStack';
     const nodes = words.map((text) => {
       const word = document.createElement('div');
-      word.className = 'awardTitle ttdSignalWord';
+      /* Deliberately do NOT use .awardTitle here. Legacy award keyframes were able to reveal
+         START before its timer and Zombie typography could restyle the cue through that class. */
+      word.className = 'ttdSignalWord';
       word.textContent = text;
-      if (lockedStyle) applyWordStyle(word, lockedStyle);
       stack.appendChild(word);
       return word;
     });
     overlay.appendChild(stack);
     document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('show'));
     return { overlay, nodes };
   }
 
   function beginLegacyMissionSuppression() {
     const saved = new Map();
     const candidates = () => document.querySelectorAll(
-      '.missionStartOverlay,[id*="missionStart" i],[class*="missionStart" i],.awardOverlay,.awardTitle,h1,h2'
+      '.missionStartOverlay,[id*="mission" i],[class*="mission" i],.awardOverlay,.awardTitle,h1,h2'
     );
     const restore = (el) => {
       const before = saved.get(el); if (!before) return;
@@ -149,7 +126,7 @@
       for (const el of candidates()) {
         if (el.closest?.(`#${SIGNAL_ID}`)) continue;
         const text = String(el.textContent || '').replace(/\s+/g, ' ').trim();
-        const match = text.length <= 80 && /MISSION\s*START!?/i.test(text);
+        const match = text.length <= 100 && /MISSION/i.test(text) && /START!?/i.test(text);
         if (match && !saved.has(el)) {
           saved.set(el, {
             visibility: el.style.getPropertyValue('visibility') ? { value:el.style.getPropertyValue('visibility'), priority:el.style.getPropertyPriority('visibility') } : null,
@@ -172,12 +149,9 @@
     const stopLegacySuppression = beginLegacyMissionSuppression();
     const { overlay, nodes } = makeSignal(['MISSION', 'START!']);
 
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      missionWordStyle = snapshotWordStyle(nodes[0]);
-      applyWordStyle(nodes[0], missionWordStyle);
-      applyWordStyle(nodes[1], missionWordStyle);
-      nodes[0]?.classList.add('in');
-    }));
+    /* MISSION becomes visible synchronously. START remains visibility:hidden until the exact gap. */
+    nodes[0]?.classList.add('in');
+    requestAnimationFrame(() => overlay.classList.add('show'));
 
     await sleep(MISSION_GAP_MS);
     nodes[1]?.classList.add('in');
@@ -191,7 +165,7 @@
     await sleep(310);
     overlay.remove();
 
-    /* Keep suppressing the legacy combined cue long enough for its own animation to finish. */
+    /* Keep suppressing any old combined cue through the remainder of its legacy animation. */
     setTimeout(stopLegacySuppression, 1200);
     missionBusy = false;
   }
@@ -204,13 +178,15 @@
       playMissionCue(() => base.apply(this, args));
     };
     wrapped.__ttdMissionWrappedV1 = true;
+    wrapped.__ttdMissionBaseV1 = base;
     window[name] = wrapped;
     try { eval(`${name} = window['${name}'];`); } catch (_) {}
   }
 
   function playClearCue() {
-    const { overlay, nodes } = makeSignal(['CLEAR!'], missionWordStyle);
-    requestAnimationFrame(() => requestAnimationFrame(() => nodes[0]?.classList.add('in')));
+    const { overlay, nodes } = makeSignal(['CLEAR!']);
+    nodes[0]?.classList.add('in');
+    requestAnimationFrame(() => overlay.classList.add('show'));
     setTimeout(() => {
       overlay.classList.add('leaving');
       overlay.classList.remove('show');
@@ -340,17 +316,6 @@
     return prepared;
   }
 
-  window.TTDGamePresentation = Object.freeze({
-    version: 1,
-    missionGapMs: MISSION_GAP_MS,
-    clearHideMs: CLEAR_HIDE_MS,
-    resultRevealMs: RESULT_REVEAL_MS,
-    showClear: playClearCue,
-    presentObjectiveClear,
-    decorateAdventureResult,
-    decorateZombieResult,
-  });
-
   function installAll() {
     wrapStartFunction('startGame');
     wrapStartFunction('startAdventure');
@@ -361,11 +326,25 @@
     installClearFlow();
   }
 
+  window.TTDGamePresentation = Object.freeze({
+    version: 2,
+    missionGapMs: MISSION_GAP_MS,
+    clearHideMs: CLEAR_HIDE_MS,
+    resultRevealMs: RESULT_REVEAL_MS,
+    showClear: playClearCue,
+    presentObjectiveClear,
+    decorateAdventureResult,
+    decorateZombieResult,
+    rebind: installAll,
+  });
+
   installAll();
-  /* Bridge layers replace some globals during boot; re-assert wrappers briefly, then stop. */
+  /* The online bridge now loads this module after its final Test Map start wrapper. Keep a
+     longer low-cost safety window for unusually slow cloud/bootstrap layers without tying the
+     presentation loader to any one gameplay mode. */
   let tries = 0;
   const timer = setInterval(() => {
     installAll();
-    if (++tries > 40) clearInterval(timer);
-  }, 100);
+    if (++tries > 120) clearInterval(timer);
+  }, 250);
 })();
