@@ -144,10 +144,11 @@ need(runUi,[
   'installPlatformOnlineStartSyncV2();',
   'window.TTDGamePresentation?.rebind?.()',
 ],'continuous world loader/injection');
+/* The old beginPlatform literal is intentionally present as a requiredReplace search needle.
+   What matters is that its replacement is present and all actual battle previews use wstate refs. */
 forbid(runUi,[
   '/online/adventure-platforming-selector-v5.js?v=5',
   'cameraX:Number(area)===2?1390:40',
-  'objects:makeInteractables(),drops:[]',
   'installPlatformOnlineStartSyncV1()',
   '/online/game-presentation-v1.js?v=2',
 ],'continuous world loader/injection');
