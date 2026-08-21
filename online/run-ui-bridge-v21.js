@@ -97,10 +97,15 @@
       const selectorSource=await selectorResponse.text();
       eval(`${selectorSource}\n//# sourceURL=/online/adventure-platforming-selector-v6.js`);
 
+      const worldResponse=await fetch('/online/adventure-pseudo3d-battle-v1.js?v=1',{cache:'no-store'});
+      if(!worldResponse.ok)throw new Error(`Pseudo-3D battle world HTTP ${worldResponse.status}`);
+      const worldSource=await worldResponse.text();
+      eval(`${worldSource}\n//# sourceURL=/online/adventure-pseudo3d-battle-v1.js`);
+
       installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v6',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + selector-v6 + pseudo3d-battle-v1',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
   loadAdventurePlatformingV2();
