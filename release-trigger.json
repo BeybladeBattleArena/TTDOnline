@@ -1,10 +1,11 @@
 {
-  "release": "2026-08-21-main-map-combat-and-results-presentation",
+  "release": "2026-08-21-main-map-combat-and-results-presentation-v2",
   "includes": [
     "combat stays on the exact traversal map",
     "MISSION then START timing",
     "objective CLEAR timing",
     "preloaded unified Adventure/Zombie result presentation",
-    "MVP die-only blue glow"
+    "MVP die-only blue glow",
+    "release verifier updated for same-map combat"
   ]
 }
