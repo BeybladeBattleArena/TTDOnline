@@ -1,55 +1,44 @@
 (() => {
   'use strict';
-  if(window.__TTD_TEST_MAINMAP_BATTLE_V2)return;
-  window.__TTD_TEST_MAINMAP_BATTLE_V2=true;
+  if(window.__TTD_TEST_MAINMAP_BATTLE_V3)return;
+  window.__TTD_TEST_MAINMAP_BATTLE_V3=true;
 
   const TEST_ID='test_map';
-  const BACK_ID='ttdMainMapCombatBackV2';
-  const FRONT_ID='ttdMainMapCombatFrontV2';
-  const snapshot=document.createElement('canvas');
-  let snapshotReady=false;
+  const BACK_ID='ttdMainMapCombatBackV3';
+  const FRONT_ID='ttdMainMapCombatFrontV3';
 
   const style=document.createElement('style');
-  style.id='ttdMainMapCombatStyleV2';
+  style.id='ttdMainMapCombatStyleV3';
   style.textContent=`
-    #laneWrap.ttd-mainmap-combat-v2{background:#101522!important;overflow:hidden;}
-    #laneWrap.ttd-mainmap-combat-v2 #${BACK_ID},
-    #laneWrap.ttd-mainmap-combat-v2 #${FRONT_ID}{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;}
-    #laneWrap.ttd-mainmap-combat-v2 #${BACK_ID}{z-index:0;}
-    #laneWrap.ttd-mainmap-combat-v2 #laneCanvas{z-index:2;background:transparent!important;}
-    #laneWrap.ttd-mainmap-combat-v2 #${FRONT_ID}{z-index:3;}
-    #laneWrap.ttd-mainmap-combat-v2 #toast{z-index:7;}
-    #laneWrap.ttd-mainmap-combat-v2 #ttdPseudoBattleBackV1,
-    #laneWrap.ttd-mainmap-combat-v2 #ttdPseudoBattleFrontV1,
-    #laneWrap.ttd-mainmap-combat-v2 #ttdPseudoBattleBadgeV1{display:none!important;}
+    #laneWrap.ttd-mainmap-combat-v3{background:#101522!important;overflow:hidden;}
+    #laneWrap.ttd-mainmap-combat-v3 #${BACK_ID},
+    #laneWrap.ttd-mainmap-combat-v3 #${FRONT_ID}{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;}
+    #laneWrap.ttd-mainmap-combat-v3 #${BACK_ID}{z-index:0;}
+    #laneWrap.ttd-mainmap-combat-v3 #laneCanvas{z-index:2;background:transparent!important;}
+    #laneWrap.ttd-mainmap-combat-v3 #${FRONT_ID}{z-index:3;}
+    #laneWrap.ttd-mainmap-combat-v3 #toast{z-index:7;}
+    #laneWrap.ttd-mainmap-combat-v3 #ttdPseudoBattleBackV1,
+    #laneWrap.ttd-mainmap-combat-v3 #ttdPseudoBattleFrontV1,
+    #laneWrap.ttd-mainmap-combat-v3 #ttdPseudoBattleBadgeV1,
+    #laneWrap.ttd-mainmap-combat-v3 #ttdMainMapCombatBackV2,
+    #laneWrap.ttd-mainmap-combat-v3 #ttdMainMapCombatFrontV2{display:none!important;}
   `;
   document.head.appendChild(style);
 
+  function platformApi(){return window.__TTD_PLATFORM_TEST_API||null;}
   function isTestState(){
     return !!state?.__ttdTestMap && !!state?.adventure && !state?.typhoonPhase;
   }
-  function combatActive(){
-    return isTestState() && !!state?.__ttdPlatformDone && snapshotReady;
+  function hasExactRenderer(){
+    return isTestState() && typeof platformApi()?.renderBattleBackdrop==='function';
   }
-
-  function cacheTraversalFrame(){
-    try{
-      const src=document.getElementById('ttdPlatformCanvas');
-      if(src&&src.width>0&&src.height>0){
-        const cs=getComputedStyle(src);
-        const visible=cs.display!=='none'&&cs.visibility!=='hidden'&&Number(cs.opacity||1)>.03;
-        if(visible){
-          if(snapshot.width!==src.width||snapshot.height!==src.height){snapshot.width=src.width;snapshot.height=src.height;}
-          const g=snapshot.getContext('2d');
-          g.clearRect(0,0,snapshot.width,snapshot.height);
-          g.drawImage(src,0,0);
-          snapshotReady=true;
-        }
-      }
-    }catch(err){console.warn('Could not cache traversal frame for combat.',err);}
-    requestAnimationFrame(cacheTraversalFrame);
+  function traversalVisible(){
+    return !!platformApi()?.active || document.getElementById('gameScreen')?.classList.contains('ttd-platform-mode');
   }
-  requestAnimationFrame(cacheTraversalFrame);
+  function combatVisible(){
+    return hasExactRenderer() && !traversalVisible();
+  }
+  function combatArea(){return state?.__ttdPlatformDone?2:1;}
 
   function ensureCanvas(id,z){
     const lane=document.getElementById('laneWrap');if(!lane)return null;
@@ -68,18 +57,19 @@
   }
 
   function drawExactBackdrop(){
-    const pack=ensureCanvas(BACK_ID,0);if(!pack||!snapshotReady)return;
+    const pack=ensureCanvas(BACK_ID,0);if(!pack)return false;
     const {g,w,h}=pack;
     g.clearRect(0,0,w,h);
-    /* This is the actual final traversal frame — not a second renderer imitating it. */
-    g.drawImage(snapshot,0,0,snapshot.width,snapshot.height,0,0,w,h);
+    /* The traversal module itself draws this frame. There is no parallel pseudo-world renderer. */
+    return platformApi()?.renderBattleBackdrop?.(g,w,h,combatArea(),performance.now()/1000)===true;
   }
 
   function drawCombatBounds(){
     const pack=ensureCanvas(FRONT_ID,3);if(!pack)return;
     const {g,w,h}=pack;
     g.clearRect(0,0,w,h);
-    const left=w*.105,right=w*.895,top=h*.25,bottom=h*.82;
+    const area=combatArea();
+    const left=w*(area===1?.10:.105),right=w*(area===1?.91:.895),top=h*.25,bottom=h*.82;
     const pulse=.34+.11*Math.sin(performance.now()/510);
     const drawGate=(x,flip)=>{
       const grad=g.createLinearGradient(x,top,x,bottom);
@@ -99,18 +89,31 @@
 
   function showCombatWorld(){
     const lane=document.getElementById('laneWrap');if(!lane)return;
-    lane.classList.add('ttd-mainmap-combat-v2');
+    lane.classList.remove('ttd-mainmap-combat-v2');
+    lane.classList.add('ttd-mainmap-combat-v3');
+    document.getElementById('ttdMainMapCombatBackV2')?.remove();
+    document.getElementById('ttdMainMapCombatFrontV2')?.remove();
     drawExactBackdrop();drawCombatBounds();
   }
   function hideCombatWorld(){
-    document.getElementById('laneWrap')?.classList.remove('ttd-mainmap-combat-v2');
+    const lane=document.getElementById('laneWrap');
+    lane?.classList.remove('ttd-mainmap-combat-v2','ttd-mainmap-combat-v3');
     document.getElementById(BACK_ID)?.remove();
     document.getElementById(FRONT_ID)?.remove();
+    document.getElementById('ttdMainMapCombatBackV2')?.remove();
+    document.getElementById('ttdMainMapCombatFrontV2')?.remove();
   }
 
   function installCombatPath(w,h){
-    /* A contained marching lane inside the visible clearing, instead of changing worlds. */
-    pathPts=[
+    const area=combatArea();
+    /* Each battle occupies a bounded clearing of the same traversal world. */
+    pathPts=area===1?[
+      {x:w*.89,y:h*.61},
+      {x:w*.73,y:h*.56},
+      {x:w*.56,y:h*.63},
+      {x:w*.38,y:h*.57},
+      {x:w*.16,y:h*.62},
+    ]:[
       {x:w*.87,y:h*.55},
       {x:w*.72,y:h*.61},
       {x:w*.56,y:h*.54},
@@ -127,25 +130,26 @@
 
   const baseBuildPath=buildPath;
   buildPath=function buildPathOnMainMap(w,h){
-    if(combatActive())return installCombatPath(w,h);
+    if(hasExactRenderer())return installCombatPath(w,h);
     return baseBuildPath(w,h);
   };
 
   const baseDrawLane=drawLane;
   drawLane=function drawLaneOnMainMap(dt){
-    if(!combatActive()){
+    if(!combatVisible()){
       hideCombatWorld();
       return baseDrawLane(dt);
     }
     showCombatWorld();
-    /* Preserve all normal battle actors/effects, but make their old stage wash transparent. */
+    /* Preserve normal enemies, towers, projectiles and effects while removing only the old flat
+       stage wash. The exact traversal renderer is visible directly underneath laneCanvas. */
     const themeIdx=state.typhoonPhase?2:Math.min(2,state.adventureStageIdx||0);
     const theme=STAGE_THEMES?.[themeIdx];
     const saved=theme?{top:theme.top,bottom:theme.bottom,tint:theme.tint}:null;
     if(theme){theme.top='rgba(0,0,0,0)';theme.bottom='rgba(0,0,0,0)';theme.tint='rgba(0,0,0,0)';}
     try{return baseDrawLane(dt);}finally{
       if(theme&&saved)Object.assign(theme,saved);
-      drawCombatBounds();
+      drawExactBackdrop();drawCombatBounds();
     }
   };
 
@@ -154,21 +158,13 @@
     baseRenderStageScreen();
     if(selectedAdventureId!==TEST_ID)return;
     const p=document.querySelector('#stageList .stageCard p');
-    if(p)p.textContent='Traverse the stage, then fight inside sectioned combat areas on that exact same map.';
+    if(p)p.textContent='Fight in a sectioned combat area, traverse forward through that same map, then fight again in the next area — no map swap.';
   };
 
   window.__TTD_TEST_PSEUDO3D_BATTLE_API={
-    version:2,
-    get active(){return combatActive();},
-    get usesExactTraversalFrame(){return snapshotReady;}
+    version:3,
+    get active(){return combatVisible();},
+    get usesExactTraversalRenderer(){return hasExactRenderer();},
+    get area(){return combatArea();}
   };
-
-  /* This file is already loaded into the child game by the online bridge; load the shared presentation layer beside it. */
-  if(!window.__TTD_GAME_PRESENTATION_LOADER_V1){
-    window.__TTD_GAME_PRESENTATION_LOADER_V1=true;
-    fetch('/online/game-presentation-v1.js?v=1',{cache:'no-store'})
-      .then((r)=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.text();})
-      .then((source)=>eval(`${source}\n//# sourceURL=/online/game-presentation-v1.js`))
-      .catch((err)=>console.error('Game presentation V1 could not load.',err));
-  }
 })();
