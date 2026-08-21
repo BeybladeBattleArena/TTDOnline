@@ -220,6 +220,7 @@
   function initObjectHp(){
     const ap=Math.max(1,Math.round(effDmg(session.nav?.die||makeDie(deckEntryKey(state.deck[0])))));
     for(const o of session.objects){
+      if(o.maxHp>0)continue;
       const hits=o.type==='breakable'?3:2;
       o.maxHp=o.hp=Math.max(6,ap*hits);
     }
@@ -289,9 +290,6 @@
     if(!session?.nav)return;
     const n=session.nav;
     state.__ttdPlatformSlotMemory[n.slotIndex]={hpRatio:Math.max(0,n.die.hp)/Math.max(1,n.die.maxHp),dot:n.die.dot};
-    if(n.linkedIndex!=null && state.board[n.linkedIndex]===n.die){
-      // Same object is already authoritative for the board.
-    }
     renderBoard();
   }
 
@@ -306,6 +304,17 @@
       state.__ttdPlatformDestroyedSlots=[...destroyedSlots(),n.slotIndex];
       renderBoard();
       session.nav=null;
+      if(destroyedSlots().size>=state.deck.length){
+        session.phase='wipeout';
+        restoreTrayChildren();
+        document.getElementById('ttdPlatformHud')?.remove();
+        document.getElementById('ttdPlatformCanvas')?.remove();
+        document.getElementById('gameScreen')?.classList.remove('ttd-platform-mode');
+        session.active=false;session=null;
+        state.running=true;lastT=0;
+        endMatch('wipeout');
+        return;
+      }
       session.phase='select';
       setupSelectTray(`${reason||'Navigator destroyed'} — select a new die`);
     }
@@ -675,14 +684,14 @@
     const gy=ground?ground.y:Math.max(-10,n.y-80);
     const gp=project(n.x,n.z,gy+1),p=project(n.x,n.z,n.y+25);
     const jumpHeight=Math.max(0,n.y-gy);
-    const shadowAlpha=Math.max(.12,.78-Math.min(.62,jumpHeight/145*.62));
+    const shadowAlpha=Math.max(.12,1-Math.min(.88,jumpHeight/145*.88));
     const sw=34*p.scale*(1-Math.min(.28,jumpHeight/260));
     g.save();g.globalAlpha=shadowAlpha;g.fillStyle='#05070b';
     const sx=gp.x,sy=gp.y+4;
     g.beginPath();g.moveTo(sx-sw,sy);g.lineTo(sx+sw*.78,sy-3);g.lineTo(sx+sw,sy+7);g.lineTo(sx-sw*.72,sy+10);g.closePath();g.fill();g.restore();
 
     const d=DICE[n.die.key],size=40*p.scale;
-    g.save();g.globalAlpha=n.alpha*(n.invuln>0&&Math.floor(n.invuln*12)%2?0.5:1);g.translate(p.x,p.y);
+    g.save();g.globalAlpha=n.alpha*(session.phase==='return'?session.returnAlpha:1)*(n.invuln>0&&Math.floor(n.invuln*12)%2?0.5:1);g.translate(p.x,p.y);
     g.fillStyle=d?.color||'#8b7fe8';g.strokeStyle=d?.glow||'#d4ecfa';g.lineWidth=2;
     const r=8*p.scale;
     g.beginPath();g.roundRect(-size/2,-size/2,size,size,r);g.fill();g.stroke();
@@ -736,6 +745,7 @@
     if(!session.lastTs)session.lastTs=ts;
     const dt=Math.min(.033,(ts-session.lastTs)/1000||0);session.lastTs=ts;session.time+=dt;
     if(session.phase==='play'&&session.nav)updateNavigator(dt);
+    if(session.phase==='return')session.returnAlpha=Math.max(0,session.returnAlpha-dt*2.4);
     updateDrops(dt);drawScene();
     requestAnimationFrame(platformLoop);
   }
@@ -802,8 +812,6 @@
          state.spawnQueue.length===0 && state.enemies.length===0 && !state.__ttdPlatformBonusApplied){
         const bonus=Math.max(0,Math.min(20,Number(state.__ttdPlatformRewards?.bonusWaveCredits||0)));
         if(bonus){
-          // Adventure EXP is server-authoritative and awards 2 base EXP per completed wave.
-          // EXP orbs convert to bonus completion credits; Adventure Pips do not use completedWaves.
           state.completedWaves+=bonus;
         }
         state.__ttdPlatformBonusApplied=true;
