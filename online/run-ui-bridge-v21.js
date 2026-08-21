@@ -94,20 +94,24 @@
       const response=await fetch('/online/adventure-platforming-v2.js?v=2',{cache:'no-store'});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const source=await response.text();
-      eval(`${source}\n//# sourceURL=/online/adventure-platforming-v2.js`);
+      const apiMarker="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),get active(){return!!session?.active;}};";
+      const apiReplacement="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex)),get selecting(){return!!session?.active&&session.phase==='select';},get active(){return!!session?.active;}};";
+      const platformSource=source.replace(apiMarker,apiReplacement);
+      if(platformSource===source)throw new Error('Platform navigator API exposure marker missing');
+      eval(`${platformSource}\n//# sourceURL=/online/adventure-platforming-v2.js`);
 
-      // Mobile battle-board dice already own pointer/drag gestures. This capture-phase shim runs
-      // before those handlers and converts a highlighted navigator pointerdown into the v2 selector's
-      // click event, so exact summoned instances are selectable on touch devices.
-      const inputResponse=await fetch('/online/adventure-platforming-mobile-input-v3.js?v=3',{cache:'no-store'});
-      if(!inputResponse.ok)throw new Error(`Mobile navigator input HTTP ${inputResponse.status}`);
-      const inputSource=await inputResponse.text();
-      eval(`${inputSource}\n//# sourceURL=/online/adventure-platforming-mobile-input-v3.js`);
+      // Navigator selection now uses independent hit targets positioned above each highlighted
+      // summoned die. They call the exact-instance selector directly and do not route through the
+      // battle board's click/drag handlers at all.
+      const hitResponse=await fetch('/online/adventure-platforming-hit-layer-v4.js?v=4',{cache:'no-store'});
+      if(!hitResponse.ok)throw new Error(`Navigator hit layer HTTP ${hitResponse.status}`);
+      const hitSource=await hitResponse.text();
+      eval(`${hitSource}\n//# sourceURL=/online/adventure-platforming-hit-layer-v4.js`);
 
       installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + mobile-input-v3',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + hit-layer-v4',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
   loadAdventurePlatformingV2();

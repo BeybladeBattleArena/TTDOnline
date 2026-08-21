@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const platform=fs.readFileSync('online/adventure-platforming-v2.js','utf8');
-const mobileInput=fs.readFileSync('online/adventure-platforming-mobile-input-v3.js','utf8');
+const hitLayer=fs.readFileSync('online/adventure-platforming-hit-layer-v4.js','utf8');
 const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 
 new vm.Script(platform,{filename:'online/adventure-platforming-v2.js'});
-new vm.Script(mobileInput,{filename:'online/adventure-platforming-mobile-input-v3.js'});
+new vm.Script(hitLayer,{filename:'online/adventure-platforming-hit-layer-v4.js'});
 new vm.Script(runUi,{filename:'online/run-ui-bridge-v21.js'});
 
 const markers=[
@@ -59,26 +59,37 @@ if(platform.includes('ADVENTURES.al_hata')||platform.includes('AL_HATA_STAGE1 ='
 }
 
 for(const marker of [
-  "addEventListener('pointerdown'",
-  "ttd-nav-instance-select",
-  "#board .tile.ttd-nav-choice",
+  "const LAYER_ID='ttdNavHitLayerV4'",
+  "z-index:420",
+  "pointer-events:none",
+  "tile.classList.contains('ttd-nav-choice')",
+  "hit.addEventListener('pointerdown'",
   "event.preventDefault()",
   "event.stopImmediatePropagation()",
-  "queueMicrotask",
+  "window.__TTD_PLATFORM_TEST_API?.selectNavigator?.(boardIndex)",
+  "requestAnimationFrame(syncHitTargets)",
+])if(!hitLayer.includes(marker))throw new Error(`Navigator hit-layer marker missing: ${marker}`);
+
+for(const forbidden of [
   "tile.click()",
-  "},true)",
-])if(!mobileInput.includes(marker))throw new Error(`Mobile navigator input marker missing: ${marker}`);
-if(mobileInput.includes("addEventListener('click'"))throw new Error('Mobile navigator input must intercept pointerdown before battle-board drag handling, not wait for click.');
+  "dispatchEvent(new MouseEvent",
+  "#board .tile.ttd-nav-choice')return",
+])if(hitLayer.includes(forbidden))throw new Error(`Navigator hit layer must not route selection through battle-board click handling: ${forbidden}`);
 
 for(const marker of [
   "/online/adventure-platforming-v2.js?v=2",
-  "/online/adventure-platforming-mobile-input-v3.js?v=3",
+  "/online/adventure-platforming-hit-layer-v4.js?v=4",
   "cache:'no-store'",
-  "eval(`${source}",
-  "eval(`${inputSource}",
+  "selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex))",
+  "get selecting(){return!!session?.active&&session.phase==='select';}",
+  "Platform navigator API exposure marker missing",
+  "eval(`${platformSource}",
+  "eval(`${hitSource}",
   "installPlatformOnlineStartSyncV1()",
   "state.adventureStage===testStage",
   "requestAnimationFrame(()=>tagAuthorizedTestState",
 ])if(!runUi.includes(marker))throw new Error(`Platform loader/start-sync marker missing: ${marker}`);
 
-console.log('Adventure platforming v2 + mobile input v3 verified: navigator selection is restricted to exact summoned board instances, mobile pointerdown is captured before board drag handling, traversal has a non-collapsing mobile layout and renderer failure guard, End Run remains functional while battle time is paused, Al Hata is untouched, and Wave 3 resumes on the second route.');
+if(runUi.includes('/online/adventure-platforming-mobile-input-v3.js?v=3'))throw new Error('Runtime must no longer depend on the failed synthetic-click mobile selector.');
+
+console.log('Adventure platforming v2 + navigator hit layer v4 verified: exact summoned board instances are selected through independent pointer targets above the battle board, no synthetic click/drag path is involved, traversal retains mobile layout and End Run safeguards, Al Hata is untouched, and Wave 3 resumes on the second route.');
