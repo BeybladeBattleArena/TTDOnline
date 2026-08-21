@@ -48,30 +48,33 @@ need(selector,[
 if(selector.includes("originalTiles[index]?.classList.contains('ttd-nav-choice')"))throw new Error('Selector v6 must not infer live dice from DOM class timing.');
 
 need(mainMapBattle,[
-  "window.__TTD_TEST_MAINMAP_BATTLE_V2=true",
-  "const snapshot=document.createElement('canvas')",
-  "state?.__ttdPlatformDone",
-  "g.drawImage(src,0,0)",
-  "ttd-mainmap-combat-v2",
-  "ttdMainMapCombatBackV2",
-  "ttdMainMapCombatFrontV2",
+  "window.__TTD_TEST_MAINMAP_BATTLE_V3=true",
+  "typeof platformApi()?.renderBattleBackdrop==='function'",
+  "platformApi()?.renderBattleBackdrop?.(g,w,h,combatArea(),performance.now()/1000)",
+  "ttd-mainmap-combat-v3",
+  "ttdMainMapCombatBackV3",
+  "ttdMainMapCombatFrontV3",
   "buildPath=function buildPathOnMainMap",
   "drawLane=function drawLaneOnMainMap",
   "theme.top='rgba(0,0,0,0)'",
-  "Traverse the stage, then fight inside sectioned combat areas on that exact same map.",
-  "/online/game-presentation-v1.js?v=1",
-  "cache:'no-store'",
-],'same-map battle');
+  "fight again in the next area — no map swap",
+  "usesExactTraversalRenderer",
+],'continuous same-map battle');
 if(mainMapBattle.includes('ADVENTURES.al_hata')||mainMapBattle.includes('AL_HATA_STAGE'))throw new Error('Same-map Test Map renderer must not mutate Al Hata.');
 if(mainMapBattle.includes("const ROUTES={")||mainMapBattle.includes('PSEUDO-3D · LOWER COURTYARD'))throw new Error('Legacy alternate pseudo-3D battle world must not return.');
+if(mainMapBattle.includes("const snapshot=document.createElement('canvas')"))throw new Error('Combat must use the traversal renderer directly, not a captured/parallel map path.');
+if(mainMapBattle.includes('/online/game-presentation-v1.js'))throw new Error('Global presentation must not be bootstrapped from the Test Map renderer.');
 
 need(presentation,[
   'const MISSION_GAP_MS = 1250',
   'const CLEAR_HIDE_MS = 1400',
   'const RESULT_REVEAL_MS = 1850',
   "makeSignal(['MISSION', 'START!'])",
-  "makeSignal(['CLEAR!'], missionWordStyle)",
+  "makeSignal(['CLEAR!'])",
   'position:fixed',
+  "font-family:'Russo One',sans-serif!important",
+  'visibility:hidden!important',
+  "nodes[0]?.classList.add('in')",
   'prepareZombieResult(pipsEarned)',
   "card.replaceWith(marker)",
   'ttdResultCardV1',
@@ -79,17 +82,26 @@ need(presentation,[
   "label.textContent = 'MVP'",
   'presentObjectiveClear',
   'window.TTDGamePresentation',
+  'rebind: installAll',
 ],'game presentation');
+if(presentation.includes("word.className = 'awardTitle ttdSignalWord'"))throw new Error('MISSION/START must not inherit legacy award animations.');
 
 need(runUi,[
   "/online/adventure-platforming-v2.js?v=2",
   "/online/adventure-platforming-selector-v6.js?v=6",
-  "/online/adventure-pseudo3d-battle-v1.js?v=1",
+  "/online/adventure-pseudo3d-battle-v1.js?v=3",
+  "function renderBattleBackdrop(g,w,h,area=1,time=0)",
+  "drawBackground(g)",
+  "currentPlatforms(preview.time)",
+  "renderBattleBackdrop:(g,w,h,area,time)=>renderBattleBackdrop(g,w,h,area,time)",
   "selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex))",
   "get liveBoardIndices(){return liveBoardIndices();}",
+  "try{buildPath(cw,ch);}",
   "eval(`${worldSource}",
   "installPlatformOnlineStartSyncV1()",
-],'platform loader');
+  "/online/game-presentation-v1.js?v=2",
+  "window.TTDGamePresentation?.rebind?.()",
+],'platform/presentation loader');
 if(runUi.includes('/online/adventure-platforming-selector-v5.js?v=5'))throw new Error('Runtime must not load selector v5.');
 
 need(loaderHtml,[
@@ -98,4 +110,4 @@ need(loaderHtml,[
   "cache:'no-store'",
 ],'loader');
 
-console.log('Adventure Test Map same-map flow verified: combat reuses the exact captured traversal frame instead of an alternate pseudo-3D world, battle paths remain sectioned inside that map, navigator selection still uses exact live summoned instances, MISSION/CLEAR/result timing is syntax-checked, Zombie results preload before reveal without pre-running counters, and Al Hata remains untouched.');
+console.log('Adventure Test Map continuous-world flow verified: wave-one combat is rebound onto a sectioned path inside the traversal renderer, both combat areas are drawn by the exact same map functions used for navigation, no pseudo-world/snapshot renderer remains, navigator selection still uses live summoned instances, MISSION is isolated from legacy award/Zombie typography with START hidden for the full 1.25-second gap, presentation loads after start wrappers, result timing remains syntax-checked, and Al Hata remains untouched.');
