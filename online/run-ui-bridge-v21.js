@@ -95,10 +95,19 @@
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const source=await response.text();
       eval(`${source}\n//# sourceURL=/online/adventure-platforming-v2.js`);
+
+      // Mobile battle-board dice already own pointer/drag gestures. This capture-phase shim runs
+      // before those handlers and converts a highlighted navigator pointerdown into the v2 selector's
+      // click event, so exact summoned instances are selectable on touch devices.
+      const inputResponse=await fetch('/online/adventure-platforming-mobile-input-v3.js?v=3',{cache:'no-store'});
+      if(!inputResponse.ok)throw new Error(`Mobile navigator input HTTP ${inputResponse.status}`);
+      const inputSource=await inputResponse.text();
+      eval(`${inputSource}\n//# sourceURL=/online/adventure-platforming-mobile-input-v3.js`);
+
       installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v2.js?v=2 + mobile-input-v3',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
   loadAdventurePlatformingV2();
