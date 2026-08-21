@@ -52,7 +52,13 @@ if(selector.includes("originalTiles[index]?.classList.contains('ttd-nav-choice')
 
 need(continuousWorld,[
   'window.__TTD_CONTINUOUS_WORLD_V1',
-  "contract: 'one-world-one-camera-persistent-objects'",
+  "contract:'one-world-one-camera-persistent-objects'",
+  "backdrop:'continuous-crossfade'",
+  'const smoothstep=',
+  'const jungleIn=smoothstep(430,760,cx)',
+  'const templeIn=smoothstep(960,1290,cx)',
+  'z1:-1200,z2:1200',
+  'groundDepth:2400',
 ],'continuous world contract');
 
 need(mainMapBattle,[
@@ -96,6 +102,7 @@ need(presentation,[
   'if (missionBusy) return base.apply(this,args);',
   "font-family:'Russo One',sans-serif!important",
   'visibility:hidden!important',
+  "return /^MISSION\\s*START!?$/i.test(normalizedText(el));",
   "el.dataset.ttdLegacyMissionSuppressed='1'",
   'legacyObserver.observe',
   "el.style.setProperty('animation','none','important')",
@@ -159,4 +166,4 @@ need(loaderHtml,[
   "cache:'no-store'",
 ],'loader');
 
-console.log('Adventure Test Map persistent continuous-world flow verified: broad beach/jungle/temple terrain replaces the platform course, traversal and combat share one camera plus persistent object/drop references, opened chests remain opened, navigation has an explicit in-world spawn, later combat pauses for a 3-2-1-START assessment countdown, battle routes span fair approach distances, MISSION/START is isolated from legacy duplicate cues and nested start calls are preserved, and no alternate pseudo-world or snapshot renderer can return.');
+console.log('Adventure Test Map persistent continuous-world flow verified: broad beach/jungle/temple terrain hides artificial map edges, biome backdrops cross-fade instead of snapping, traversal and combat share one camera plus persistent object/drop references, opened chests remain opened, navigation has an explicit in-world spawn, later combat pauses for a 3-2-1-START assessment countdown, battle routes span fair approach distances, MISSION/START is isolated from legacy duplicate cues and nested start calls are preserved, and no alternate pseudo-world or snapshot renderer can return.');
