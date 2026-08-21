@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const platform=fs.readFileSync('online/adventure-platforming-v2.js','utf8');
-const hitLayer=fs.readFileSync('online/adventure-platforming-hit-layer-v4.js','utf8');
+const selector=fs.readFileSync('online/adventure-platforming-selector-v5.js','utf8');
 const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
+const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 
 new vm.Script(platform,{filename:'online/adventure-platforming-v2.js'});
-new vm.Script(hitLayer,{filename:'online/adventure-platforming-hit-layer-v4.js'});
+new vm.Script(selector,{filename:'online/adventure-platforming-selector-v5.js'});
 new vm.Script(runUi,{filename:'online/run-ui-bridge-v21.js'});
 
 const markers=[
@@ -59,37 +60,49 @@ if(platform.includes('ADVENTURES.al_hata')||platform.includes('AL_HATA_STAGE1 ='
 }
 
 for(const marker of [
-  "const LAYER_ID='ttdNavHitLayerV4'",
-  "z-index:420",
-  "pointer-events:none",
-  "tile.classList.contains('ttd-nav-choice')",
-  "hit.addEventListener('pointerdown'",
-  "event.preventDefault()",
-  "event.stopImmediatePropagation()",
-  "window.__TTD_PLATFORM_TEST_API?.selectNavigator?.(boardIndex)",
-  "requestAnimationFrame(syncHitTargets)",
-])if(!hitLayer.includes(marker))throw new Error(`Navigator hit-layer marker missing: ${marker}`);
+  "const ROOT_ID='ttdNavigatorSelectorV5'",
+  "NAV SELECT V5",
+  "cloneNode(true)",
+  "ttdNavigatorBoardCloneV5",
+  "originalTiles[index]?.classList.contains('ttd-nav-choice')",
+  "button.addEventListener('pointerdown'",
+  "button.addEventListener('touchstart'",
+  "button.addEventListener('click'",
+  "api.selectNavigator(index)",
+  "board.style.visibility='hidden'",
+  "Selection reached the runtime but traversal did not start",
+])if(!selector.includes(marker))throw new Error(`Navigator selector v5 marker missing: ${marker}`);
 
 for(const forbidden of [
   "tile.click()",
   "dispatchEvent(new MouseEvent",
-  "#board .tile.ttd-nav-choice')return",
-])if(hitLayer.includes(forbidden))throw new Error(`Navigator hit layer must not route selection through battle-board click handling: ${forbidden}`);
+  "ttdNavHitLayerV4",
+])if(selector.includes(forbidden))throw new Error(`Navigator selector v5 must remain isolated from the battle-board event path: ${forbidden}`);
 
 for(const marker of [
   "/online/adventure-platforming-v2.js?v=2",
-  "/online/adventure-platforming-hit-layer-v4.js?v=4",
+  "/online/adventure-platforming-selector-v5.js?v=5",
   "cache:'no-store'",
   "selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex))",
   "get selecting(){return!!session?.active&&session.phase==='select';}",
   "Platform navigator API exposure marker missing",
   "eval(`${platformSource}",
-  "eval(`${hitSource}",
+  "eval(`${selectorSource}",
   "installPlatformOnlineStartSyncV1()",
   "state.adventureStage===testStage",
   "requestAnimationFrame(()=>tagAuthorizedTestState",
 ])if(!runUi.includes(marker))throw new Error(`Platform loader/start-sync marker missing: ${marker}`);
 
-if(runUi.includes('/online/adventure-platforming-mobile-input-v3.js?v=3'))throw new Error('Runtime must no longer depend on the failed synthetic-click mobile selector.');
+for(const obsolete of [
+  '/online/adventure-platforming-mobile-input-v3.js?v=3',
+  '/online/adventure-platforming-hit-layer-v4.js?v=4',
+])if(runUi.includes(obsolete))throw new Error(`Runtime must not depend on failed navigator selector path: ${obsolete}`);
 
-console.log('Adventure platforming v2 + navigator hit layer v4 verified: exact summoned board instances are selected through independent pointer targets above the battle board, no synthetic click/drag path is involved, traversal retains mobile layout and End Run safeguards, Al Hata is untouched, and Wave 3 resumes on the second route.');
+for(const marker of [
+  "window.__TTD_ASSET_URL=(path)=>",
+  "url.searchParams.set('__ttd',token)",
+  "window.fetch=(input,init={})=>",
+  "cache:'no-store'",
+])if(!loaderHtml.includes(marker))throw new Error(`Verified loader cache-bust marker missing: ${marker}`);
+
+console.log('Adventure platforming v2 + selector v5 verified: the navigator is chosen from a cloned visual copy of the exact summoned 5×3 board with independent native pointer/touch/click targets, no battle-board drag/click routing is used, the selector visibly identifies itself as NAV SELECT V5, the loader cache-bust contract is verified, traversal retains End Run/mobile safeguards, Al Hata is untouched, and Wave 3 resumes on the second route.');
