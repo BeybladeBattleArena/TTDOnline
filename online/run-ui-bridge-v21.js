@@ -54,13 +54,7 @@
         state.__ttdPlatformDestroyedSlots=[];
         state.__ttdCombatIntroSeen=false;
         state.__ttdCombatIntroPending=false;
-        state.__ttdWorldState={
-          version:1,
-          cameraX:340,
-          traversalStart:{x:410,z:0,y:0},
-          objects:null,
-          drops:null,
-        };
+        state.__ttdWorldState={version:1,cameraX:340,traversalStart:{x:410,z:0,y:0},objects:null,drops:null};
         if(modeLabel)modeLabel.textContent='Test Map · Beach Clearing';
         try{window.__TTD_PLATFORM_TEST_API?.ensureWorldState?.();buildPath(cw,ch);}catch(err){console.warn('Test Map first combat path could not rebuild.',err);}
         return;
@@ -84,8 +78,6 @@
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       let platformSource=await response.text();
 
-      /* The Test Map is deliberately authored as broad, overlapping terrain regions. There are
-         no gaps/floating slabs unless a future map definition explicitly adds a cliff/platform. */
       const renderMarker="  if(document.getElementById('adventureScreen')?.classList.contains('active'))renderAdventureList();";
       const worldInjection=`  const __ttdBaseCurrentPlatformsV4=currentPlatforms;
   const __ttdBaseDrawBackgroundV4=drawBackground;
@@ -142,15 +134,9 @@
     for(let i=0;i<9;i++){const t=(i+1)/10;const a={x:pts[0].x+(pts[3].x-pts[0].x)*t,y:pts[0].y+(pts[3].y-pts[0].y)*t};const b={x:pts[1].x+(pts[2].x-pts[1].x)*t,y:pts[1].y+(pts[2].y-pts[1].y)*t};g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}g.restore();
   };
 
-  function drawPalm(g,x,z,scale=1,foreground=false){
-    const p=project(x,z,0),s=p.scale*scale;g.save();g.translate(p.x,p.y);g.scale(s,s);g.globalAlpha=foreground?.96:.82;g.strokeStyle='#5b4933';g.lineWidth=7;g.beginPath();g.moveTo(0,8);g.quadraticCurveTo(-6,-44,7,-94);g.stroke();g.translate(7,-94);g.strokeStyle='#315638';g.lineWidth=10;for(let i=0;i<7;i++){const a=-Math.PI*.88+i*(Math.PI*1.76/6);g.beginPath();g.moveTo(0,0);g.quadraticCurveTo(Math.cos(a)*30,Math.sin(a)*18,Math.cos(a)*55,Math.sin(a)*34);g.stroke();}g.restore();
-  }
-  function drawJungleTree(g,x,z,scale=1,foreground=false){
-    const p=project(x,z,0),s=p.scale*scale;g.save();g.translate(p.x,p.y);g.scale(s,s);g.globalAlpha=foreground?.98:.86;g.fillStyle='#483d2c';g.fillRect(-8,-92,16,100);g.fillStyle='#294b2f';[[0,-102,42],[-28,-82,30],[30,-80,33],[4,-62,38]].forEach(([cx,cy,r])=>{g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.fill();});g.fillStyle='rgba(98,142,78,.55)';g.beginPath();g.arc(-11,-111,17,0,Math.PI*2);g.fill();g.restore();
-  }
-  function drawTempleColumn(g,x,z,scale=1,foreground=false){
-    const p=project(x,z,0),s=p.scale*scale;g.save();g.translate(p.x,p.y);g.scale(s,s);g.globalAlpha=foreground?.98:.9;g.fillStyle='#77766b';g.fillRect(-13,-92,26,92);g.fillStyle='#929083';g.fillRect(-20,-99,40,10);g.fillRect(-18,-8,36,8);g.strokeStyle='rgba(43,45,43,.45)';g.lineWidth=2;g.beginPath();g.moveTo(-5,-89);g.lineTo(2,-56);g.lineTo(-4,-28);g.stroke();g.restore();
-  }
+  function drawPalm(g,x,z,scale=1,foreground=false){const p=project(x,z,0),s=p.scale*scale;g.save();g.translate(p.x,p.y);g.scale(s,s);g.globalAlpha=foreground?.96:.82;g.strokeStyle='#5b4933';g.lineWidth=7;g.beginPath();g.moveTo(0,8);g.quadraticCurveTo(-6,-44,7,-94);g.stroke();g.translate(7,-94);g.strokeStyle='#315638';g.lineWidth=10;for(let i=0;i<7;i++){const a=-Math.PI*.88+i*(Math.PI*1.76/6);g.beginPath();g.moveTo(0,0);g.quadraticCurveTo(Math.cos(a)*30,Math.sin(a)*18,Math.cos(a)*55,Math.sin(a)*34);g.stroke();}g.restore();}
+  function drawJungleTree(g,x,z,scale=1,foreground=false){const p=project(x,z,0),s=p.scale*scale;g.save();g.translate(p.x,p.y);g.scale(s,s);g.globalAlpha=foreground?.98:.86;g.fillStyle='#483d2c';g.fillRect(-8,-92,16,100);g.fillStyle='#294b2f';[[0,-102,42],[-28,-82,30],[30,-80,33],[4,-62,38]].forEach(([cx,cy,r])=>{g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.fill();});g.fillStyle='rgba(98,142,78,.55)';g.beginPath();g.arc(-11,-111,17,0,Math.PI*2);g.fill();g.restore();}
+  function drawTempleColumn(g,x,z,scale=1,foreground=false){const p=project(x,z,0),s=p.scale*scale;g.save();g.translate(p.x,p.y);g.scale(s,s);g.globalAlpha=foreground?.98:.9;g.fillStyle='#77766b';g.fillRect(-13,-92,26,92);g.fillStyle='#929083';g.fillRect(-20,-99,40,10);g.fillRect(-18,-8,36,8);g.strokeStyle='rgba(43,45,43,.45)';g.lineWidth=2;g.beginPath();g.moveTo(-5,-89);g.lineTo(2,-56);g.lineTo(-4,-28);g.stroke();g.restore();}
   function drawShell(g,x,z,rot=0){const p=project(x,z,1);g.save();g.translate(p.x,p.y);g.rotate(rot);g.scale(p.scale,p.scale);g.fillStyle='#f2dfc1';g.beginPath();g.arc(0,0,7,Math.PI,0);g.lineTo(0,8);g.closePath();g.fill();g.strokeStyle='rgba(137,102,76,.55)';for(let i=-4;i<=4;i+=2){g.beginPath();g.moveTo(0,7);g.lineTo(i,-2);g.stroke();}g.restore();}
   function drawShrub(g,x,z,scale=1){const p=project(x,z,0);g.save();g.translate(p.x,p.y);g.scale(p.scale*scale,p.scale*scale);g.fillStyle='#3d653e';[-18,0,18].forEach((cx,i)=>{g.beginPath();g.arc(cx,-10-(i%2)*7,18,0,Math.PI*2);g.fill();});g.restore();}
 
@@ -161,9 +147,7 @@
     {kind:'shrub',x:610,z:70,s:1},{kind:'shrub',x:760,z:-85,s:.9},{kind:'shrub',x:990,z:95,s:1.1},
     {kind:'column',x:1120,z:-205,s:1.0},{kind:'column',x:1210,z:210,s:1.1},{kind:'column',x:1420,z:-215,s:1.15},{kind:'column',x:1560,z:215,s:1.05},{kind:'column',x:1740,z:-190,s:.95},
   ];
-  function drawWorldProps(g,foreground=false){
-    for(const prop of WORLD_PROPS){const front=prop.z>80;if(front!==foreground)continue;if(prop.kind==='palm')drawPalm(g,prop.x,prop.z,prop.s,front);else if(prop.kind==='tree')drawJungleTree(g,prop.x,prop.z,prop.s,front);else if(prop.kind==='column')drawTempleColumn(g,prop.x,prop.z,prop.s,front);else if(prop.kind==='shell')drawShell(g,prop.x,prop.z,prop.r);else drawShrub(g,prop.x,prop.z,prop.s);}
-  }
+  function drawWorldProps(g,foreground=false){for(const prop of WORLD_PROPS){const front=prop.z>80;if(front!==foreground)continue;if(prop.kind==='palm')drawPalm(g,prop.x,prop.z,prop.s,front);else if(prop.kind==='tree')drawJungleTree(g,prop.x,prop.z,prop.s,front);else if(prop.kind==='column')drawTempleColumn(g,prop.x,prop.z,prop.s,front);else if(prop.kind==='shell')drawShell(g,prop.x,prop.z,prop.r);else drawShrub(g,prop.x,prop.z,prop.s);}}
 
   drawChest=function drawChestPersistentV4(g,o){
     if(!continuousWorldActive())return __ttdBaseDrawChestV4(g,o);
@@ -176,7 +160,7 @@
     const c=document.getElementById('ttdPlatformCanvas');if(!c||!session)return;if(!resizePlatformCanvas())throw new Error('Traversal canvas has no usable layout size.');
     const g=c.getContext('2d');g.clearRect(0,0,session.w,session.h);drawBackground(g);currentPlatforms(session.time).forEach(p=>drawPlatform(g,p));drawWorldProps(g,false);drawGate(g);drawHazards(g);
     for(const o of session.objects){o.flash=Math.max(0,(o.flash||0)-.016);if(o.type==='breakable')drawPillar(g,o);else drawChest(g,o);}session.drops.forEach(d=>drawDrop(g,d));drawNavigator(g);drawWorldProps(g,true);
-    const hud=document.getElementById('ttdPlatformHud');if(hud){const n=session.nav,navBadge=hud.querySelector('.ttdNavBadge');if(navBadge)navBadge.textContent=n?`${DICE[n.die.key]?.name||n.die.key} · HP ${Math.max(0,Math.ceil(n.die.hp))}/${Math.ceil(n.die.maxHp)} · ${n.die.dot} PIP`:'NAVIGATOR REQUIRED';const area=hud.querySelector('.ttdAreaBadge');if(area){const x=n?.x||0;area.textContent=x<580?'BEACH CLEARING':x<1080?'JUNGLE PATH':x<1335?'TEMPLE APPROACH':'TEMPLE COURT';}}
+    const hud=document.getElementById('ttdPlatformHud');if(hud){const n=session.nav,navBadge=hud.querySelector('.ttdNavBadge');if(navBadge)navBadge.textContent=n?((DICE[n.die.key]?.name||n.die.key)+' · HP '+Math.max(0,Math.ceil(n.die.hp))+'/'+Math.ceil(n.die.maxHp)+' · '+n.die.dot+' PIP'):'NAVIGATOR REQUIRED';const area=hud.querySelector('.ttdAreaBadge');if(area){const x=n?.x||0;area.textContent=x<580?'BEACH CLEARING':x<1080?'JUNGLE PATH':x<1335?'TEMPLE APPROACH':'TEMPLE COURT';}}
   };
 
   function renderBattleBackdrop(g,w,h,area=1,time=0,cameraOverride=null){
@@ -191,19 +175,8 @@
 ${renderMarker}`;
       platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');
 
-      platformSource=requiredReplace(
-        platformSource,
-        "      active:true,phase:'select',nav:null,w:1,h:1,cameraX:40,time:0,lastTs:0,\n      joyX:0,joyZ:0,checkpoint:{x:80,z:0,y:0},objects:makeInteractables(),drops:[],hazardCd:0,returnAlpha:1,",
-        "      active:true,phase:'select',nav:null,w:1,h:1,cameraX:(ensureWorldState()?.cameraX??340),time:0,lastTs:0,\n      joyX:0,joyZ:0,checkpoint:{...(ensureWorldState()?.traversalStart||{x:410,z:0,y:0})},objects:(ensureWorldState()?.objects||makeInteractables()),drops:(ensureWorldState()?.drops||[]),hazardCd:0,returnAlpha:1,",
-        'persistent traversal session'
-      );
-
-      platformSource=requiredReplace(
-        platformSource,
-        "    session.cameraX+=((n.x+155)-session.cameraX)*Math.min(1,dt*3.2);",
-        "    {const desired=n.x+155,delta=desired-session.cameraX,alpha=1-Math.exp(-dt*2.15),step=Math.max(-7,Math.min(7,delta*alpha));session.cameraX+=step;const world=ensureWorldState();if(world)world.cameraX=session.cameraX;}",
-        'smooth persistent camera'
-      );
+      platformSource=requiredReplace(platformSource,"      active:true,phase:'select',nav:null,w:1,h:1,cameraX:40,time:0,lastTs:0,\n      joyX:0,joyZ:0,checkpoint:{x:80,z:0,y:0},objects:makeInteractables(),drops:[],hazardCd:0,returnAlpha:1,","      active:true,phase:'select',nav:null,w:1,h:1,cameraX:(ensureWorldState()?.cameraX??340),time:0,lastTs:0,\n      joyX:0,joyZ:0,checkpoint:{...(ensureWorldState()?.traversalStart||{x:410,z:0,y:0})},objects:(ensureWorldState()?.objects||makeInteractables()),drops:(ensureWorldState()?.drops||[]),hazardCd:0,returnAlpha:1,",'persistent traversal session');
+      platformSource=requiredReplace(platformSource,"    session.cameraX+=((n.x+155)-session.cameraX)*Math.min(1,dt*3.2);","    {const desired=n.x+155,delta=desired-session.cameraX,alpha=1-Math.exp(-dt*2.15),step=Math.max(-7,Math.min(7,delta*alpha));session.cameraX+=step;const world=ensureWorldState();if(world)world.cameraX=session.cameraX;}",'smooth persistent camera');
 
       const apiMarker="window.__TTD_PLATFORM_TEST_API={version:2,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),get active(){return!!session?.active;}};";
       const apiReplacement="window.__TTD_PLATFORM_TEST_API={version:4,start:()=>startAdventure(TEST_ID,0,selectedDifficulty),selectNavigator:(boardIndex)=>chooseNavigator(Number(boardIndex)),renderBattleBackdrop:(g,w,h,area,time,cameraX)=>renderBattleBackdrop(g,w,h,area,time,cameraX),ensureWorldState:()=>ensureWorldState(),get worldState(){return ensureWorldState();},get liveBoardIndices(){return liveBoardIndices();},get selecting(){return!!session?.active&&session.phase==='select';},get active(){return!!session?.active;}};";
@@ -211,9 +184,7 @@ ${renderMarker}`;
       eval(`${platformSource}\n//# sourceURL=/online/adventure-platforming-v2.js`);
 
       const selectorResponse=await fetch('/online/adventure-platforming-selector-v6.js?v=6',{cache:'no-store'});if(!selectorResponse.ok)throw new Error(`Navigator selector v6 HTTP ${selectorResponse.status}`);eval(`${await selectorResponse.text()}\n//# sourceURL=/online/adventure-platforming-selector-v6.js`);
-
       const continuousResponse=await fetch('/online/adventure-continuous-world-v1.js?v=1',{cache:'no-store'});if(!continuousResponse.ok)throw new Error(`Continuous world marker HTTP ${continuousResponse.status}`);eval(`${await continuousResponse.text()}\n//# sourceURL=/online/adventure-continuous-world-v1.js`);
-
       const worldResponse=await fetch('/online/adventure-pseudo3d-battle-v1.js?v=4',{cache:'no-store'});if(!worldResponse.ok)throw new Error(`Persistent same-map battle HTTP ${worldResponse.status}`);eval(`${await worldResponse.text()}\n//# sourceURL=/online/adventure-pseudo3d-battle-v1.js`);
 
       installPlatformOnlineStartSyncV2();
