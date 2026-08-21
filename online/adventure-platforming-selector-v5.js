@@ -84,14 +84,15 @@
     let choiceCount=0;
     cloneTiles.forEach((tile,index)=>{
       tile.style.position='relative';
-      tile.style.pointerEvents='none';
       const selectable=originalTiles[index]?.classList.contains('ttd-nav-choice');
       if(!selectable){
+        tile.style.pointerEvents='none';
         tile.style.opacity='.22';
         tile.style.filter='grayscale(.7)';
         return;
       }
       choiceCount+=1;
+      tile.style.pointerEvents='auto';
       tile.style.opacity='1';
       tile.style.filter='none';
       tile.style.outline='1px solid rgba(243,212,145,.85)';
