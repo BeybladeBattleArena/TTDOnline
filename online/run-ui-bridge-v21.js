@@ -44,4 +44,21 @@
     if(family==='zombie')ensureZombieExp(m);
     if(Number(m.chestCount||0)>0){const text=document.getElementById('overlayText');if(text)text.textContent=`Al Hata is cleared! ${m.chestCount===1?'A Frozen Island Chest has':`${m.chestCount} Frozen Island Chests have`} been added to your inventory.`;}
   });
+
+  // This module is fetched separately so the experimental traversal engine can evolve without
+  // touching Al Hata or the 668 KB legacy core. Direct eval is deliberate: this bridge is injected
+  // inside the core game IIFE, so the platform module receives safe lexical access to battle state,
+  // die HP/stat helpers, Adventure routing, and path construction.
+  async function loadAdventurePlatformingV1(){
+    try{
+      const response=await fetch('/online/adventure-platforming-v1.js?v=1',{cache:'no-store'});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const source=await response.text();
+      eval(`${source}\n//# sourceURL=/online/adventure-platforming-v1.js`);
+    }catch(err){
+      console.error('Adventure platforming test module could not load.',err);
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v1.js?v=1',message:String(err?.message||err)},location.origin);}catch(_){}
+    }
+  }
+  loadAdventurePlatformingV1();
 })();
