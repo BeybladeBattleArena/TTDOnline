@@ -45,6 +45,46 @@
     if(Number(m.chestCount||0)>0){const text=document.getElementById('overlayText');if(text)text.textContent=`Al Hata is cleared! ${m.chestCount===1?'A Frozen Island Chest has':`${m.chestCount} Frozen Island Chests have`} been added to your inventory.`;}
   });
 
+  function installPlatformOnlineStartSyncV1(){
+    if(window.__TTD_PLATFORM_ONLINE_START_SYNC_V1)return;
+    window.__TTD_PLATFORM_ONLINE_START_SYNC_V1=true;
+    const TEST_ID='test_map';
+    const platformStartAdventure=startAdventure;
+    const testFlags=['__ttdTestMap','__ttdTestBattlePath','__ttdPlatformDone','__ttdPlatformRewards','__ttdPlatformBonusApplied','__ttdPlatformSlotMemory','__ttdPlatformDestroyedSlots'];
+
+    function tagAuthorizedTestState(previousState,startedAt){
+      const testStage=ADVENTURES?.[TEST_ID]?.stages?.[0];
+      if(state && state!==previousState && testStage && state.adventureStage===testStage){
+        state.__ttdTestMap=true;
+        state.__ttdTestBattlePath=1;
+        state.__ttdPlatformDone=false;
+        state.__ttdPlatformRewards={dieOre:0,expOrbs:0,bonusWaveCredits:0};
+        state.__ttdPlatformBonusApplied=false;
+        state.__ttdPlatformSlotMemory={};
+        state.__ttdPlatformDestroyedSlots=[];
+        if(modeLabel)modeLabel.textContent='Test Map · First Route';
+        return;
+      }
+      if(performance.now()-startedAt<25000)requestAnimationFrame(()=>tagAuthorizedTestState(previousState,startedAt));
+    }
+
+    startAdventure=function onlinePlatformAwareStartAdventure(advId,stageIdx,diffKey){
+      const previousState=state;
+      const result=platformStartAdventure(advId,stageIdx,diffKey);
+      if(advId!==TEST_ID)return result;
+
+      // The online single-player bridge begins the cloud run first and invokes the legacy starter
+      // only after the server answers. The platform wrapper therefore briefly sees the old state.
+      // Undo those premature prototype flags and tag the newly-created authorized Adventure state.
+      if(state===previousState && previousState){
+        testFlags.forEach((key)=>{ try{delete previousState[key];}catch(_){} });
+      }
+      const startedAt=performance.now();
+      requestAnimationFrame(()=>tagAuthorizedTestState(previousState,startedAt));
+      return result;
+    };
+  }
+
   // This module is fetched separately so the experimental traversal engine can evolve without
   // touching Al Hata or the 668 KB legacy core. Direct eval is deliberate: this bridge is injected
   // inside the core game IIFE, so the platform module receives safe lexical access to battle state,
@@ -55,6 +95,7 @@
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const source=await response.text();
       eval(`${source}\n//# sourceURL=/online/adventure-platforming-v1.js`);
+      installPlatformOnlineStartSyncV1();
     }catch(err){
       console.error('Adventure platforming test module could not load.',err);
       try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'/online/adventure-platforming-v1.js?v=1',message:String(err?.message||err)},location.origin);}catch(_){}
