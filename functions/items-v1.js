@@ -90,7 +90,7 @@ exports.useExpTomeV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
     tx.set(itemRef,{schemaVersion:ITEM_SCHEMA,itemId:'exp_tome',name:def.name,category:def.category,count:remaining,updatedAt:FieldValue.serverTimestamp(),updatedAtMs:Date.now()},{merge:true});
     tx.set(levelRef,{schemaVersion:21,xp:level.xp,level:level.level,claimedRewards:rewardResult.claimedRewards,updatedAt:FieldValue.serverTimestamp()},{merge:true});
     const pipsDelta=Math.max(0,Math.floor(Number(rewardResult.pipsDelta)||0)),astrasDelta=Math.max(0,Math.floor(Number(rewardResult.astrasDelta)||0));
-    nextGameState={...currentGame,revision:currentGame.revision+(pipsDelta||astrasDelta?1:0),inventoryVersion:currentGame.inventoryVersion+1,economy:{pips:currentGame.economy.pips+pipsDelta,astras:currentGame.economy.astras+astrasDelta}};
+    nextGameState={...currentGame,revision:currentGame.revision+1,inventoryVersion:currentGame.inventoryVersion+1,economy:{pips:currentGame.economy.pips+pipsDelta,astras:currentGame.economy.astras+astrasDelta}};
     tx.update(gameRef,{economy:nextGameState.economy,revision:nextGameState.revision,inventoryVersion:nextGameState.inventoryVersion,updatedAt:FieldValue.serverTimestamp()});
     tx.set(receiptRef,{operation:'use_item',itemId:'exp_tome',quantity:1,xpGranted:def.useXp,oldXp,newXp,levelsGained,createdAt:FieldValue.serverTimestamp()});
   });
