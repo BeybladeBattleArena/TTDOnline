@@ -2,14 +2,32 @@
   'use strict';
   if (window.__TTD_AUDIO_V27) return;
   const frame=document.getElementById('gameFrame');
-  const TRACKS=Object.freeze({main:{url:'/assets/audio/main-menu.webm',loopStart:4.49,loopEnd:195.23},shop:{url:'/assets/audio/shop-remix.webm',loopStart:13.02,loopEnd:159.43},deck:{url:'/assets/audio/deck-construction.webm',loopStart:21.18,loopEnd:112.45},gacha:{url:'/assets/audio/gacha.webm',loopStart:.03,loopEnd:88.63}});
-  const WELCOME=Object.freeze(['/assets/audio/welcome-rng-1.mp3','/assets/audio/welcome-rng-2.mp3','/assets/audio/welcome-rng-3.mp3','/assets/audio/welcome-rng-4.mp3']);
+  const TRACKS=Object.freeze({
+    main:{url:'/assets/audio/main-menu.webm',loopStart:4.49,loopEnd:195.23},
+    shop:{url:'/assets/audio/shop-remix.webm',loopStart:13.02,loopEnd:159.43},
+    deck:{url:'/assets/audio/deck-construction.webm',loopStart:21.18,loopEnd:112.45},
+    gacha:{url:'/assets/audio/gacha.webm',loopStart:.03,loopEnd:88.63}
+  });
+  const WELCOME=Object.freeze([
+    '/assets/audio/welcome-rng-1.mp3','/assets/audio/welcome-rng-2.mp3',
+    '/assets/audio/welcome-rng-3.mp3','/assets/audio/welcome-rng-4.mp3'
+  ]);
+  const ANNOUNCER=Object.freeze({
+    mission:'/assets/audio/announcer/Mission.mp3',
+    start:'/assets/audio/announcer/Start.mp3',
+    clear:'/assets/audio/announcer/MissionClear.mp3',
+    fail:'/assets/audio/announcer/MissionFail.mp3',
+    finish:'/assets/audio/announcer/Finish.mp3',
+    redTeam:'/assets/audio/announcer/RedTeam.mp3',
+    blueTeam:'/assets/audio/announcer/BlueTeam.mp3',
+    wins:'/assets/audio/announcer/Wins.mp3'
+  });
   const SILENT_SCREENS=new Set(['gameModesScreen','modeScreen','zombieModeScreen','adventureScreen','stageScreen','missionScreen','gameScreen']);
   const buffers=new Map();let context=null,master=null,musicGain=null,voiceGain=null,current=null,entered=false,lastScreen='';
   function ensureContext(){if(context&&context.state!=='closed')return context;const Ctor=window.AudioContext||window.webkitAudioContext;if(!Ctor)return null;context=window.__ttdAudioContext&&window.__ttdAudioContext.state!=='closed'?window.__ttdAudioContext:new Ctor();window.__ttdAudioContext=context;master=context.createGain();musicGain=context.createGain();voiceGain=context.createGain();master.gain.value=1;musicGain.gain.value=.56;voiceGain.gain.value=.92;musicGain.connect(master);voiceGain.connect(master);master.connect(context.destination);return context;}
   async function unlock(){const ctx=ensureContext();if(!ctx)return null;try{await ctx.resume();}catch(_){}window.__ttdAudioUnlocked=true;return ctx;}
   async function load(url){if(buffers.has(url))return buffers.get(url);const promise=fetch(url,{cache:'force-cache'}).then(r=>{if(!r.ok)throw new Error(`Audio ${r.status}: ${url}`);return r.arrayBuffer();}).then(bytes=>ensureContext().decodeAudioData(bytes));buffers.set(url,promise);try{return await promise;}catch(error){buffers.delete(url);throw error;}}
-  const preloadPromise=Promise.allSettled([...Object.values(TRACKS).map(t=>load(t.url)),...WELCOME.map(load)]);
+  const preloadPromise=Promise.allSettled([...Object.values(TRACKS).map(t=>load(t.url)),...WELCOME.map(load),...Object.values(ANNOUNCER).map(load)]);
   function fadeParam(param,value,seconds=.22){if(!context)return;const now=context.currentTime;param.cancelScheduledValues(now);param.setValueAtTime(param.value,now);param.linearRampToValueAtTime(value,now+seconds);}
   function stopCurrent(fade=.18){const playing=current;if(!playing||!context)return;fadeParam(musicGain.gain,0,fade);const src=playing.source;setTimeout(()=>{try{src.stop();}catch(_){}},Math.ceil((fade+.04)*1000));current=null;}
   async function playTrack(key){if(!entered||!TRACKS[key])return;const ctx=await unlock();if(!ctx)return;if(current)stopCurrent(.16);const track=TRACKS[key];let buffer;try{buffer=await load(track.url);}catch(error){console.error('TTD music load failed',error);return;}if(!entered)return;const source=ctx.createBufferSource();source.buffer=buffer;source.loop=true;source.loopStart=track.loopStart;source.loopEnd=Math.min(track.loopEnd,buffer.duration);source.connect(musicGain);musicGain.gain.cancelScheduledValues(ctx.currentTime);musicGain.gain.setValueAtTime(0,ctx.currentTime);musicGain.gain.linearRampToValueAtTime(.56,ctx.currentTime+.26);source.start(0,0);current={key,track,source,startedAt:ctx.currentTime};}
@@ -17,9 +35,28 @@
   function routeFor(screen){if(!entered||!screen)return null;if(screen==='shopScreen')return'shop';if(screen==='deckScreen')return'deck';if(screen==='gachaScreen')return'gacha';if(SILENT_SCREENS.has(screen))return null;return'main';}
   function syncRoute(force=false){if(!entered)return;const screen=activeScreenId();if(!force&&screen===lastScreen)return;lastScreen=screen;const route=routeFor(screen);if(!route){stopCurrent(.18);return;}playTrack(route).catch(error=>console.error('TTD music route failed',error));}
   async function playWelcome(){const ctx=await unlock();if(!ctx)return;const url=WELCOME[Math.floor(Math.random()*WELCOME.length)];let buffer;try{buffer=await load(url);}catch(error){console.error('TTD welcome voice load failed',error);return;}return new Promise(resolve=>{const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);source.addEventListener('ended',resolve,{once:true});source.start();});}
+  async function playVoiceCue(key){
+    const url=ANNOUNCER[key];
+    if(!url)return false;
+    const ctx=await unlock();
+    if(!ctx)return false;
+    let buffer;
+    try{buffer=await load(url);}catch(error){console.error('TTD announcer voice load failed',key,error);return false;}
+    const source=ctx.createBufferSource();
+    source.buffer=buffer;
+    source.connect(voiceGain);
+    source.start();
+    return true;
+  }
   async function enterMainMenu(){entered=true;lastScreen='';await playTrack('main');}
   function silence(){stopCurrent(.15);}
+  window.addEventListener('message',(event)=>{
+    if(event.origin!==location.origin||event.source!==frame?.contentWindow)return;
+    const message=event.data||{};
+    if(message.type!=='ttd:voice-cue')return;
+    playVoiceCue(String(message.cue||'')).catch(error=>console.error('TTD announcer cue failed',error));
+  });
   frame?.addEventListener('load',()=>setTimeout(()=>syncRoute(true),80));window.setInterval(syncRoute,180);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){context?.suspend?.().catch?.(()=>{});}else if(entered){context?.resume?.().catch?.(()=>{});syncRoute(true);}});
-  window.__TTD_AUDIO_V27=Object.freeze({TRACKS,WELCOME,SILENT_SCREENS,preloadPromise,unlock,playWelcome,enterMainMenu,syncRoute,silence});
+  window.__TTD_AUDIO_V27=Object.freeze({TRACKS,WELCOME,ANNOUNCER,SILENT_SCREENS,preloadPromise,unlock,playWelcome,playVoiceCue,enterMainMenu,syncRoute,silence});
 })();
