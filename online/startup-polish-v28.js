@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__TTD_STARTUP_POLISH_V28) return;
-  window.__TTD_STARTUP_POLISH_V28 = true;
+  if (window.__TTD_STARTUP_POLISH_V31) return;
+  window.__TTD_STARTUP_POLISH_V31 = true;
 
   const splash = document.getElementById('ttdStartupSplashV26');
   const originalFx = document.getElementById('ttdStartupFxV26');
@@ -33,7 +33,7 @@
   }
 
   const style = document.createElement('style');
-  style.id = 'ttd-startup-polish-style-v28';
+  style.id = 'ttd-startup-polish-style-v31';
   style.textContent = `
     #ttdStartupSplashV26 .ttdSplashWordV26{
       font-family:'CCDangerGirlOpen','Carter One',sans-serif!important;
@@ -147,28 +147,49 @@
   let entering=false;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   function accountReady(){return !signedIn?.hidden&&!frame?.hidden&&status?.dataset?.kind==='ok'&&/cloud account ready/i.test(status?.textContent||'');}
-  async function waitReady(){while(!accountReady())await sleep(45);}
+  async function waitReady(maxMs=8000){
+    const deadline=performance.now()+Math.max(0,maxMs);
+    while(!accountReady()&&performance.now()<deadline)await sleep(45);
+    return accountReady();
+  }
+  function revealFromBlack(){
+    fade.classList.add('ttdRevealV28');fade.classList.remove('ttdBlackV28');
+    setTimeout(()=>fade.classList.remove('ttdRevealV28'),370);
+  }
   async function enter(){
     if(entering)return;entering=true;
     const audio=window.__TTD_AUDIO_V27;
     try{await audio?.unlock?.();}catch(_){}
     tap.disabled=true;tap.classList.remove('ttdTapReadyV26');tap.textContent='ENTERING…';
     fade.classList.add('ttdBlackV28');
-    await sleep(95);
-    let welcomePromise=Promise.resolve();
-    try{welcomePromise=Promise.resolve(audio?.playWelcome?.());}catch(error){console.error('TTD welcome failed',error);}
-    await sleep(350);
-    try{await welcomePromise;}catch(error){console.error('TTD welcome failed',error);}
-    await sleep(90);
-    await waitReady();
-    try{await audio?.enterMainMenu?.();}catch(error){console.error('TTD main music failed',error);}
-    splash.hidden=true;document.documentElement.classList.remove('ttdStartupOpenV26');
-    fade.classList.add('ttdRevealV28');fade.classList.remove('ttdBlackV28');
-    await sleep(370);fade.classList.remove('ttdRevealV28');
+    try{
+      await sleep(95);
+      let welcomePromise=Promise.resolve();
+      try{welcomePromise=Promise.resolve(audio?.playWelcome?.());}catch(error){console.error('TTD welcome failed',error);}
+      await sleep(350);
+      try{await Promise.race([welcomePromise,sleep(5000)]);}catch(error){console.error('TTD welcome failed',error);}
+      await sleep(90);
+      const ready=await waitReady(8000);
+      if(!ready)console.warn('TTD startup reveal timed out waiting for account-ready; revealing shell instead of holding a black screen.');
+      if(ready){
+        try{Promise.resolve(audio?.enterMainMenu?.()).catch(error=>console.error('TTD main music failed',error));}catch(error){console.error('TTD main music failed',error);}
+      }
+      splash.hidden=true;document.documentElement.classList.remove('ttdStartupOpenV26');
+    } finally {
+      revealFromBlack();
+      entering=false;
+    }
   }
+  function promptIsReady(){return !!window.__TTD_STARTUP_SPLASH_V31?.promptReady || !tap.disabled;}
   function intercept(event){
-    if(entering||tap.disabled||splash.hidden)return;
+    if(splash.hidden)return;
     if(event.type==='keydown'&&!['Enter',' '].includes(event.key))return;
+    if(!promptIsReady()){
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      window.__TTD_STARTUP_SPLASH_V31?.skipToEnd?.();
+      return;
+    }
+    if(entering||tap.disabled)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();enter();
   }
   splash.addEventListener('pointerup',intercept,true);
