@@ -67,14 +67,14 @@
     eval(`${await response.text()}\n//# sourceURL=${url.split('?')[0]}`);
   }
 
-  async function ensurePresentationV4(){
-    if(window.__TTD_GAME_PRESENTATION_V4){window.TTDGamePresentation?.rebind?.();return;}
+  async function ensurePresentationV6(){
+    if(window.__TTD_GAME_PRESENTATION_V6){window.TTDGamePresentation?.rebind?.();return;}
     try{
-      await evalScoped('/online/game-presentation-v1.js?v=4','Game presentation');
+      await evalScoped('/online/game-presentation-v1.js?v=6','Game presentation');
       window.TTDGamePresentation?.rebind?.();
     }catch(err){
       console.error('Independent game presentation bootstrap failed.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'game-presentation-v4',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'game-presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
 
@@ -87,6 +87,6 @@
     }
   }
 
-  ensurePresentationV4();
+  ensurePresentationV6();
   ensureSameMapBattleV4();
 })();

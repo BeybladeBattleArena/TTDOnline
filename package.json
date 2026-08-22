@@ -24,7 +24,7 @@
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy": "npm run check && firebase deploy",
-    "check:platforming": "node scripts/check-adventure-platforming-v1.mjs"
+    "check:platforming": "node scripts/check-presentation-v6.mjs"
   },
   "devDependencies": {
     "firebase-tools": "^14.0.0"
