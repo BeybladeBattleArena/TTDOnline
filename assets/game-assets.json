@@ -29,6 +29,7 @@
     "welcomeRng4": {"path":"/assets/audio/welcome-rng-4.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}}},
     "announcerMission": {"path":"/assets/audio/announcer/Mission.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"MISSION announcer cue"},
     "announcerStart": {"path":"/assets/audio/announcer/Start.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"MISSION START announcer cue"},
+    "announcerCombatStart": {"path":"/assets/audio/announcer/CombatStart.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"3 2 1 START combat announcer cue"},
     "announcerMissionClear": {"path":"/assets/audio/announcer/MissionClear.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"CLEAR announcer cue"},
     "announcerMissionFail": {"path":"/assets/audio/announcer/MissionFail.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"FAIL announcer cue"},
     "announcerFinish": {"path":"/assets/audio/announcer/Finish.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"FINISH announcer cue"},
