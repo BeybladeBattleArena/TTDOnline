@@ -48,18 +48,34 @@ need(selector,[
   "api.selectNavigator(index)",
   "document.getElementById('ttdNavInstancePrompt')?.remove()",
 ],'selector v6');
-if(selector.includes("originalTiles[index]?.classList.contains('ttd-nav-choice')"))throw new Error('Selector v6 must not infer live dice from DOM class timing.');
 
 need(continuousWorld,[
-  'window.__TTD_CONTINUOUS_WORLD_V1',
+  'window.__TTD_CONTINUOUS_WORLD_V2',
   "contract:'one-world-one-camera-persistent-objects'",
-  "backdrop:'continuous-crossfade'",
-  'const smoothstep=',
-  'const jungleIn=smoothstep(430,760,cx)',
-  'const templeIn=smoothstep(960,1290,cx)',
-  'z1:-1200,z2:1200',
+  "rendererOwner:'adventure-platforming-v2 transformed scope'",
+  "scopeSafe:true",
+  "const TEST_ID='test_map'",
+  'function isAuthorizedTestState(candidate)',
+  'candidate.adventureStage===testStage || candidate.adventureStage?.name===testStage.name',
+  'function watchAuthorizedTestState()',
+  'requestAnimationFrame(watchAuthorizedTestState)',
+  'candidate.__ttdTestMap=true',
+  "candidate.__ttdWorldState=candidate.__ttdWorldState||{version:1,cameraX:340,traversalStart:{x:410,z:0,y:0},objects:null,drops:null}",
+  'window.__TTD_PLATFORM_TEST_API?.ensureWorldState?.()',
+  'buildPath(cw,ch)',
+  "await evalScoped('/online/game-presentation-v1.js?v=4','Game presentation')",
+  "await evalScoped('/online/adventure-pseudo3d-battle-v1.js?v=4','Persistent same-map battle')",
+  'ensurePresentationV4();',
+  'ensureSameMapBattleV4();',
   'groundDepth:2400',
-],'continuous world contract');
+],'scope-safe continuous world companion');
+forbid(continuousWorld,[
+  'const basePlatforms=currentPlatforms',
+  'const baseBackground=drawBackground',
+  'currentPlatforms=function currentPlatformsContinuousWorldV1',
+  'drawBackground=function drawBackgroundContinuousWorldV1',
+  'performance.now()-startedAt<25000',
+],'scope-safe continuous world companion');
 
 need(mainMapBattle,[
   'window.__TTD_TEST_MAINMAP_BATTLE_V4=true',
@@ -90,7 +106,7 @@ forbid(mainMapBattle,[
 if(mainMapBattle.includes('ADVENTURES.al_hata')||mainMapBattle.includes('AL_HATA_STAGE'))throw new Error('Same-map Test Map renderer must not mutate Al Hata.');
 
 need(presentation,[
-  'window.__TTD_GAME_PRESENTATION_V3',
+  'window.__TTD_GAME_PRESENTATION_V4',
   'const MISSION_GAP_MS = 1250',
   'const COUNT_STEP_MS = 720',
   'const CLEAR_HIDE_MS = 1400',
@@ -98,27 +114,53 @@ need(presentation,[
   "makeSignal(['MISSION', 'START!'])",
   "makeSignal(['CLEAR!'])",
   "makeSignal(['3','2','1','START!'],'countdown')",
+  "nodes[0]?.classList.add('in')",
+  'await sleep(MISSION_GAP_MS)',
+  "nodes[1]?.classList.add('in')",
   'playCombatCountdown',
-  'if (missionBusy) return base.apply(this,args);',
   "font-family:'Russo One',sans-serif!important",
   'visibility:hidden!important',
   "return /^MISSION\\s*START!?$/i.test(normalizedText(el));",
   "el.dataset.ttdLegacyMissionSuppressed='1'",
   'legacyObserver.observe',
   "el.style.setProperty('animation','none','important')",
+  "if(typeof startGame==='function')bindStart('startGame',()=>startGame,(fn)=>{startGame=fn;})",
+  "if(typeof startAdventure==='function')bindStart('startAdventure',()=>startAdventure,(fn)=>{startAdventure=fn;})",
+  "if(typeof startAdventureCampaign==='function')bindStart('startAdventureCampaign',()=>startAdventureCampaign,(fn)=>{startAdventureCampaign=fn;})",
+  "if(typeof startEndlessHorde==='function')bindStart('startEndlessHorde',()=>startEndlessHorde,(fn)=>{startEndlessHorde=fn;})",
+  'campaignComplete=wrappedCampaignComplete',
+  'endEndlessHorde=wrappedEndHorde',
+  'showZombieSummary=wrapped',
   'prepareZombieResult(pipsEarned)',
+  'suppressZombieSummaryUntil=performance.now()+ZOMBIE_SUPPRESS_MS',
   "card.replaceWith(marker)",
   'ttdResultCardV1',
   'ttdMvpDieGlowV1',
-  "label.textContent = 'MVP'",
+  "label.textContent='MVP'",
   'presentObjectiveClear',
   'window.TTDGamePresentation',
-  'rebind: installAll',
-],'game presentation v3');
+  'rebind:installAll',
+],'game presentation v4');
 forbid(presentation,[
   "word.className = 'awardTitle ttdSignalWord'",
   'MISSION START!',
-],'game presentation v3');
+  'window.startAdventure',
+  'window.startAdventureCampaign',
+  'window.startEndlessHorde',
+  'window.campaignComplete',
+  'window.endEndlessHorde',
+],'game presentation v4');
+
+const missionShow= presentation.indexOf("nodes[0]?.classList.add('in')");
+const missionWait= presentation.indexOf('await sleep(MISSION_GAP_MS)',missionShow);
+const startShow= presentation.indexOf("nodes[1]?.classList.add('in')",missionWait);
+if(!(missionShow>=0&&missionWait>missionShow&&startShow>missionWait))throw new Error('MISSION and START must be revealed in deterministic sequence.');
+const clearCall=presentation.indexOf('playClearCue();',presentation.indexOf('wrappedCampaignComplete'));
+const campaignCall=presentation.indexOf('baseCampaignComplete.apply',presentation.indexOf('wrappedCampaignComplete'));
+if(!(clearCall>=0&&campaignCall>clearCall))throw new Error('Adventure CLEAR must begin before the completion result is constructed.');
+const suppressCall=presentation.indexOf('suppressZombieSummaryUntil=performance.now()+ZOMBIE_SUPPRESS_MS',presentation.indexOf('wrappedEndHorde'));
+const hordeCall=presentation.indexOf('baseEndHorde.apply',presentation.indexOf('wrappedEndHorde'));
+if(!(suppressCall>=0&&hordeCall>suppressCall))throw new Error('Zombie legacy summary must be suppressed before endEndlessHorde schedules it.');
 
 need(runUi,[
   'function installPlatformOnlineStartSyncV2()',
@@ -147,12 +189,9 @@ need(runUi,[
   "+' · HP '+",
   '/online/adventure-continuous-world-v1.js?v=1',
   '/online/adventure-pseudo3d-battle-v1.js?v=4',
-  '/online/game-presentation-v1.js?v=3',
   'installPlatformOnlineStartSyncV2();',
   'window.TTDGamePresentation?.rebind?.()',
 ],'continuous world loader/injection');
-/* The old beginPlatform literal is intentionally present as a requiredReplace search needle.
-   What matters is that its replacement is present and all actual battle previews use wstate refs. */
 forbid(runUi,[
   '/online/adventure-platforming-selector-v5.js?v=5',
   'cameraX:Number(area)===2?1390:40',
@@ -166,4 +205,4 @@ need(loaderHtml,[
   "cache:'no-store'",
 ],'loader');
 
-console.log('Adventure Test Map persistent continuous-world flow verified: broad beach/jungle/temple terrain hides artificial map edges, biome backdrops cross-fade instead of snapping, traversal and combat share one camera plus persistent object/drop references, opened chests remain opened, navigation has an explicit in-world spawn, later combat pauses for a 3-2-1-START assessment countdown, battle routes span fair approach distances, MISSION/START is isolated from legacy duplicate cues and nested start calls are preserved, and no alternate pseudo-world or snapshot renderer can return.');
+console.log('Adventure and presentation runtime verified: the Test Map companion cannot escape traversal lexical scope, live Test Map state is persistently recognized even after deferred server starts, same-map combat can bootstrap independently, MISSION and START bind directly to the real lexical gameplay functions in deterministic order, Adventure completion begins CLEAR before result construction, and Zombie suppresses the legacy summary before constructing and revealing the unified result presentation.');
