@@ -17,6 +17,7 @@ const GAME_LOADER_PATH = '/online/game-loader.html';
 const LOCAL_PROFILE_KEY = 'rd_account';
 const ACTIVE_UID_KEY = 'ttd_online_active_uid_v1';
 const SCOPED_PROFILE_PREFIX = 'ttd_online_profile_v1_';
+const STARTUP_BRIDGE_PHASES = new Set(['loader-started', 'assets-loaded', 'document-ready']);
 
 const el = (id) => document.getElementById(id);
 const statusEl = el('status');
@@ -39,6 +40,7 @@ let gachaRequestInFlight = false;
 let deckRequestInFlight = false;
 let pendingDeckRequest = null;
 let bridgeTimer = null;
+let bridgeSessionSynced = false;
 
 function setStatus(message, kind = '') {
   statusEl.textContent = message || '';
@@ -179,8 +181,10 @@ function clearBridgeTimer() {
 }
 
 function armBridgeTimer(stage = 'The secure online game did not finish starting.') {
+  if (bridgeSessionSynced) return;
   clearBridgeTimer();
   bridgeTimer = setTimeout(() => {
+    if (bridgeSessionSynced) return;
     gameFrame.hidden = true;
     gameFrame.style.pointerEvents = 'none';
     accountArea.hidden = false;
@@ -190,6 +194,7 @@ function armBridgeTimer(stage = 'The secure online game did not finish starting.
 
 function showSignedOutMode() {
   clearBridgeTimer();
+  bridgeSessionSynced = false;
   cloudGameState = null;
   cloudDice = [];
   cloudDecks = [];
@@ -206,6 +211,7 @@ function showSignedOutMode() {
 }
 
 function showGameMode(user, generation, gameState) {
+  bridgeSessionSynced = false;
   signedOutEl.hidden = true;
   signedInEl.hidden = false;
   accountArea.hidden = false;
@@ -322,17 +328,24 @@ window.addEventListener('message', (event) => {
   const message = event.data || {};
 
   if (message.type === 'ttd:bridge-phase') {
-    setStatus(message.message || `Securing online gameplay (${message.phase || 'working'})…`);
-    armBridgeTimer(`The secure game loader stopped during ${message.phase || 'startup'}.`);
+    const phase = String(message.phase || '');
+    if (bridgeSessionSynced || !STARTUP_BRIDGE_PHASES.has(phase)) {
+      console.warn('[TTD ignored non-startup bridge phase]', phase || 'unknown', message.bridge || '', message.message || '');
+      return;
+    }
+    setStatus(message.message || `Securing online gameplay (${phase})…`);
+    armBridgeTimer(`The secure game loader stopped during ${phase}.`);
     return;
   }
   if (message.type === 'ttd:bridge-ready') {
+    if (bridgeSessionSynced) return;
     setStatus('Applying authoritative cloud progression…');
     armBridgeTimer('The game bridge did not acknowledge authoritative cloud progression.');
     sendCloudSyncToGame();
     return;
   }
   if (message.type === 'ttd:bridge-synced') {
+    bridgeSessionSynced = true;
     clearBridgeTimer();
     setStatus('Cloud account ready.', 'ok');
     accountArea.hidden = true;
@@ -341,6 +354,7 @@ window.addEventListener('message', (event) => {
     return;
   }
   if (message.type === 'ttd:bridge-sync-error') {
+    bridgeSessionSynced = false;
     clearBridgeTimer();
     gameFrame.hidden = true;
     gameFrame.style.pointerEvents = 'none';

@@ -3,10 +3,14 @@ import fs from 'node:fs';
 const splash=fs.readFileSync('online/startup-splash-v26.js','utf8');
 const polish=fs.readFileSync('online/startup-polish-v28.js','utf8');
 const diagnosticGuard=fs.readFileSync('online/bridge-diagnostic-guard-v1.js','utf8');
+const sessionGuard=fs.readFileSync('online/bridge-session-guard-v2.js','utf8');
+const firebase=fs.readFileSync('online/firebase-client-v4.js','utf8');
+const onlineHtml=fs.readFileSync('online.html','utf8');
 const entry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
 new Function(splash);
 new Function(polish);
 new Function(diagnosticGuard);
+new Function(sessionGuard);
 
 const required=[
   'const DICE_COUNT = 240',
@@ -64,13 +68,38 @@ const diagnosticRequired=[
   "window.__TTD_BRIDGE_DIAGNOSTICS = diagnostics",
   "sessionStorage.setItem(STORAGE_KEY",
   "event.stopImmediatePropagation()",
-  "}, true);",
 ];
-for(const marker of diagnosticRequired)if(!diagnosticGuard.includes(marker))throw new Error(`Bridge diagnostic guard missing: ${marker}`);
+for(const marker of diagnosticRequired)if(!diagnosticGuard.includes(marker))throw new Error(`Legacy bridge diagnostic guard missing: ${marker}`);
+
+const sessionRequired=[
+  'window.__TTD_BRIDGE_SESSION_GUARD_V2',
+  "new Set(['loader-started','assets-loaded','document-ready'])",
+  "message.type === 'ttd:bridge-synced'",
+  "phase === 'bridge-runtime-error' || !isStartupPhase || synced",
+  "event.stopImmediatePropagation()",
+  "window.__TTD_BRIDGE_DIAGNOSTICS_V2 = diagnostics",
+];
+for(const marker of sessionRequired)if(!sessionGuard.includes(marker))throw new Error(`Synchronous bridge session guard missing: ${marker}`);
+
+const firebaseRequired=[
+  "const STARTUP_BRIDGE_PHASES = new Set(['loader-started', 'assets-loaded', 'document-ready'])",
+  'let bridgeSessionSynced = false',
+  'if (bridgeSessionSynced) return;',
+  'if (bridgeSessionSynced || !STARTUP_BRIDGE_PHASES.has(phase))',
+  "console.warn('[TTD ignored non-startup bridge phase]'",
+  'bridgeSessionSynced = true',
+  'if (bridgeSessionSynced) return;\n    gameFrame.hidden = true;',
+];
+for(const marker of firebaseRequired)if(!firebase.includes(marker))throw new Error(`Firebase bridge watchdog contract missing: ${marker}`);
+if(firebase.includes("armBridgeTimer(`The secure game loader stopped during ${message.phase || 'startup'}.`)"))throw new Error('Firebase may not arm the fatal watchdog for arbitrary bridge phases.');
+
+const syncGuardTag='<script src="/online/bridge-session-guard-v2.js?v=2"></script>';
+const firebaseTag='<script type="module" src="/online/firebase-client-v4.js?v=4"></script>';
+if(!onlineHtml.includes(syncGuardTag))throw new Error('Online shell does not synchronously load bridge-session-guard-v2.');
+if(onlineHtml.indexOf(syncGuardTag)>onlineHtml.indexOf(firebaseTag))throw new Error('Bridge session guard must be a classic script registered before Firebase installs its message listener.');
 
 const diagnosticImport="import './bridge-diagnostic-guard-v1.js?v=1';";
-if(!entry.includes(diagnosticImport))throw new Error('Online client does not load the bridge diagnostic guard.');
-if(entry.indexOf(diagnosticImport)>entry.indexOf("import './audio-client-v27.js"))throw new Error('Bridge diagnostic guard must install before startup/audio modules and before the game iframe can boot.');
+if(!entry.includes(diagnosticImport))throw new Error('Online client lost the secondary bridge diagnostic logger.');
 if(!entry.includes("import './startup-splash-v26.js?v=31';"))throw new Error('Online client does not load startup splash v31 behavior.');
 if(!entry.includes("import './startup-polish-v28.js?v=31';"))throw new Error('Online client does not load startup polish v31 behavior.');
 if(entry.indexOf('startup-splash-v26')>entry.indexOf('singleplayer-client-v9-core'))throw new Error('Startup splash must initialize before the legacy game core client.');
@@ -78,4 +107,4 @@ if(!/DICE_COUNT\s*=\s*(?:2\d\d|[3-9]\d\d)/.test(splash))throw new Error('Startup
 if(splash.indexOf("'Okay, Die Master'")>splash.indexOf("'TAP to DIE'"))throw new Error('Greeting must type before TAP to DIE.');
 if(splash.indexOf('unlockAudioFromGesture()')>splash.indexOf("tapButton.textContent=accountReady()?"))throw new Error('Audio unlock must happen synchronously before post-tap waiting UI.');
 if(splash.indexOf('sequenceToken++;')>splash.indexOf('diceReveal=1'))throw new Error('Early title skip must cancel the in-flight animation before forcing its final state.');
-console.log('Startup splash verified: full animated opener remains intact, early tap skip stays two-stage, black entry fade is bounded, and nonfatal bridge diagnostics are captured before they can corrupt cloud-ready state, re-arm the fatal startup watchdog, hide the game, or suppress main-menu music.');
+console.log('Startup and bridge session verified: title skip remains two-stage, audio reveal is bounded, only known startup phases can arm the watchdog, and no bridge phase can return a synced live session to startup/fatal timeout state.');
