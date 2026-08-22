@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-08-22-items-v1",
+  "chestArtFamilies": {
+    "adventure_normal": "/assets/items/chest-frozen-island-normal.webp",
+    "adventure_hard": "/assets/items/chest-frozen-island-hard.webp",
+    "adventure_hell": "/assets/items/chest-frozen-island-hell.webp"
+  },
+  "adventureChestFamilies": {
+    "al_hata": {
+      "chestKey": "frozen_island",
+      "displayName": "Frozen Island Chest",
+      "normal": "frozen_island_chest_normal",
+      "hard": "frozen_island_chest_hard",
+      "hell": "frozen_island_chest_hell"
+    },
+    "dark_monastery": {
+      "chestKey": "black_cathedral",
+      "displayName": "Black Cathedral Chest",
+      "artReuse": "al_hata",
+      "normal": "black_cathedral_chest_normal",
+      "hard": "black_cathedral_chest_hard",
+      "hell": "black_cathedral_chest_hell"
+    }
+  },
+  "items": {
+    "epic_summon_ticket": {
+      "name": "Epic Summon Ticket",
+      "inventoryCategory": "rewards",
+      "stackable": true,
+      "asset": "/assets/items/epic-summon-ticket.webp",
+      "description": "A premium summon ticket reserved for Epic Summon use."
+    },
+    "exp_tome": {
+      "name": "EXP Tome",
+      "inventoryCategory": "rewards",
+      "stackable": true,
+      "asset": "/assets/items/exp-tome.webp",
+      "description": "A training tome. Use it to gain 60 account EXP.",
+      "useEffect": { "type": "grant_account_exp", "amount": 60 }
+    },
+    "common_ore": {
+      "name": "Common Ore",
+      "inventoryCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/ore-common.webp",
+      "rarityTarget": "common",
+      "description": "Ore attuned to Common dice."
+    },
+    "rare_ore": {
+      "name": "Rare Ore",
+      "inventoryCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/ore-rare.webp",
+      "rarityTarget": "rare",
+      "description": "Ore attuned to Rare dice."
+    },
+    "unique_ore": {
+      "name": "Unique Ore",
+      "inventoryCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/ore-unique.webp",
+      "rarityTarget": "unique",
+      "description": "Ore attuned to Unique dice."
+    },
+    "legendary_ore": {
+      "name": "Legendary Ore",
+      "inventoryCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/ore-legendary.webp",
+      "rarityTarget": "legendary",
+      "description": "Ore attuned to Legendary dice."
+    },
+    "omni_ore": {
+      "name": "Omni Ore",
+      "inventoryCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/ore-omni.webp",
+      "rarityTarget": "omni",
+      "description": "Pearlescent ore that can stand in for any die-rarity ore."
+    },
+    "chest_key_normal": {
+      "name": "Chest Key [Normal]",
+      "inventoryCategory": "rewards",
+      "shopCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/key-normal.webp",
+      "difficulty": "normal"
+    },
+    "chest_key_hard": {
+      "name": "Chest Key [Hard]",
+      "inventoryCategory": "rewards",
+      "shopCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/key-hard.webp",
+      "difficulty": "hard"
+    },
+    "chest_key_hell": {
+      "name": "Chest Key [Hell]",
+      "inventoryCategory": "rewards",
+      "shopCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/key-hell.webp",
+      "difficulty": "hell"
+    },
+    "frozen_island_chest_normal": {
+      "name": "Frozen Island Chest [Normal]",
+      "inventoryCategory": "rewards",
+      "stackable": true,
+      "asset": "/assets/items/chest-frozen-island-normal.webp",
+      "chestKey": "frozen_island",
+      "mapKey": "al_hata",
+      "difficulty": "normal",
+      "requiredKey": "chest_key_normal"
+    },
+    "frozen_island_chest_hard": {
+      "name": "Frozen Island Chest [Hard]",
+      "inventoryCategory": "rewards",
+      "stackable": true,
+      "asset": "/assets/items/chest-frozen-island-hard.webp",
+      "chestKey": "frozen_island",
+      "mapKey": "al_hata",
+      "difficulty": "hard",
+      "requiredKey": "chest_key_hard"
+    },
+    "frozen_island_chest_hell": {
+      "name": "Frozen Island Chest [Hell]",
+      "inventoryCategory": "rewards",
+      "stackable": true,
+      "asset": "/assets/items/chest-frozen-island-hell.webp",
+      "chestKey": "frozen_island",
+      "mapKey": "al_hata",
+      "difficulty": "hell",
+      "requiredKey": "chest_key_hell"
+    },
+    "mystery_chest": {
+      "name": "Mystery Chest",
+      "inventoryCategory": "rewards",
+      "shopCategory": "materials",
+      "stackable": true,
+      "asset": "/assets/items/mystery-chest.webp",
+      "costPips": 3300,
+      "description": "A sealed chest of unknown contents. A Mystery Key will be required to open it.",
+      "requiredKey": "mystery_key"
+    }
+  }
+}
