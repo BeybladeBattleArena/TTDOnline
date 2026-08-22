@@ -15,6 +15,7 @@
   const ANNOUNCER=Object.freeze({
     mission:'/assets/audio/announcer/Mission.mp3',
     start:'/assets/audio/announcer/Start.mp3',
+    combatStart:'/assets/audio/announcer/CombatStart.mp3',
     clear:'/assets/audio/announcer/MissionClear.mp3',
     fail:'/assets/audio/announcer/MissionFail.mp3',
     finish:'/assets/audio/announcer/Finish.mp3',
