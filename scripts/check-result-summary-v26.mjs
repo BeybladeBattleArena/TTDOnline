@@ -19,7 +19,7 @@ const required=[
   "stats.insertAdjacentElement('afterend', block)",
   "button.insertAdjacentElement('beforebegin', block)",
   "Math.round(wave * 10 + kills * 1.2 + coinGold + (message.typhoonDefeated ? 150 : 0))",
-  'Math.round(kills * 2 + playSeconds * 0.15)',
+  'kills > 0 ? Math.round(kills * 2 + playSeconds * 0.15) : 0',
   "getElementById('ttd-result-summary-hide-v26')?.remove()",
   "frame?.addEventListener('load', resetForNewRun)",
 ];
@@ -30,4 +30,4 @@ if(entry.indexOf('result-summary-client-v26')>entry.indexOf('singleplayer-client
 if(/\+\$\{[^}]+\}\s*(?:Pips|EXP)/.test(client)||/>\+\d*\s*(?:Pips|EXP)/.test(client))throw new Error('Animated Pips/EXP lines must not use + prefixes.');
 if(client.indexOf('setTimeout(resolve, START_DELAY_MS)')>client.indexOf('await animateLine(pipsEl'))throw new Error('Pips delay must occur before Pips animation.');
 if(client.indexOf('await animateLine(pipsEl')>client.indexOf('await animateLine(expEl'))throw new Error('Pips must tally before EXP.');
-console.log('Result summary v26 verified: final stats pause at 000, then Pips tally before EXP.');
+console.log('Result summary v26 verified: final stats pause at 000, Pips tally before EXP, and zero-kill Zombie runs predict zero Pips.');
