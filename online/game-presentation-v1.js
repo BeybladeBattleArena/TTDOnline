@@ -1,9 +1,9 @@
 (() => {
   'use strict';
-  if (window.__TTD_GAME_PRESENTATION_V3) return;
-  window.__TTD_GAME_PRESENTATION_V3 = true;
+  if (window.__TTD_GAME_PRESENTATION_V4) return;
+  window.__TTD_GAME_PRESENTATION_V4 = true;
 
-  const SIGNAL_ID = 'ttdGameSignalV3';
+  const SIGNAL_ID = 'ttdGameSignalV4';
   const MISSION_GAP_MS = 1250;
   const MISSION_START_HOLD_MS = 1050;
   const COUNT_STEP_MS = 720;
@@ -11,7 +11,7 @@
   const CLEAR_HIDE_MS = 1400;
   const CLEAR_REMOVE_MS = 1700;
   const RESULT_REVEAL_MS = 1850;
-  const ZOMBIE_SUPPRESS_MS = 2450;
+  const ZOMBIE_SUPPRESS_MS = 2600;
 
   let missionBusy = false;
   let countdownBusy = false;
@@ -21,7 +21,7 @@
   let suppressZombieSummaryUntil = 0;
 
   const style = document.createElement('style');
-  style.id = 'ttdGamePresentationStyleV3';
+  style.id = 'ttdGamePresentationStyleV4';
   style.textContent = `
     #${SIGNAL_ID}{
       position:fixed;inset:0;z-index:1260;pointer-events:none;
@@ -121,6 +121,7 @@
     el.dataset.ttdLegacyMissionSuppressed='1';
     el.style.setProperty('visibility','hidden','important');
     el.style.setProperty('opacity','0','important');
+    el.style.setProperty('display','none','important');
     el.style.setProperty('animation','none','important');
     el.style.setProperty('pointer-events','none','important');
   }
@@ -146,11 +147,9 @@
     const { overlay, nodes } = makeSignal(['MISSION', 'START!']);
     nodes[0]?.classList.add('in');
     requestAnimationFrame(() => overlay.classList.add('show'));
-
     await sleep(MISSION_GAP_MS);
     nodes[1]?.classList.add('in');
     try { startFn?.(); } catch (err) { console.error('TTD mission start failed.', err); }
-
     await sleep(MISSION_START_HOLD_MS);
     overlay.classList.add('leaving');
     overlay.classList.remove('show');
@@ -159,23 +158,22 @@
     missionBusy = false;
   }
 
-  function wrapStartFunction(name) {
-    const base = window[name];
-    if (typeof base !== 'function' || base.__ttdMissionWrappedV3) return;
-    const wrapped = function(...args) {
-      /* Nested start calls are part of the same launch and must pass through. Older wrappers
-         returned here, which could swallow mode-specific startup work. */
-      if (missionBusy) return base.apply(this,args);
-      playMissionCue(() => base.apply(this, args));
+  function bindStart(name,getter,setter){
+    let base;
+    try{base=getter();}catch(_){return;}
+    if(typeof base!=='function'||base.__ttdMissionWrappedV4)return;
+    const wrapped=function(...args){
+      if(missionBusy)return base.apply(this,args);
+      const self=this;
+      playMissionCue(()=>base.apply(self,args));
     };
-    wrapped.__ttdMissionWrappedV3 = true;
-    wrapped.__ttdMissionBaseV3 = base;
-    window[name] = wrapped;
-    try { eval(`${name} = window['${name}'];`); } catch (_) {}
+    wrapped.__ttdMissionWrappedV4=true;
+    wrapped.__ttdMissionBaseV4=base;
+    try{setter(wrapped);}catch(err){console.warn(`Could not bind ${name} presentation.`,err);}
   }
 
   async function playCombatCountdown(onStart) {
-    if(countdownBusy){return false;}
+    if(countdownBusy)return false;
     countdownBusy=true;
     const {overlay,nodes}=makeSignal(['3','2','1','START!'],'countdown');
     requestAnimationFrame(()=>overlay.classList.add('show'));
@@ -201,127 +199,127 @@
     setTimeout(() => overlay.remove(), CLEAR_REMOVE_MS);
   }
 
-  function decorateAdventureResult() {document.getElementById('gameOverlay')?.classList.add('ttdResultCardV1');}
-  function decorateZombieResult(cardOverride = null) {
-    const overlay = document.getElementById('zSummaryOverlay');
-    if (overlay) overlay.classList.add('ttdResultCardV1');
-    const card = cardOverride || document.getElementById('zSummaryCard');
-    if (!card) return;
-    const glyph = card.querySelector('.glyphBig');
-    if (!glyph) return;
+  function decorateAdventureResult(){document.getElementById('gameOverlay')?.classList.add('ttdResultCardV1');}
+  function decorateZombieResult(cardOverride=null){
+    const overlay=document.getElementById('zSummaryOverlay');
+    if(overlay)overlay.classList.add('ttdResultCardV1');
+    const card=cardOverride||document.getElementById('zSummaryCard');
+    if(!card)return;
+    const glyph=card.querySelector('.glyphBig');
+    if(!glyph)return;
     glyph.classList.add('ttdMvpDieGlowV1');
-    const label = glyph.previousElementSibling;
-    if (label) {label.textContent = 'MVP';label.classList.add('ttdMvpLabelV1');}
+    const label=glyph.previousElementSibling;
+    if(label){label.textContent='MVP';label.classList.add('ttdMvpLabelV1');}
   }
   function revealAdventureResult(){decorateAdventureResult();document.getElementById('gameOverlay')?.classList.add('show');}
 
-  function prepareZombieResult(pipsEarned) {
-    if (typeof rawZombieSummary !== 'function') return null;
-    const overlay = document.getElementById('zSummaryOverlay');
-    const card = document.getElementById('zSummaryCard');
-    if (!overlay || !card) return null;
+  function prepareZombieResult(pipsEarned){
+    if(typeof rawZombieSummary!=='function')return null;
+    const overlay=document.getElementById('zSummaryOverlay');
+    const card=document.getElementById('zSummaryCard');
+    if(!overlay||!card)return null;
     rawZombieSummary(pipsEarned);
     decorateZombieResult(card);
     overlay.classList.remove('show');
-    const marker = document.createComment('ttd-prepared-zombie-result-v3');
+    const marker=document.createComment('ttd-prepared-zombie-result-v4');
     card.replaceWith(marker);
-    return { overlay, card, marker };
+    return {overlay,card,marker};
   }
-  function revealZombieResult(prepared) {
-    if (!prepared) return;
-    if (prepared.marker.parentNode) prepared.marker.replaceWith(prepared.card);
+  function revealZombieResult(prepared){
+    if(!prepared)return;
+    if(prepared.marker.parentNode)prepared.marker.replaceWith(prepared.card);
     decorateZombieResult(prepared.card);
     void prepared.overlay.offsetWidth;
     prepared.overlay.classList.add('show');
   }
 
-  function installSummaryWrapper() {
-    if (typeof window.showZombieSummary !== 'function' || window.showZombieSummary.__ttdResultDecoratedV3) return;
-    rawZombieSummary = window.showZombieSummary;
-    const wrapped = function(...args) {
-      if (performance.now() < suppressZombieSummaryUntil) return;
-      const result = rawZombieSummary.apply(this, args);
+  function installSummaryWrapper(){
+    if(typeof showZombieSummary!=='function'||showZombieSummary.__ttdResultDecoratedV4)return;
+    rawZombieSummary=showZombieSummary;
+    const wrapped=function(...args){
+      if(performance.now()<suppressZombieSummaryUntil)return;
+      const result=rawZombieSummary.apply(this,args);
       decorateZombieResult();
       return result;
     };
-    wrapped.__ttdResultDecoratedV3 = true;
-    window.showZombieSummary = wrapped;
-    try { showZombieSummary = window.showZombieSummary; } catch (_) {}
+    wrapped.__ttdResultDecoratedV4=true;
+    wrapped.__ttdResultBaseV4=rawZombieSummary;
+    showZombieSummary=wrapped;
   }
 
-  function installClearFlow() {
-    if (typeof window.campaignComplete === 'function' && !window.campaignComplete.__ttdClearWrappedV3) {
-      const baseCampaignComplete = window.campaignComplete;
-      const wrappedCampaignComplete = function(...args) {
-        if (adventureClearBusy) return;
-        adventureClearBusy = true;
+  function installClearFlow(){
+    if(typeof campaignComplete==='function'&&!campaignComplete.__ttdClearWrappedV4){
+      const baseCampaignComplete=campaignComplete;
+      const wrappedCampaignComplete=function(...args){
+        if(adventureClearBusy)return;
+        adventureClearBusy=true;
         playClearCue();
-        const result = baseCampaignComplete.apply(this, args);
-        const overlay = document.getElementById('gameOverlay');
-        if (overlay) {decorateAdventureResult();overlay.classList.remove('show');void overlay.offsetWidth;}
-        setTimeout(() => {revealAdventureResult();adventureClearBusy = false;}, RESULT_REVEAL_MS);
+        const result=baseCampaignComplete.apply(this,args);
+        const overlay=document.getElementById('gameOverlay');
+        if(overlay){decorateAdventureResult();overlay.classList.remove('show');void overlay.offsetWidth;}
+        setTimeout(()=>{revealAdventureResult();adventureClearBusy=false;},RESULT_REVEAL_MS);
         return result;
       };
-      wrappedCampaignComplete.__ttdClearWrappedV3 = true;
-      window.campaignComplete = wrappedCampaignComplete;
-      try { campaignComplete = window.campaignComplete; } catch (_) {}
+      wrappedCampaignComplete.__ttdClearWrappedV4=true;
+      wrappedCampaignComplete.__ttdClearBaseV4=baseCampaignComplete;
+      campaignComplete=wrappedCampaignComplete;
     }
 
-    if (typeof window.endEndlessHorde === 'function' && !window.endEndlessHorde.__ttdResultWrappedV3) {
-      const baseEndHorde = window.endEndlessHorde;
-      const wrappedEndHorde = function(...args) {
-        if (!state?.running || zombieResultBusy) return baseEndHorde.apply(this, args);
-        zombieResultBusy = true;
-        const pipsEarned = Math.round((Number(state.kills) || 0) * 2 + (Number(state.zPlayTime) || 0) * .15);
-        const result = baseEndHorde.apply(this, args);
-        const prepared = prepareZombieResult(pipsEarned);
-        suppressZombieSummaryUntil = performance.now() + ZOMBIE_SUPPRESS_MS;
-        setTimeout(() => {revealZombieResult(prepared);zombieResultBusy = false;}, RESULT_REVEAL_MS);
+    if(typeof endEndlessHorde==='function'&&!endEndlessHorde.__ttdResultWrappedV4){
+      const baseEndHorde=endEndlessHorde;
+      const wrappedEndHorde=function(...args){
+        if(!state?.running||zombieResultBusy)return baseEndHorde.apply(this,args);
+        zombieResultBusy=true;
+        const pipsEarned=Math.round((Number(state.kills)||0)*2+(Number(state.zPlayTime)||0)*.15);
+        suppressZombieSummaryUntil=performance.now()+ZOMBIE_SUPPRESS_MS;
+        const result=baseEndHorde.apply(this,args);
+        const prepared=prepareZombieResult(pipsEarned);
+        setTimeout(()=>{revealZombieResult(prepared);zombieResultBusy=false;},RESULT_REVEAL_MS);
         return result;
       };
-      wrappedEndHorde.__ttdResultWrappedV3 = true;
-      window.endEndlessHorde = wrappedEndHorde;
-      try { endEndlessHorde = window.endEndlessHorde; } catch (_) {}
+      wrappedEndHorde.__ttdResultWrappedV4=true;
+      wrappedEndHorde.__ttdResultBaseV4=baseEndHorde;
+      endEndlessHorde=wrappedEndHorde;
     }
   }
 
-  function presentObjectiveClear({ prepare, reveal, delay = RESULT_REVEAL_MS } = {}) {
+  function presentObjectiveClear({prepare,reveal,delay=RESULT_REVEAL_MS}={}){
     playClearCue();
-    const prepared = typeof prepare === 'function' ? prepare() : undefined;
-    setTimeout(() => { if (typeof reveal === 'function') reveal(prepared); }, Math.max(0, Number(delay) || RESULT_REVEAL_MS));
+    const prepared=typeof prepare==='function'?prepare():undefined;
+    setTimeout(()=>{if(typeof reveal==='function')reveal(prepared);},Math.max(0,Number(delay)||RESULT_REVEAL_MS));
     return prepared;
   }
 
-  function installAll() {
-    wrapStartFunction('startGame');
-    wrapStartFunction('startAdventure');
-    wrapStartFunction('startAdventureCampaign');
-    wrapStartFunction('startEndlessHorde');
+  function installAll(){
+    if(typeof startGame==='function')bindStart('startGame',()=>startGame,(fn)=>{startGame=fn;});
+    if(typeof startAdventure==='function')bindStart('startAdventure',()=>startAdventure,(fn)=>{startAdventure=fn;});
+    if(typeof startAdventureCampaign==='function')bindStart('startAdventureCampaign',()=>startAdventureCampaign,(fn)=>{startAdventureCampaign=fn;});
+    if(typeof startEndlessHorde==='function')bindStart('startEndlessHorde',()=>startEndlessHorde,(fn)=>{startEndlessHorde=fn;});
     installSummaryWrapper();
     decorateAdventureResult();
     installClearFlow();
     scanLegacyMissionNodes();
   }
 
-  window.TTDGamePresentation = Object.freeze({
-    version: 3,
-    missionGapMs: MISSION_GAP_MS,
-    combatCountdownStepMs: COUNT_STEP_MS,
-    clearHideMs: CLEAR_HIDE_MS,
-    resultRevealMs: RESULT_REVEAL_MS,
-    showMissionStart: playMissionCue,
+  window.TTDGamePresentation=Object.freeze({
+    version:4,
+    missionGapMs:MISSION_GAP_MS,
+    combatCountdownStepMs:COUNT_STEP_MS,
+    clearHideMs:CLEAR_HIDE_MS,
+    resultRevealMs:RESULT_REVEAL_MS,
+    showMissionStart:playMissionCue,
     playCombatCountdown,
-    showClear: playClearCue,
+    showClear:playClearCue,
     presentObjectiveClear,
     decorateAdventureResult,
     decorateZombieResult,
-    rebind: installAll,
+    rebind:installAll,
   });
 
   installAll();
-  let tries = 0;
-  const timer = setInterval(() => {
+  let tries=0;
+  const timer=setInterval(()=>{
     installAll();
-    if (++tries > 100) clearInterval(timer);
-  }, 100);
+    if(++tries>160)clearInterval(timer);
+  },100);
 })();
