@@ -58,7 +58,7 @@ markers(friendClient,['v18FriendLevel','Level ${friend.level?.level||1}','ttd:ac
 markers(runClient,['renderLevel(data.level)','ttd:account-progression-v21',"type:'ttd:v6-run-finish-result'",'...data'],'run EXP client');
 markers(runUi,['overlayXpV21','zSummaryXpV21','+${xp} EXP',"family==='adventure'","family==='zombie'"],'run result EXP UI');
 markers(presentation,[
-  'const pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0',
+  'pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0',
   'if(kills<=0){state.zPlayTime=0;state.time=0;}',
   'if(kills<=0){state.zPlayTime=actualPlayTime;state.time=actualTime;}',
 ],'zero-kill Horde finish gate');
