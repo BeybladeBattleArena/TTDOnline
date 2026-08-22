@@ -12,6 +12,8 @@ const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 const clientEntry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const friendClient=fs.readFileSync('online/deck-social-client-v18.js','utf8');
+const presentation=fs.readFileSync('online/game-presentation-v1.js','utf8');
+const resultSummary=fs.readFileSync('online/result-summary-client-v26.js','utf8');
 
 const expectedEarly=[0,150,350,600,900,1250,1650,2100,2600,3150];
 expectedEarly.forEach((xp,index)=>{if(progression.xpThresholdForLevel(index+1)!==xp)throw new Error(`Level ${index+1} threshold must be ${xp} XP.`);});
@@ -20,6 +22,8 @@ for(const [level,xp] of [[11,3721],[25,15040],[50,63690],[75,175465],[100,381615
 }
 if(progression.levelFromXp(2099)!==7||progression.levelFromXp(2100)!==8||progression.levelFromXp(3150)!==10)throw new Error('Early-level boundary behavior changed.');
 if(progression.calculateRunXp({modeKey:'endlesshorde',playSeconds:190,kills:69})!==58)throw new Error('Measured 3:10 / 69-kill Horde calibration must award 58 EXP.');
+if(progression.calculateRunXp({modeKey:'endlesshorde',playSeconds:9999,kills:0})!==0)throw new Error('Zero-kill Endless Horde must award 0 EXP regardless of elapsed time.');
+if(progression.calculateRunXp({modeKey:'future_zombie_night',modeFamily:'zombie',playSeconds:9999,kills:0})!==0)throw new Error('Every Zombie-family mode must award 0 EXP before the first kill.');
 if(progression.calculateRunXp({modeKey:'adventure',difficultyKey:'normal',completedWaves:26,kills:188,playSeconds:390,typhoonDefeated:false})!==107)throw new Error('Measured Al Hata calibration must award 107 EXP.');
 if(progression.calculateRunXp({modeKey:'future_zombie_night',modeFamily:'zombie',playSeconds:190,kills:69})!==58)throw new Error('Future Zombie modes must inherit the Zombie EXP family.');
 if(progression.calculateRunXp({modeKey:'future_adventure_2',modeFamily:'adventure',difficultyKey:'normal',completedWaves:26,kills:188,playSeconds:390})!==107)throw new Error('Future Adventure modes must inherit the Adventure EXP family.');
@@ -53,8 +57,16 @@ markers(deckSocial,['progressionV21.publicLevel','progressionV21.curveSummary()'
 markers(friendClient,['v18FriendLevel','Level ${friend.level?.level||1}','ttd:account-progression-v21'],'friend list/client level UI');
 markers(runClient,['renderLevel(data.level)','ttd:account-progression-v21',"type:'ttd:v6-run-finish-result'",'...data'],'run EXP client');
 markers(runUi,['overlayXpV21','zSummaryXpV21','+${xp} EXP',"family==='adventure'","family==='zombie'"],'run result EXP UI');
+markers(presentation,[
+  'const pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0',
+  'if(kills<=0){state.zPlayTime=0;state.time=0;}',
+  'if(kills<=0){state.zPlayTime=actualPlayTime;state.time=actualTime;}',
+],'zero-kill Horde finish gate');
+markers(resultSummary,[
+  'kills > 0 ? Math.round(kills * 2 + playSeconds * 0.15) : 0',
+],'zero-kill Horde result prediction');
 if(!clientEntry.includes("import './run-client-v21.js?v=21';"))throw new Error('Single-player client does not load run-client-v21.');
 if(!loader.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Game loader does not load EXP-aware result bridge v21.');
 if(!main.includes('getAccountProgressionV21:accountProgression.getAccountProgressionV21'))throw new Error('Account progression v21 callable is not exported.');
 
-console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, extensible empty per-level rewards, EXP result UI, and friend-list levels are wired end to end.');
+console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, zero rewards before the first Zombie kill, extensible empty per-level rewards, EXP result UI, and friend-list levels are wired end to end.');

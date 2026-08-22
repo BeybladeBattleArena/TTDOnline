@@ -32,7 +32,7 @@
     const wave = Math.max(0, Number(message.wave) || 0);
     const playSeconds = Math.max(0, Number(message.playSeconds) || 0);
     if (mode === 'adventure') return Math.round(wave * 10 + kills * 1.2 + coinGold + (message.typhoonDefeated ? 150 : 0));
-    if (mode === 'endlesshorde' || isZombieMode(mode)) return Math.round(kills * 2 + playSeconds * 0.15);
+    if (mode === 'endlesshorde' || isZombieMode(mode)) return kills > 0 ? Math.round(kills * 2 + playSeconds * 0.15) : 0;
     const mult = mode === 'bossrush' ? 1.3 : mode === 'sudden' ? 1.6 : 1;
     return Math.round((completedWaves * 8 + kills + coinGold) * mult);
   }
@@ -129,8 +129,6 @@
     if (!block) return;
     const run = pending;
     run.sequenceStarted = true;
-
-    // Keep 000 visible briefly so the player registers the completed-run stats before rewards bank.
     await new Promise((resolve) => setTimeout(resolve, START_DELAY_MS));
     if (pending !== run) return;
 
