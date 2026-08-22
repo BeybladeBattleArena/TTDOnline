@@ -284,6 +284,7 @@
     }
     nodes[2]?.classList.remove('in');
     nodes[3]?.classList.add('in');
+    announce('combatStart');
     try{onStart?.();}catch(err){console.error('TTD combat countdown start failed.',err);}
     await sleep(COUNT_START_HOLD_MS);
     overlay.classList.add('leaving');overlay.classList.remove('show');
