@@ -1,6 +1,6 @@
 import './audio-client-v27.js?v=30';
-import './startup-splash-v26.js?v=26';
-import './startup-polish-v28.js?v=28';
+import './startup-splash-v26.js?v=31';
+import './startup-polish-v28.js?v=31';
 import './typography-client-v24.js?v=24';
 import './ui-fusion-v29.js?v=29';
 import './gacha-atmosphere-v30.js?v=30';
