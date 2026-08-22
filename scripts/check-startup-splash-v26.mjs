@@ -2,9 +2,11 @@ import fs from 'node:fs';
 
 const splash=fs.readFileSync('online/startup-splash-v26.js','utf8');
 const polish=fs.readFileSync('online/startup-polish-v28.js','utf8');
+const diagnosticGuard=fs.readFileSync('online/bridge-diagnostic-guard-v1.js','utf8');
 const entry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
 new Function(splash);
 new Function(polish);
+new Function(diagnosticGuard);
 
 const required=[
   'const DICE_COUNT = 240',
@@ -54,6 +56,21 @@ const polishRequired=[
 ];
 for(const marker of polishRequired)if(!polish.includes(marker))throw new Error(`Startup polish v31 behavior missing: ${marker}`);
 if(polish.includes('await audio?.enterMainMenu?.()'))throw new Error('Visual startup reveal may not wait on main-menu audio.');
+
+const diagnosticRequired=[
+  'window.__TTD_BRIDGE_DIAGNOSTIC_GUARD_V1',
+  "message.type !== 'ttd:bridge-phase' || message.phase !== 'bridge-runtime-error'",
+  "console.warn('[TTD nonfatal bridge diagnostic]'",
+  "window.__TTD_BRIDGE_DIAGNOSTICS = diagnostics",
+  "sessionStorage.setItem(STORAGE_KEY",
+  "event.stopImmediatePropagation()",
+  "}, true);",
+];
+for(const marker of diagnosticRequired)if(!diagnosticGuard.includes(marker))throw new Error(`Bridge diagnostic guard missing: ${marker}`);
+
+const diagnosticImport="import './bridge-diagnostic-guard-v1.js?v=1';";
+if(!entry.includes(diagnosticImport))throw new Error('Online client does not load the bridge diagnostic guard.');
+if(entry.indexOf(diagnosticImport)>entry.indexOf("import './audio-client-v27.js"))throw new Error('Bridge diagnostic guard must install before startup/audio modules and before the game iframe can boot.');
 if(!entry.includes("import './startup-splash-v26.js?v=31';"))throw new Error('Online client does not load startup splash v31 behavior.');
 if(!entry.includes("import './startup-polish-v28.js?v=31';"))throw new Error('Online client does not load startup polish v31 behavior.');
 if(entry.indexOf('startup-splash-v26')>entry.indexOf('singleplayer-client-v9-core'))throw new Error('Startup splash must initialize before the legacy game core client.');
@@ -61,4 +78,4 @@ if(!/DICE_COUNT\s*=\s*(?:2\d\d|[3-9]\d\d)/.test(splash))throw new Error('Startup
 if(splash.indexOf("'Okay, Die Master'")>splash.indexOf("'TAP to DIE'"))throw new Error('Greeting must type before TAP to DIE.');
 if(splash.indexOf('unlockAudioFromGesture()')>splash.indexOf("tapButton.textContent=accountReady()?"))throw new Error('Audio unlock must happen synchronously before post-tap waiting UI.');
 if(splash.indexOf('sequenceToken++;')>splash.indexOf('diceReveal=1'))throw new Error('Early title skip must cancel the in-flight animation before forcing its final state.');
-console.log('Startup splash verified: full animated opener remains intact, an early tap jumps to the complete title card and waits for a distinct second enter tap, and the black entry fade can no longer be held hostage by menu audio or an endless readiness wait.');
+console.log('Startup splash verified: full animated opener remains intact, early tap skip stays two-stage, black entry fade is bounded, and nonfatal bridge diagnostics are captured before they can corrupt cloud-ready state, re-arm the fatal startup watchdog, hide the game, or suppress main-menu music.');
