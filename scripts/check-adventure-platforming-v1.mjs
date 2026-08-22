@@ -159,8 +159,8 @@ const clearCall=presentation.indexOf('playClearCue();',presentation.indexOf('wra
 const campaignCall=presentation.indexOf('baseCampaignComplete.apply',presentation.indexOf('wrappedCampaignComplete'));
 if(!(clearCall>=0&&campaignCall>clearCall))throw new Error('Adventure CLEAR must begin before the completion result is constructed.');
 const suppressCall=presentation.indexOf('suppressZombieSummaryUntil=performance.now()+ZOMBIE_SUPPRESS_MS',presentation.indexOf('wrappedEndHorde'));
-const hordeCall=presentation.indexOf('baseEndHorde.apply',presentation.indexOf('wrappedEndHorde'));
-if(!(suppressCall>=0&&hordeCall>suppressCall))throw new Error('Zombie legacy summary must be suppressed before endEndlessHorde schedules it.');
+const hordeCall=presentation.indexOf('const result=baseEndHorde.apply',presentation.indexOf('wrappedEndHorde'));
+if(!(suppressCall>=0&&hordeCall>suppressCall))throw new Error('Zombie legacy summary must be suppressed before the normal endEndlessHorde finish path schedules it.');
 
 need(runUi,[
   'function installPlatformOnlineStartSyncV2()',
