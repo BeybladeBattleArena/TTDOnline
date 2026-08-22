@@ -32,7 +32,7 @@ need(presentation,[
   'await sleep(MAP_PREVIEW_MS)','freezeRunForMission(runState)','resumeRunFromMission(runState)',
   'runState.running=false','runState.running=true','drawLane?.(0)',
   'campaignComplete=wrappedCampaignComplete','endMatch=wrappedEndMatch','endEndlessHorde=wrappedEndHorde',
-  'const pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0',
+  'pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0',
   'version:6','rebind:installAll',
 ],'presentation v6');
 forbid(presentation,[
