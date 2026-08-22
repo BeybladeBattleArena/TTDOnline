@@ -145,6 +145,7 @@
 
   const fade=document.createElement('div');fade.id='ttdAudioEntryFadeV28';fade.setAttribute('aria-hidden','true');document.body.appendChild(fade);
   let entering=false;
+  let skipGestureUntil=0;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   function accountReady(){return !signedIn?.hidden&&!frame?.hidden&&status?.dataset?.kind==='ok'&&/cloud account ready/i.test(status?.textContent||'');}
   async function waitReady(maxMs=8000){
@@ -181,16 +182,19 @@
     }
   }
   function promptIsReady(){return !!window.__TTD_STARTUP_SPLASH_V31?.promptReady || !tap.disabled;}
+  function stopEvent(event){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();}
   function intercept(event){
     if(splash.hidden)return;
     if(event.type==='keydown'&&!['Enter',' '].includes(event.key))return;
+    if(event.type==='click'&&performance.now()<skipGestureUntil){stopEvent(event);return;}
     if(!promptIsReady()){
-      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      window.__TTD_STARTUP_SPLASH_V31?.skipToEnd?.();
+      stopEvent(event);
+      const skipped=window.__TTD_STARTUP_SPLASH_V31?.skipToEnd?.();
+      if(skipped)skipGestureUntil=performance.now()+500;
       return;
     }
     if(entering||tap.disabled)return;
-    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();enter();
+    stopEvent(event);enter();
   }
   splash.addEventListener('pointerup',intercept,true);
   splash.addEventListener('click',intercept,true);
