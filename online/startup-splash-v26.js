@@ -39,6 +39,7 @@
   const splash = document.createElement('section');
   splash.id = 'ttdStartupSplashV26';
   splash.hidden = true;
+  splash.dataset.ttdPromptReady = '0';
   splash.setAttribute('aria-label','Time to Die');
   splash.innerHTML = `
     <canvas id="ttdStartupFxV26" aria-hidden="true"></canvas>
@@ -205,6 +206,13 @@
   }
   async function typeText(el,text,perChar,token){el.textContent='';for(const ch of text){if(token!==sequenceToken)return false;el.textContent+=ch;await wait(perChar);}return token===sequenceToken;}
 
+  function markPromptReady(){
+    promptReady=true;
+    splash.dataset.ttdPromptReady='1';
+    tapButton.disabled=false;
+    tapButton.classList.add('ttdTapReadyV26');
+    splash.classList.add('ttdCanTapV26');
+  }
   async function playLanding(token) {
     await wait(220);
     if(!await flyWord(timeWord,620,token))return;impactWord(timeWord,COLORS.time);await wait(690);
@@ -214,7 +222,24 @@
     if(!await typeText(greeting,'Okay, Die Master',42,token))return;await wait(150);
     tapButton.textContent='';
     if(!await typeText(tapButton,'TAP to DIE',54,token))return;
-    promptReady=true;tapButton.disabled=false;tapButton.classList.add('ttdTapReadyV26');splash.classList.add('ttdCanTapV26');
+    markPromptReady();
+  }
+  function finishLandingImmediately(){
+    if(!active||promptReady||tapped||splash.hidden)return false;
+    sequenceToken++;
+    bursts=[];
+    for(const word of [timeWord,toWord,dieWord]){
+      word.classList.remove('ttdImpactV26');
+      word.style.setProperty('--fly-ms','1ms');
+      word.classList.add('ttdArrivedV26');
+    }
+    diceRevealStarted=performance.now()-1000;
+    diceReveal=1;
+    greeting.textContent='Okay, Die Master';
+    tapButton.textContent='TAP to DIE';
+    markPromptReady();
+    requestFrame();
+    return true;
   }
 
   function createAudioContext(win) {
@@ -262,6 +287,7 @@
   function resetLanding() {
     sequenceToken++;
     active=false;tapped=false;promptReady=false;bootstrapReady=false;diceRevealStarted=0;diceReveal=0;bursts=[];if(raf){cancelAnimationFrame(raf);raf=0;}
+    splash.dataset.ttdPromptReady='0';
     greeting.textContent='';tapButton.textContent='';tapButton.disabled=true;tapButton.classList.remove('ttdTapReadyV26','ttdTapWaitingV26');splash.classList.remove('ttdCanTapV26','ttdSplashLeaving');
     resetWord(timeWord,'translate3d(-125vw,0,0)');resetWord(toWord,'translate3d(125vw,0,0)');resetWord(dieWord,'translate3d(0,125vh,0)');
     splash.hidden=true;document.documentElement.classList.remove('ttdStartupOpenV26');
@@ -269,6 +295,7 @@
   function beginLanding() {
     if(active||!signedIn())return;
     active=true;tapped=false;promptReady=false;bootstrapReady=accountReady();diceRevealStarted=0;diceReveal=0;bursts=[];
+    splash.dataset.ttdPromptReady='0';
     greeting.textContent='';tapButton.textContent='';tapButton.disabled=true;tapButton.classList.remove('ttdTapReadyV26','ttdTapWaitingV26');splash.classList.remove('ttdCanTapV26','ttdSplashLeaving');
     resetWord(timeWord,'translate3d(-125vw,0,0)');resetWord(toWord,'translate3d(125vw,0,0)');resetWord(dieWord,'translate3d(0,125vh,0)');
     splash.hidden=false;document.documentElement.classList.add('ttdStartupOpenV26');resizeCanvas();const token=++sequenceToken;requestFrame();playLanding(token);
@@ -277,6 +304,13 @@
     if(signedIn())beginLanding();
     else if(active||!splash.hidden)resetLanding();
   }
+
+  window.__TTD_STARTUP_SPLASH_V31=Object.freeze({
+    version:31,
+    skipToEnd:finishLandingImmediately,
+    get active(){return active&&!splash.hidden;},
+    get promptReady(){return promptReady;},
+  });
 
   splash.addEventListener('pointerup',acceptTap);
   tapButton.addEventListener('click',acceptTap);
