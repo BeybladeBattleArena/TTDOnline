@@ -47,6 +47,9 @@ const polishRequired=[
   'finally {\n      revealFromBlack();',
   'function promptIsReady()',
   'window.__TTD_STARTUP_SPLASH_V31?.skipToEnd?.()',
+  'let skipGestureUntil=0',
+  "event.type==='click'&&performance.now()<skipGestureUntil",
+  'skipGestureUntil=performance.now()+500',
   'event.stopImmediatePropagation()',
 ];
 for(const marker of polishRequired)if(!polish.includes(marker))throw new Error(`Startup polish v31 behavior missing: ${marker}`);
@@ -58,4 +61,4 @@ if(!/DICE_COUNT\s*=\s*(?:2\d\d|[3-9]\d\d)/.test(splash))throw new Error('Startup
 if(splash.indexOf("'Okay, Die Master'")>splash.indexOf("'TAP to DIE'"))throw new Error('Greeting must type before TAP to DIE.');
 if(splash.indexOf('unlockAudioFromGesture()')>splash.indexOf("tapButton.textContent=accountReady()?"))throw new Error('Audio unlock must happen synchronously before post-tap waiting UI.');
 if(splash.indexOf('sequenceToken++;')>splash.indexOf('diceReveal=1'))throw new Error('Early title skip must cancel the in-flight animation before forcing its final state.');
-console.log('Startup splash verified: full animated opener remains intact, an early tap jumps to the complete title card and waits for a second enter tap, and the black entry fade can no longer be held hostage by menu audio or an endless readiness wait.');
+console.log('Startup splash verified: full animated opener remains intact, an early tap jumps to the complete title card and waits for a distinct second enter tap, and the black entry fade can no longer be held hostage by menu audio or an endless readiness wait.');
