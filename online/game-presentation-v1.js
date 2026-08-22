@@ -1,15 +1,18 @@
 (() => {
   'use strict';
-  if (window.__TTD_GAME_PRESENTATION_V4) return;
-  window.__TTD_GAME_PRESENTATION_V4 = true;
+  if (window.__TTD_GAME_PRESENTATION_V5) return;
+  window.__TTD_GAME_PRESENTATION_V5 = true;
 
-  const SIGNAL_ID = 'ttdGameSignalV4';
+  const SIGNAL_ID = 'ttdGameSignalV5';
+  const HOLD_ID = 'ttdMissionHoldShieldV5';
+  const MAP_PREVIEW_MS = 500;
+  const RUN_READY_TIMEOUT_MS = 25000;
   const MISSION_GAP_MS = 1250;
   const MISSION_START_HOLD_MS = 1050;
   const COUNT_STEP_MS = 720;
   const COUNT_START_HOLD_MS = 520;
-  const CLEAR_HIDE_MS = 1400;
-  const CLEAR_REMOVE_MS = 1700;
+  const OUTCOME_HIDE_MS = 1400;
+  const OUTCOME_REMOVE_MS = 1700;
   const RESULT_REVEAL_MS = 1850;
   const ZOMBIE_SUPPRESS_MS = 2600;
 
@@ -17,11 +20,12 @@
   let countdownBusy = false;
   let adventureClearBusy = false;
   let zombieResultBusy = false;
+  let matchResultBusy = false;
   let rawZombieSummary = null;
   let suppressZombieSummaryUntil = 0;
 
   const style = document.createElement('style');
-  style.id = 'ttdGamePresentationStyleV4';
+  style.id = 'ttdGamePresentationStyleV5';
   style.textContent = `
     #${SIGNAL_ID}{
       position:fixed;inset:0;z-index:1260;pointer-events:none;
@@ -44,6 +48,24 @@
     #${SIGNAL_ID}.leaving .ttdSignalWord{opacity:0!important;transform:scale(1.07);filter:blur(2px);transition:opacity .24s ease,transform .26s ease,filter .22s ease;}
     #${SIGNAL_ID}.countdown{background:rgba(5,8,16,.06);}
     #${SIGNAL_ID}.countdown .ttdSignalWord{font-size:clamp(38px,11vw,70px)!important;}
+    #${SIGNAL_ID}.outcome-fail .ttdSignalWord{
+      color:transparent!important;
+      background:linear-gradient(180deg,#91c3e3 0%,#7398c9 53%,#746aa7 100%)!important;
+      -webkit-background-clip:text!important;background-clip:text!important;
+      -webkit-text-fill-color:transparent!important;
+      text-shadow:0 2px 0 rgba(0,0,0,.84),0 0 13px rgba(111,141,197,.35)!important;
+    }
+    #${SIGNAL_ID}.outcome-finish .ttdSignalWord{
+      color:transparent!important;
+      background:linear-gradient(180deg,#fff17b 0%,#f8da68 66%,#efc45d 100%)!important;
+      -webkit-background-clip:text!important;background-clip:text!important;
+      -webkit-text-fill-color:transparent!important;
+      text-shadow:0 2px 0 rgba(0,0,0,.88),0 0 12px rgba(247,209,96,.38)!important;
+    }
+    #${HOLD_ID}{
+      position:fixed;inset:0;z-index:1255;background:transparent;
+      pointer-events:auto;touch-action:none;
+    }
 
     #gameOverlay.ttdResultCardV1,
     #zSummaryOverlay.ttdResultCardV1{
@@ -91,6 +113,10 @@
   document.head.appendChild(style);
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function announce(cue){
+    try{window.parent?.postMessage({type:'ttd:voice-cue',cue},location.origin);}catch(_){}
+  }
 
   function makeSignal(words, extraClass='') {
     document.getElementById(SIGNAL_ID)?.remove();
@@ -140,35 +166,109 @@
   });
   legacyObserver.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 
+  function installMissionHoldShield(){
+    document.getElementById(HOLD_ID)?.remove();
+    const shield=document.createElement('div');
+    shield.id=HOLD_ID;
+    shield.setAttribute('aria-hidden','true');
+    document.body.appendChild(shield);
+    return shield;
+  }
+  function removeMissionHoldShield(){document.getElementById(HOLD_ID)?.remove();}
+
+  function isGameScreenReady(){
+    return !!document.getElementById('gameScreen')?.classList.contains('active');
+  }
+  function waitForRunState(previousState,startedAt=performance.now()){
+    return new Promise((resolve,reject)=>{
+      const check=()=>{
+        if(state && state!==previousState && isGameScreenReady()){resolve(state);return;}
+        if(performance.now()-startedAt>=RUN_READY_TIMEOUT_MS){reject(new Error('Run did not reach the game map before mission intro timeout.'));return;}
+        requestAnimationFrame(check);
+      };
+      check();
+    });
+  }
+  function drawMissionPreview(runState){
+    if(state!==runState || !runState.__ttdMissionIntroHold)return;
+    try{
+      resizeCanvas?.();
+      renderHUD?.();
+      renderBoard?.();
+      drawLane?.(0);
+    }catch(err){console.warn('TTD static mission preview draw recovered.',err);}
+    requestAnimationFrame(()=>drawMissionPreview(runState));
+  }
+  function freezeRunForMission(runState){
+    runState.__ttdMissionIntroHold=true;
+    runState.running=false;
+    try{lastT=0;}catch(_){}
+    installMissionHoldShield();
+    drawMissionPreview(runState);
+  }
+  function resumeRunFromMission(runState){
+    if(state!==runState)return false;
+    runState.__ttdMissionIntroHold=false;
+    runState.running=true;
+    removeMissionHoldShield();
+    try{lastT=0;}catch(_){}
+    try{requestAnimationFrame(loop);}catch(err){console.error('TTD gameplay resume failed.',err);return false;}
+    return true;
+  }
+
   async function playMissionCue(startFn) {
     if (missionBusy) return;
     missionBusy = true;
     scanLegacyMissionNodes();
-    const { overlay, nodes } = makeSignal(['MISSION', 'START!']);
-    nodes[0]?.classList.add('in');
-    requestAnimationFrame(() => overlay.classList.add('show'));
-    await sleep(MISSION_GAP_MS);
-    nodes[1]?.classList.add('in');
-    try { startFn?.(); } catch (err) { console.error('TTD mission start failed.', err); }
-    await sleep(MISSION_START_HOLD_MS);
-    overlay.classList.add('leaving');
-    overlay.classList.remove('show');
-    await sleep(300);
-    overlay.remove();
-    missionBusy = false;
+    const previousState=state;
+    try{
+      startFn?.();
+      const runState=await waitForRunState(previousState);
+      freezeRunForMission(runState);
+      await sleep(MAP_PREVIEW_MS);
+      if(state!==runState)throw new Error('Run state changed during mission preview.');
+
+      const { overlay, nodes } = makeSignal(['MISSION', 'START!']);
+      nodes[0]?.classList.add('in');
+      announce('mission');
+      requestAnimationFrame(() => overlay.classList.add('show'));
+
+      await sleep(MISSION_GAP_MS);
+      if(state!==runState)throw new Error('Run state changed before START.');
+      nodes[1]?.classList.add('in');
+      announce('start');
+      resumeRunFromMission(runState);
+
+      await sleep(MISSION_START_HOLD_MS);
+      overlay.classList.add('leaving');
+      overlay.classList.remove('show');
+      await sleep(300);
+      overlay.remove();
+    }catch(err){
+      console.error('TTD mission intro failed.',err);
+      removeMissionHoldShield();
+      document.getElementById(SIGNAL_ID)?.remove();
+      if(state?.__ttdMissionIntroHold){
+        state.__ttdMissionIntroHold=false;
+        state.running=true;
+        try{lastT=0;requestAnimationFrame(loop);}catch(_){}
+      }
+    }finally{
+      missionBusy=false;
+    }
   }
 
   function bindStart(name,getter,setter){
     let base;
     try{base=getter();}catch(_){return;}
-    if(typeof base!=='function'||base.__ttdMissionWrappedV4)return;
+    if(typeof base!=='function'||base.__ttdMissionWrappedV5)return;
     const wrapped=function(...args){
       if(missionBusy)return base.apply(this,args);
       const self=this;
       playMissionCue(()=>base.apply(self,args));
     };
-    wrapped.__ttdMissionWrappedV4=true;
-    wrapped.__ttdMissionBaseV4=base;
+    wrapped.__ttdMissionWrappedV5=true;
+    wrapped.__ttdMissionBaseV5=base;
     try{setter(wrapped);}catch(err){console.warn(`Could not bind ${name} presentation.`,err);}
   }
 
@@ -191,13 +291,24 @@
     return true;
   }
 
-  function playClearCue() {
-    const { overlay, nodes } = makeSignal(['CLEAR!']);
+  const OUTCOMES=Object.freeze({
+    clear:{text:'CLEAR!',className:'outcome-clear',voice:'clear'},
+    fail:{text:'FAIL',className:'outcome-fail',voice:'fail'},
+    finish:{text:'FINISH!',className:'outcome-finish',voice:'finish'},
+  });
+  function playOutcomeCue(kind='clear'){
+    const spec=OUTCOMES[kind]||OUTCOMES.clear;
+    const {overlay,nodes}=makeSignal([spec.text],spec.className);
     nodes[0]?.classList.add('in');
-    requestAnimationFrame(() => overlay.classList.add('show'));
-    setTimeout(() => {overlay.classList.add('leaving');overlay.classList.remove('show');}, CLEAR_HIDE_MS);
-    setTimeout(() => overlay.remove(), CLEAR_REMOVE_MS);
+    announce(spec.voice);
+    requestAnimationFrame(()=>overlay.classList.add('show'));
+    setTimeout(()=>{overlay.classList.add('leaving');overlay.classList.remove('show');},OUTCOME_HIDE_MS);
+    setTimeout(()=>overlay.remove(),OUTCOME_REMOVE_MS);
+    return overlay;
   }
+  function playClearCue(){return playOutcomeCue('clear');}
+  function playFailCue(){return playOutcomeCue('fail');}
+  function playFinishCue(){return playOutcomeCue('finish');}
 
   function decorateAdventureResult(){document.getElementById('gameOverlay')?.classList.add('ttdResultCardV1');}
   function decorateZombieResult(cardOverride=null){
@@ -212,6 +323,10 @@
     if(label){label.textContent='MVP';label.classList.add('ttdMvpLabelV1');}
   }
   function revealAdventureResult(){decorateAdventureResult();document.getElementById('gameOverlay')?.classList.add('show');}
+  function hideAdventureResult(){
+    const overlay=document.getElementById('gameOverlay');
+    if(overlay){decorateAdventureResult();overlay.classList.remove('show');void overlay.offsetWidth;}
+  }
 
   function prepareZombieResult(pipsEarned){
     if(typeof rawZombieSummary!=='function')return null;
@@ -221,7 +336,7 @@
     rawZombieSummary(pipsEarned);
     decorateZombieResult(card);
     overlay.classList.remove('show');
-    const marker=document.createComment('ttd-prepared-zombie-result-v4');
+    const marker=document.createComment('ttd-prepared-zombie-result-v5');
     card.replaceWith(marker);
     return {overlay,card,marker};
   }
@@ -234,7 +349,7 @@
   }
 
   function installSummaryWrapper(){
-    if(typeof showZombieSummary!=='function'||showZombieSummary.__ttdResultDecoratedV4)return;
+    if(typeof showZombieSummary!=='function'||showZombieSummary.__ttdResultDecoratedV5)return;
     rawZombieSummary=showZombieSummary;
     const wrapped=function(...args){
       if(performance.now()<suppressZombieSummaryUntil)return;
@@ -242,49 +357,84 @@
       decorateZombieResult();
       return result;
     };
-    wrapped.__ttdResultDecoratedV4=true;
-    wrapped.__ttdResultBaseV4=rawZombieSummary;
+    wrapped.__ttdResultDecoratedV5=true;
+    wrapped.__ttdResultBaseV5=rawZombieSummary;
     showZombieSummary=wrapped;
   }
 
-  function installClearFlow(){
-    if(typeof campaignComplete==='function'&&!campaignComplete.__ttdClearWrappedV4){
+  function installOutcomeFlows(){
+    if(typeof campaignComplete==='function'&&!campaignComplete.__ttdClearWrappedV5){
       const baseCampaignComplete=campaignComplete;
       const wrappedCampaignComplete=function(...args){
         if(adventureClearBusy)return;
         adventureClearBusy=true;
         playClearCue();
         const result=baseCampaignComplete.apply(this,args);
-        const overlay=document.getElementById('gameOverlay');
-        if(overlay){decorateAdventureResult();overlay.classList.remove('show');void overlay.offsetWidth;}
+        hideAdventureResult();
         setTimeout(()=>{revealAdventureResult();adventureClearBusy=false;},RESULT_REVEAL_MS);
         return result;
       };
-      wrappedCampaignComplete.__ttdClearWrappedV4=true;
-      wrappedCampaignComplete.__ttdClearBaseV4=baseCampaignComplete;
+      wrappedCampaignComplete.__ttdClearWrappedV5=true;
+      wrappedCampaignComplete.__ttdClearBaseV5=baseCampaignComplete;
       campaignComplete=wrappedCampaignComplete;
     }
 
-    if(typeof endEndlessHorde==='function'&&!endEndlessHorde.__ttdResultWrappedV4){
+    if(typeof endMatch==='function'&&!endMatch.__ttdOutcomeWrappedV5){
+      const baseEndMatch=endMatch;
+      const wrappedEndMatch=function(reason,...args){
+        if(matchResultBusy)return baseEndMatch.call(this,reason,...args);
+        matchResultBusy=true;
+        const normalized=String(reason||'').toLowerCase();
+        const kind=normalized==='voluntary'?'finish':(normalized==='victory'||normalized==='clear'?'clear':'fail');
+        playOutcomeCue(kind);
+        const result=baseEndMatch.call(this,reason,...args);
+        hideAdventureResult();
+        setTimeout(()=>{revealAdventureResult();matchResultBusy=false;},RESULT_REVEAL_MS);
+        return result;
+      };
+      wrappedEndMatch.__ttdOutcomeWrappedV5=true;
+      wrappedEndMatch.__ttdOutcomeBaseV5=baseEndMatch;
+      endMatch=wrappedEndMatch;
+    }
+
+    if(typeof endEndlessHorde==='function'&&!endEndlessHorde.__ttdResultWrappedV5){
       const baseEndHorde=endEndlessHorde;
       const wrappedEndHorde=function(...args){
         if(!state?.running||zombieResultBusy)return baseEndHorde.apply(this,args);
         zombieResultBusy=true;
-        const pipsEarned=Math.round((Number(state.kills)||0)*2+(Number(state.zPlayTime)||0)*.15);
+        const kills=Math.max(0,Number(state.kills)||0);
+        const actualPlayTime=Math.max(0,Number(state.zPlayTime)||0);
+        const actualTime=Math.max(0,Number(state.time)||0);
+        const pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0;
+        playFinishCue();
         suppressZombieSummaryUntil=performance.now()+ZOMBIE_SUPPRESS_MS;
-        const result=baseEndHorde.apply(this,args);
+
+        let result;
+        if(kills<=0){state.zPlayTime=0;state.time=0;}
+        try{
+          result=baseEndHorde.apply(this,args);
+        }finally{
+          if(kills<=0){state.zPlayTime=actualPlayTime;state.time=actualTime;}
+        }
+
         const prepared=prepareZombieResult(pipsEarned);
         setTimeout(()=>{revealZombieResult(prepared);zombieResultBusy=false;},RESULT_REVEAL_MS);
         return result;
       };
-      wrappedEndHorde.__ttdResultWrappedV4=true;
-      wrappedEndHorde.__ttdResultBaseV4=baseEndHorde;
+      wrappedEndHorde.__ttdResultWrappedV5=true;
+      wrappedEndHorde.__ttdResultBaseV5=baseEndHorde;
       endEndlessHorde=wrappedEndHorde;
     }
   }
 
   function presentObjectiveClear({prepare,reveal,delay=RESULT_REVEAL_MS}={}){
     playClearCue();
+    const prepared=typeof prepare==='function'?prepare():undefined;
+    setTimeout(()=>{if(typeof reveal==='function')reveal(prepared);},Math.max(0,Number(delay)||RESULT_REVEAL_MS));
+    return prepared;
+  }
+  function presentOutcome(kind,{prepare,reveal,delay=RESULT_REVEAL_MS}={}){
+    playOutcomeCue(kind);
     const prepared=typeof prepare==='function'?prepare():undefined;
     setTimeout(()=>{if(typeof reveal==='function')reveal(prepared);},Math.max(0,Number(delay)||RESULT_REVEAL_MS));
     return prepared;
@@ -297,20 +447,24 @@
     if(typeof startEndlessHorde==='function')bindStart('startEndlessHorde',()=>startEndlessHorde,(fn)=>{startEndlessHorde=fn;});
     installSummaryWrapper();
     decorateAdventureResult();
-    installClearFlow();
+    installOutcomeFlows();
     scanLegacyMissionNodes();
   }
 
   window.TTDGamePresentation=Object.freeze({
-    version:4,
+    version:5,
+    mapPreviewMs:MAP_PREVIEW_MS,
     missionGapMs:MISSION_GAP_MS,
     combatCountdownStepMs:COUNT_STEP_MS,
-    clearHideMs:CLEAR_HIDE_MS,
+    clearHideMs:OUTCOME_HIDE_MS,
     resultRevealMs:RESULT_REVEAL_MS,
     showMissionStart:playMissionCue,
     playCombatCountdown,
     showClear:playClearCue,
+    showFail:playFailCue,
+    showFinish:playFinishCue,
     presentObjectiveClear,
+    presentOutcome,
     decorateAdventureResult,
     decorateZombieResult,
     rebind:installAll,
