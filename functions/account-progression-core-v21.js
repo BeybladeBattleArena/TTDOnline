@@ -75,9 +75,9 @@ function calculateRunXp(run = {}) {
     xp = completedWaves * 2 + kills * 0.25 + Math.min(playSeconds, 1800) * 0.02 + clearBonus;
     xp *= DIFFICULTY_XP_MULTIPLIER[String(run.difficultyKey || 'normal').toLowerCase()] || 1;
   } else if (family === 'zombie') {
-    // Calibrated from real Horde play: 190 sec / 69 kills => ~58 EXP. The small quadratic term
-    // increasingly values surviving deeper into a run without making kills irrelevant.
-    xp = playSeconds * 0.16 + kills * 0.35 + playSeconds * playSeconds * 0.0001;
+    // A Zombie run earns nothing before the first kill. Once kill #1 lands, retain the existing
+    // calibrated Horde scale exactly: survival time + kills + the small deep-run quadratic term.
+    if (kills > 0) xp = playSeconds * 0.16 + kills * 0.35 + playSeconds * playSeconds * 0.0001;
   }
 
   return Math.max(0, Math.min(10000, Math.round(xp)));
