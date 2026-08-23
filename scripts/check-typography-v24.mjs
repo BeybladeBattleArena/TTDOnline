@@ -10,18 +10,17 @@ const required=[
   '#btnZombies h3',
   '#zombieModeScreen .topbar .title',
   '#zombieModeScreen .modeCard.zombieSub h3',
-  'html.ttdZombieTypographyActive #modeLabel',
-  'html.ttdZombieTypographyActive #overlayTitle',
-  'html.ttdZombieTypographyActive #zSummaryCard h2',
-  "doc.documentElement.classList.toggle('ttdZombieTypographyActive', zombieModeActive)",
-  'win.__ttdZombieTypographyOriginal = zombieModeActive',
-  'descriptor.set.call(this, source)',
-  "modeKey.includes('zombie')",
-  "modeKey.includes('horde')",
+  'style.textContent = globalCss() + zombieTitleCss()',
+  'descriptor.set.call(this, `400 ${size}px ${FONT_STACK}`)',
 ];
-for(const marker of required)if(!client.includes(marker))throw new Error(`Typography v24 missing: ${marker}`);
-if(client.includes('Advent Pro'))throw new Error('Typography v24 must not retain Advent Pro.');
-if(!entry.includes("import './typography-client-v24.js?v=24';"))throw new Error('Single-player client does not load typography v24.');
+for(const marker of required)if(!client.includes(marker))throw new Error(`Typography v25 missing: ${marker}`);
+if(client.includes('Advent Pro'))throw new Error('Typography must not retain Advent Pro.');
+if(client.includes('__ttdZombieTypographyOriginal'))throw new Error('Zombie runs must not bypass the global Russo One font.');
+if(client.includes('descriptor.set.call(this, source)'))throw new Error('Canvas text must not fall back to a legacy source font.');
+for(const selector of ['#zSummaryCard h2','#overlayTitle','#modeLabel']){
+  if(client.includes(selector))throw new Error(`Creepster scope is too broad: ${selector}`);
+}
+if(!entry.includes("import './typography-client-v24.js?v=25';"))throw new Error('Single-player client does not load typography v25.');
 if(entry.includes('typography-client-v23'))throw new Error('Typography v23 is still loaded.');
 
-console.log('Typography v24 verified: Russo One remains global while Zombie titles use Creepster and Zombie battle/result body typography remains original.');
+console.log('Typography v25 verified: Russo One is global, including Zombie results, while Creepster is restricted to Zombie menu titles.');
