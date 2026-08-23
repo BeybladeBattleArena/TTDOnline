@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-21-main-map-combat-and-results-presentation-v2",
+  "release": "2026-08-22-items-audio-typography-v1",
   "includes": [
-    "combat stays on the exact traversal map",
-    "MISSION then START timing",
-    "objective CLEAR timing",
-    "preloaded unified Adventure/Zombie result presentation",
-    "MVP die-only blue glow",
-    "release verifier updated for same-map combat"
+    "larger 60px shop item presentation near the normalized art masters",
+    "corrected cross-item art routing for keys and Mystery Chest",
+    "Epic Summon Ticket and EXP Tome legacy IDs now resolve to canonical item art",
+    "serialized announcer playback so MissionFail finishes before later cues",
+    "Russo One enforced globally including Zombie results",
+    "Creepster retained only for Zombie-facing menu titles"
   ]
 }
