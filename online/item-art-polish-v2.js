@@ -1,8 +1,8 @@
 (() => {
   'use strict';
-  if(window.__TTD_ITEM_ART_POLISH_V2)return;
+  if(window.__TTD_ITEM_ART_POLISH_V3)return;
   const frame=document.getElementById('gameFrame');
-  const STYLE_ID='ttd-item-art-polish-v2';
+  const STYLE_ID='ttd-item-art-polish-v3';
 
   function apply(){
     try{
@@ -11,32 +11,39 @@
       let style=doc.getElementById(STYLE_ID);
       if(!style){style=doc.createElement('style');style.id=STYLE_ID;doc.head.appendChild(style);}
       style.textContent=`
-        /* The normalized item WebPs in this asset batch are 64px masters. The old 48px
-           shop rule downsampled them once more, then the card layout could rescale that
-           result again. Keep the presentation near native size and let the browser use
-           normal continuous-image interpolation. */
+        /* Source art remains full resolution. Card geometry alone standardizes presentation. */
+        .ttdItemArtV1{
+          object-fit:contain!important;
+          image-rendering:auto!important;
+        }
         .shopItemCard .siIcon{
-          width:64px!important;
-          height:64px!important;
+          width:68px!important;
+          height:68px!important;
           margin:0 auto 8px!important;
           display:grid!important;
           place-items:center!important;
-          flex:0 0 64px!important;
+          flex:0 0 68px!important;
         }
         .shopItemCard .siIcon>svg{
-          width:60px!important;
-          height:60px!important;
+          width:64px!important;
+          height:64px!important;
           display:block!important;
         }
         .shopItemCard .siIcon .ttdItemArtV1,
         .shopItemCard>.ttdItemArtV1{
-          width:60px!important;
-          height:60px!important;
-          max-width:60px!important;
-          max-height:60px!important;
+          width:64px!important;
+          height:64px!important;
+          max-width:64px!important;
+          max-height:64px!important;
           margin:0 auto 8px!important;
-          object-fit:contain!important;
-          image-rendering:auto!important;
+        }
+        .chestCard .ttdItemArtV1,
+        .rewardPopupCard .ttdItemArtV1{
+          width:74px!important;
+          height:74px!important;
+          max-width:74px!important;
+          max-height:74px!important;
+          margin:0 auto 7px!important;
         }
       `;
       return true;
@@ -51,5 +58,6 @@
   });
   window.setInterval(apply,750);
   apply();
-  window.__TTD_ITEM_ART_POLISH_V2=Object.freeze({apply});
+  window.__TTD_ITEM_ART_POLISH_V3=Object.freeze({apply});
+  window.__TTD_ITEM_ART_POLISH_V2=window.__TTD_ITEM_ART_POLISH_V3;
 })();
