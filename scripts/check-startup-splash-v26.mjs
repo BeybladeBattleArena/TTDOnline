@@ -1,13 +1,16 @@
 import fs from 'node:fs';
 
 const splash=fs.readFileSync('online/startup-splash-v26.js','utf8');
+const gate=fs.readFileSync('online/startup-gate-v33.js','utf8');
 const polish=fs.readFileSync('online/startup-polish-v28.js','utf8');
 const diagnosticGuard=fs.readFileSync('online/bridge-diagnostic-guard-v1.js','utf8');
 const sessionGuard=fs.readFileSync('online/bridge-session-guard-v2.js','utf8');
 const firebase=fs.readFileSync('online/firebase-client-v4.js','utf8');
+const firebaseConfig=fs.readFileSync('firebase.json','utf8');
 const onlineHtml=fs.readFileSync('online.html','utf8');
 const entry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
 new Function(splash);
+new Function(gate);
 new Function(polish);
 new Function(diagnosticGuard);
 new Function(sessionGuard);
@@ -43,6 +46,33 @@ const required=[
   'get promptReady(){return promptReady;}',
 ];
 for(const marker of required)if(!splash.includes(marker))throw new Error(`Startup splash v31 behavior missing: ${marker}`);
+
+const gateRequired=[
+  'window.__TTD_STARTUP_GATE_V33',
+  'const CRITICAL_ASSETS=Object.freeze([',
+  "'/assets/ui/loading-endless-horde.jpg'",
+  "'/assets/ui/loading-al-hata.jpg'",
+  "'/assets/items/gift-box-pink.jpg'",
+  "'/assets/items/gift-box-icy.jpg'",
+  'child.__TTD_ASSET_URL(path)',
+  'Promise.all(Array.from({length:4},worker))',
+  'Promise.race([welcomePromise,sleep(5000)])',
+  'waitOperational(20000)',
+  'child.__TTD_GAME_ASSETS',
+  'child.__TTD_ITEM_ASSETS_V1',
+  'child.__TTD_WORLD_ITEMS_V1',
+  "doc.getElementById('homeScreen')",
+  "doc.getElementById('shopScreen')",
+  "doc.getElementById('inventoryScreen')",
+  "tap.textContent='TAP TO RETRY'",
+  'splash.hidden=true',
+  'audio?.enterMainMenu?.()',
+  "splash.addEventListener('pointerup',intercept,true)",
+  'event.stopImmediatePropagation()',
+];
+for(const marker of gateRequired)if(!gate.includes(marker))throw new Error(`Startup gate v33 behavior missing: ${marker}`);
+if(gate.indexOf('preloadCritical()')>gate.indexOf('waitOperational(20000)'))throw new Error('Critical image preload must begin no later than the operational readiness wait.');
+if(gate.includes("console.warn('TTD startup reveal timed out"))throw new Error('Startup gate may not reveal the game after a readiness timeout.');
 
 const polishRequired=[
   'window.__TTD_STARTUP_POLISH_V31',
@@ -93,6 +123,9 @@ const firebaseRequired=[
 for(const marker of firebaseRequired)if(!firebase.includes(marker))throw new Error(`Firebase bridge watchdog contract missing: ${marker}`);
 if(firebase.includes("armBridgeTimer(`The secure game loader stopped during ${message.phase || 'startup'}.`)"))throw new Error('Firebase may not arm the fatal watchdog for arbitrary bridge phases.');
 
+if(!firebaseConfig.includes('"source": "/assets/**"')||!firebaseConfig.includes('public, max-age=31536000, immutable'))throw new Error('Build-tokened assets must be cacheable so startup preloads are reused by the game UI.');
+if(!firebaseConfig.includes('"source": "**/*.@(html|js|css|json)"')||!firebaseConfig.includes('no-cache, no-store, must-revalidate'))throw new Error('Code and manifest shell files must remain no-store.');
+
 const syncGuardTag='<script src="/online/bridge-session-guard-v2.js?v=2"></script>';
 const firebaseTag='<script type="module" src="/online/firebase-client-v4.js?v=4"></script>';
 if(!onlineHtml.includes(syncGuardTag))throw new Error('Online shell does not synchronously load bridge-session-guard-v2.');
@@ -101,10 +134,13 @@ if(onlineHtml.indexOf(syncGuardTag)>onlineHtml.indexOf(firebaseTag))throw new Er
 const diagnosticImport="import './bridge-diagnostic-guard-v1.js?v=1';";
 if(!entry.includes(diagnosticImport))throw new Error('Online client lost the secondary bridge diagnostic logger.');
 if(!entry.includes("import './startup-splash-v26.js?v=31';"))throw new Error('Online client does not load startup splash v31 behavior.');
+if(!entry.includes("import './startup-gate-v33.js?v=33';"))throw new Error('Online client does not load startup gate v33.');
 if(!entry.includes("import './startup-polish-v28.js?v=31';"))throw new Error('Online client does not load startup polish v31 behavior.');
+if(entry.indexOf('startup-splash-v26')>entry.indexOf('startup-gate-v33'))throw new Error('Startup gate must initialize after the splash exists.');
+if(entry.indexOf('startup-gate-v33')>entry.indexOf('startup-polish-v28'))throw new Error('Startup gate must register before legacy startup-polish tap interception.');
 if(entry.indexOf('startup-splash-v26')>entry.indexOf('singleplayer-client-v9-core'))throw new Error('Startup splash must initialize before the legacy game core client.');
 if(!/DICE_COUNT\s*=\s*(?:2\d\d|[3-9]\d\d)/.test(splash))throw new Error('Startup background must contain hundreds of generated dice.');
 if(splash.indexOf("'Okay, Die Master'")>splash.indexOf("'TAP to DIE'"))throw new Error('Greeting must type before TAP to DIE.');
 if(splash.indexOf('unlockAudioFromGesture()')>splash.indexOf("tapButton.textContent=accountReady()?"))throw new Error('Audio unlock must happen synchronously before post-tap waiting UI.');
 if(splash.indexOf('sequenceToken++;')>splash.indexOf('diceReveal=1'))throw new Error('Early title skip must cancel the in-flight animation before forcing its final state.');
-console.log('Startup and bridge session verified: title skip remains two-stage, audio reveal is bounded, only known startup phases can arm the watchdog, and no bridge phase can return a synced live session to startup/fatal timeout state.');
+console.log('Startup v33 verified: the splash remains two-stage, black-screen entry preloads native-resolution critical art with the runtime build token, waits for operational menus/code/fonts, and never reveals a partial game shell.');
