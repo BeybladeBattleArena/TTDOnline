@@ -20,6 +20,21 @@
     "rewrites": [
       {"source":"/","destination":"/online.html"}
     ],
+    "redirects": [
+      {"source":"/assets/ui/epic-summon-ticket.webp","destination":"/assets/items/epic-summon-ticket.jpg","type":302},
+      {"source":"/assets/ui/exp-tome.webp","destination":"/assets/items/exp-tome.jpg","type":302},
+      {"source":"/assets/ui/loading-endless-horde.webp","destination":"/assets/ui/loading-endless-horde.jpg","type":302},
+      {"source":"/assets/ui/loading-al-hata.webp","destination":"/assets/ui/loading-al-hata.jpg","type":302},
+      {"source":"/assets/items/epic-summon-ticket.webp","destination":"/assets/items/epic-summon-ticket.jpg","type":302},
+      {"source":"/assets/items/exp-tome.webp","destination":"/assets/items/exp-tome.jpg","type":302},
+      {"source":"/assets/items/key-normal.webp","destination":"/assets/items/key-normal.jpg","type":302},
+      {"source":"/assets/items/key-hard.webp","destination":"/assets/items/key-hard.jpg","type":302},
+      {"source":"/assets/items/key-hell.webp","destination":"/assets/items/key-hell.jpg","type":302},
+      {"source":"/assets/items/mystery-chest.webp","destination":"/assets/items/mystery-chest.jpg","type":302},
+      {"source":"/assets/items/chest-frozen-island-normal.webp","destination":"/assets/items/chest-frozen-island-normal.jpg","type":302},
+      {"source":"/assets/items/chest-frozen-island-hard.webp","destination":"/assets/items/chest-frozen-island-hard.jpg","type":302},
+      {"source":"/assets/items/chest-frozen-island-hell.webp","destination":"/assets/items/chest-frozen-island-hell.jpg","type":302}
+    ],
     "headers": [
       {
         "source": "/assets/**",
