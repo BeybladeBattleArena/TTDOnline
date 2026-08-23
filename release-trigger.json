@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-22-items-audio-typography-v1",
+  "release": "2026-08-23-highres-art-startup-gate-v2",
   "includes": [
-    "larger 60px shop item presentation near the normalized art masters",
-    "corrected cross-item art routing for keys and Mystery Chest",
-    "Epic Summon Ticket and EXP Tome legacy IDs now resolve to canonical item art",
-    "serialized announcer playback so MissionFail finishes before later cues",
-    "Russo One enforced globally including Zombie results",
-    "Creepster retained only for Zombie-facing menu titles"
+    "materialize the designer-provided loading screens and item art at native resolution",
+    "use semantic Normal, Hard, and Hell key and chest artwork",
+    "keep source artwork high resolution while standardizing only UI presentation size",
+    "preload critical loading, menu, item, font, and runtime pieces behind the black startup transition",
+    "do not reveal the game shell until the core menus and required asset runtime are operational",
+    "stabilize the deploy workflow so asset materialization and Firebase deployment complete in one release run"
   ]
 }
