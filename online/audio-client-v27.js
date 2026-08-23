@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  if(window.__TTD_AUDIO_V31)return;
+  if(window.__TTD_AUDIO_V32)return;
   const frame=document.getElementById('gameFrame');
   const asset=(path)=>{try{return window.__TTD_ASSET_URL?.(path)||path;}catch(_){return path;}};
   const TRACKS=Object.freeze({
@@ -27,7 +27,7 @@
   const SILENT_SCREENS=new Set(['gameModesScreen','modeScreen','zombieModeScreen','adventureScreen','stageScreen','missionScreen','gameScreen']);
   const buffers=new Map();
   let context=null,master=null,musicGain=null,voiceGain=null,current=null,entered=false,lastScreen='';
-  let activeVoice=null,lastVoiceKey='',lastVoiceAt=-Infinity;
+  let activeVoice=null,lastVoiceKey='',lastVoiceAt=-Infinity,voiceQueue=Promise.resolve();
 
   function ensureContext(){
     if(context&&context.state!=='closed')return context;
@@ -57,19 +57,31 @@
   function routeFor(screen){if(!entered||!screen)return null;if(screen==='shopScreen')return'shop';if(screen==='deckScreen')return'deck';if(screen==='gachaScreen')return'gacha';if(SILENT_SCREENS.has(screen))return null;return'main';}
   function syncRoute(force=false){if(!entered)return;const screen=activeScreenId();if(!force&&screen===lastScreen)return;lastScreen=screen;const route=routeFor(screen);if(!route){stopCurrent(.18);return;}playTrack(route).catch(error=>console.error('TTD music route failed',error));}
   async function playWelcome(){const ctx=await unlock();if(!ctx)return;const url=WELCOME[Math.floor(Math.random()*WELCOME.length)];let buffer;try{buffer=await load(url);}catch(error){console.error('TTD welcome voice load failed',error);return;}return new Promise(resolve=>{const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);source.addEventListener('ended',resolve,{once:true});source.start();});}
-  async function playVoiceCue(key){
+  async function playVoiceNow(key){
     const url=ANNOUNCER[key];if(!url)return false;
-    const now=performance.now();if(key===lastVoiceKey&&now-lastVoiceAt<300)return true;lastVoiceKey=key;lastVoiceAt=now;
     const ctx=await unlock();if(!ctx)return false;let buffer;
     try{buffer=await load(url);}catch(error){console.error('TTD announcer voice load failed',key,error);return false;}
-    if(activeVoice){try{activeVoice.stop();}catch(_){}activeVoice=null;}
-    const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);source.addEventListener('ended',()=>{if(activeVoice===source)activeVoice=null;},{once:true});source.start();activeVoice=source;return true;
+    return new Promise(resolve=>{
+      const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);activeVoice=source;
+      let finished=false;
+      const finish=(ok=true)=>{if(finished)return;finished=true;if(activeVoice===source)activeVoice=null;resolve(ok);};
+      source.addEventListener('ended',()=>finish(true),{once:true});
+      try{source.start();}catch(error){console.error('TTD announcer voice start failed',key,error);finish(false);}
+    });
+  }
+  function playVoiceCue(key){
+    if(!ANNOUNCER[key])return Promise.resolve(false);
+    const now=performance.now();if(key===lastVoiceKey&&now-lastVoiceAt<300)return Promise.resolve(true);lastVoiceKey=key;lastVoiceAt=now;
+    // Do not pre-empt the current phrase. Result follow-up cues wait their turn so a long
+    // MissionFail/MissionClear recording is heard all the way through.
+    const run=()=>playVoiceNow(key);const queued=voiceQueue.then(run,run);voiceQueue=queued.catch(()=>false);return queued;
   }
   async function enterMainMenu(){entered=true;lastScreen='';await playTrack('main');}
   function silence(){stopCurrent(.15);}
   window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame?.contentWindow)return;const message=event.data||{};if(message.type!=='ttd:voice-cue')return;playVoiceCue(String(message.cue||'')).catch(error=>console.error('TTD announcer cue failed',error));});
   frame?.addEventListener('load',()=>setTimeout(()=>syncRoute(true),80));window.setInterval(syncRoute,180);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){context?.suspend?.().catch?.(()=>{});}else if(entered){context?.resume?.().catch?.(()=>{});syncRoute(true);}});
-  window.__TTD_AUDIO_V31=Object.freeze({TRACKS,WELCOME,ANNOUNCER,SILENT_SCREENS,preloadPromise,unlock,playWelcome,playVoiceCue,enterMainMenu,syncRoute,silence});
-  window.__TTD_AUDIO_V27=window.__TTD_AUDIO_V31;
+  window.__TTD_AUDIO_V32=Object.freeze({TRACKS,WELCOME,ANNOUNCER,SILENT_SCREENS,preloadPromise,unlock,playWelcome,playVoiceCue,enterMainMenu,syncRoute,silence});
+  window.__TTD_AUDIO_V31=window.__TTD_AUDIO_V32;
+  window.__TTD_AUDIO_V27=window.__TTD_AUDIO_V32;
 })();
