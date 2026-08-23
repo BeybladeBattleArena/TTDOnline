@@ -11,16 +11,18 @@ permissions:
 
 concurrency:
   group: firebase-production-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   prepare-art:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.materialize.outputs.changed }}
+      deploy_sha: ${{ steps.materialize.outputs.deploy_sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Authenticate to Google Cloud and designer asset handoff
         id: gcp_auth
@@ -37,29 +39,32 @@ jobs:
         env:
           DRIVE_TOKEN: ${{ steps.gcp_auth.outputs.access_token }}
         run: |
+          set -euo pipefail
           bash scripts/materialize-highres-art-v33.sh
-          if git diff --quiet -- assets .github/highres-art-v33.lock; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if ! git diff --quiet -- assets .github/highres-art-v33.lock; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add assets/ui/loading-endless-horde.jpg assets/ui/loading-al-hata.jpg \
+              assets/items/key-normal.jpg assets/items/key-hard.jpg assets/items/key-hell.jpg \
+              assets/items/chest-frozen-island-normal.jpg assets/items/chest-frozen-island-hard.jpg assets/items/chest-frozen-island-hell.jpg \
+              assets/items/mystery-chest.jpg assets/items/epic-summon-ticket.jpg assets/items/exp-tome.jpg \
+              assets/items/ore-common.jpg assets/items/ore-rare.jpg assets/items/ore-unique.jpg assets/items/ore-legendary.jpg assets/items/ore-omni.jpg \
+              assets/items/gift-box-pink.jpg assets/items/gift-box-icy.jpg .github/highres-art-v33.lock
+            git commit -m "[asset-materialization] Full-resolution designer art v33"
+            git push origin HEAD:main
           fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/ui/loading-endless-horde.jpg assets/ui/loading-al-hata.jpg \
-            assets/items/key-normal.jpg assets/items/key-hard.jpg assets/items/key-hell.jpg \
-            assets/items/chest-frozen-island-normal.jpg assets/items/chest-frozen-island-hard.jpg assets/items/chest-frozen-island-hell.jpg \
-            assets/items/mystery-chest.jpg assets/items/epic-summon-ticket.jpg assets/items/exp-tome.jpg \
-            assets/items/ore-common.jpg assets/items/ore-rare.jpg assets/items/ore-unique.jpg assets/items/ore-legendary.jpg assets/items/ore-omni.jpg \
-            assets/items/gift-box-pink.jpg assets/items/gift-box-icy.jpg .github/highres-art-v33.lock
-          git commit -m "[release] Materialize full-resolution designer art"
-          git push origin HEAD:main
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "deploy_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: prepare-art
-    if: needs.prepare-art.outputs.changed != 'true'
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_SHA: ${{ needs.prepare-art.outputs.deploy_sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-art.outputs.deploy_sha }}
+          fetch-depth: 0
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -78,7 +83,7 @@ jobs:
 
       - name: Stamp exact production build
         run: |
-          printf '{"commit":"%s","ref":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$GITHUB_REF_NAME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
+          printf '{"commit":"%s","ref":"%s","builtAt":"%s"}\n' "$DEPLOY_SHA" "$GITHUB_REF_NAME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
 
       - name: Deploy Hosting
         run: npx firebase-tools deploy --only hosting --project ttd-online-b8c0f --non-interactive --force
@@ -88,14 +93,14 @@ jobs:
           LIVE_URL: https://ttd-online-b8c0f.web.app
         run: |
           for attempt in {1..20}; do
-            body="$(curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL/build.json?verify=$GITHUB_SHA-$attempt" || true)"
-            if [[ "$body" == *"\"commit\":\"$GITHUB_SHA\""* ]]; then
-              echo "Verified production Hosting commit $GITHUB_SHA"
+            body="$(curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL/build.json?verify=$DEPLOY_SHA-$attempt" || true)"
+            if [[ "$body" == *"\"commit\":\"$DEPLOY_SHA\""* ]]; then
+              echo "Verified production Hosting commit $DEPLOY_SHA"
               exit 0
             fi
             sleep 2
           done
-          echo "Production verification failed: Hosting is not serving $GITHUB_SHA"
+          echo "Production verification failed: Hosting is not serving $DEPLOY_SHA"
           exit 1
 
       - name: Deploy Firestore and Functions
@@ -104,9 +109,9 @@ jobs:
       - name: Record verified production commit
         shell: bash
         run: |
-          printf '{"commit":"%s","verifiedAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > production-verified.json
+          printf '{"commit":"%s","verifiedAt":"%s"}\n' "$DEPLOY_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > production-verified.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add production-verified.json
-          git commit -m "[deployment-record] verified production $GITHUB_SHA"
+          git commit -m "[deployment-record] verified production $DEPLOY_SHA"
           git push origin HEAD:main
