@@ -55,6 +55,21 @@ jobs:
           fi
           echo "deploy_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Record prepare-art diagnostic
+        if: always()
+        env:
+          AUTH_OUTCOME: ${{ steps.gcp_auth.outcome }}
+          MATERIALIZE_OUTCOME: ${{ steps.materialize.outcome }}
+        run: |
+          set +e
+          printf '{"releaseSha":"%s","auth":"%s","materialize":"%s","recordedAt":"%s"}\n' \
+            "$GITHUB_SHA" "$AUTH_OUTCOME" "$MATERIALIZE_OUTCOME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/deploy-diagnostic.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/deploy-diagnostic.json
+          git commit -m "[deploy-diagnostic] prepare-art $GITHUB_SHA" || true
+          git push origin HEAD:main || true
+
   deploy:
     needs: prepare-art
     runs-on: ubuntu-latest
