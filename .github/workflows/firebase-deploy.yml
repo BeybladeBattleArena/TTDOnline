@@ -1,4 +1,4 @@
-name: Firebase Production Deploy
+name: Firebase Hosting Production Deploy
 
 on:
   workflow_dispatch:
@@ -14,58 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prepare-art:
+  deploy:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      deploy_sha: ${{ steps.materialize.outputs.deploy_sha }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
-      - name: Authenticate to Google Cloud and designer asset handoff
-        id: gcp_auth
-        uses: google-github-actions/auth@v3
-        with:
-          project_id: ttd-online-b8c0f
-          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
-          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
-          token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/drive.readonly
-
-      - name: Materialize full-resolution designer art
-        id: materialize
-        env:
-          DRIVE_TOKEN: ${{ steps.gcp_auth.outputs.access_token }}
-        run: |
-          set -euo pipefail
-          bash scripts/materialize-highres-art-v33.sh
-          git add assets/ui/loading-endless-horde.jpg assets/ui/loading-al-hata.jpg \
-            assets/items/key-normal.jpg assets/items/key-hard.jpg assets/items/key-hell.jpg \
-            assets/items/chest-frozen-island-normal.jpg assets/items/chest-frozen-island-hard.jpg assets/items/chest-frozen-island-hell.jpg \
-            assets/items/mystery-chest.jpg assets/items/epic-summon-ticket.jpg assets/items/exp-tome.jpg \
-            assets/items/ore-common.jpg assets/items/ore-rare.jpg assets/items/ore-unique.jpg assets/items/ore-legendary.jpg assets/items/ore-omni.jpg \
-            assets/items/gift-box-pink.jpg assets/items/gift-box-icy.jpg .github/highres-art-v33.lock
-          if ! git diff --cached --quiet; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m "[skip ci] [asset-materialization] Full-resolution designer art v33"
-            git push origin HEAD:main
-          fi
-          echo "deploy_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-  deploy:
-    needs: prepare-art
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    env:
-      DEPLOY_SHA: ${{ needs.prepare-art.outputs.deploy_sha }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.prepare-art.outputs.deploy_sha }}
           fetch-depth: 0
 
       - name: Authenticate to Google Cloud
@@ -79,13 +34,15 @@ jobs:
         with:
           node-version: '22'
 
-      - run: npm install
-      - run: npm --prefix functions install
-      - run: npm run check
+      - name: Install hosting toolchain
+        run: npm install
+
+      - name: Validate deployable game client
+        run: npm run check:hosting
 
       - name: Stamp exact production build
         run: |
-          printf '{"commit":"%s","ref":"%s","builtAt":"%s"}\n' "$DEPLOY_SHA" "$GITHUB_REF_NAME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
+          printf '{"commit":"%s","ref":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$GITHUB_REF_NAME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
 
       - name: Deploy Hosting
         run: npx firebase-tools deploy --only hosting --project ttd-online-b8c0f --non-interactive --force
@@ -94,26 +51,56 @@ jobs:
         env:
           LIVE_URL: https://ttd-online-b8c0f.web.app
         run: |
-          for attempt in {1..20}; do
-            body="$(curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL/build.json?verify=$DEPLOY_SHA-$attempt" || true)"
-            if [[ "$body" == *"\"commit\":\"$DEPLOY_SHA\""* ]]; then
-              echo "Verified production Hosting commit $DEPLOY_SHA"
+          set -euo pipefail
+          for attempt in {1..30}; do
+            body="$(curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL/build.json?verify=$GITHUB_SHA-$attempt" || true)"
+            if [[ "$body" == *"\"commit\":\"$GITHUB_SHA\""* ]]; then
+              echo "Verified production Hosting commit $GITHUB_SHA"
               exit 0
             fi
             sleep 2
           done
-          echo "Production verification failed: Hosting is not serving $DEPLOY_SHA"
+          echo "Production verification failed: Hosting is not serving $GITHUB_SHA"
           exit 1
 
-      - name: Deploy Firestore and Functions
-        run: npx firebase-tools deploy --only firestore,functions --project ttd-online-b8c0f --non-interactive --force
+      - name: Verify critical game and high-resolution art
+        env:
+          LIVE_URL: https://ttd-online-b8c0f.web.app
+        run: |
+          set -euo pipefail
+          check_file() {
+            local path="$1"
+            local min_bytes="$2"
+            local tmp
+            tmp="$(mktemp)"
+            curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL$path?verify=$GITHUB_SHA" -o "$tmp"
+            local bytes
+            bytes="$(wc -c < "$tmp" | tr -d ' ')"
+            rm -f "$tmp"
+            if [ "$bytes" -lt "$min_bytes" ]; then
+              echo "Production asset $path is unexpectedly small: $bytes bytes"
+              exit 1
+            fi
+            echo "Verified $path ($bytes bytes)"
+          }
+          check_file /online.html 1000
+          check_file /online/startup-gate-v33.js 1000
+          check_file /assets/game-assets.json 1000
+          check_file /assets/ui/loading-endless-horde.jpg 100000
+          check_file /assets/ui/loading-al-hata.jpg 100000
+          check_file /assets/items/mystery-chest.jpg 100000
+          check_file /assets/items/epic-summon-ticket.jpg 100000
+          check_file /assets/items/exp-tome.jpg 100000
+          check_file /assets/items/key-normal.jpg 100000
+          check_file /assets/items/key-hard.jpg 100000
+          check_file /assets/items/key-hell.jpg 100000
 
       - name: Record verified production commit
         shell: bash
         run: |
-          printf '{"commit":"%s","verifiedAt":"%s"}\n' "$DEPLOY_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > production-verified.json
+          printf '{"commit":"%s","verifiedAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > production-verified.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add production-verified.json
-          git commit -m "[skip ci] [deployment-record] verified production $DEPLOY_SHA"
+          git commit -m "[skip ci] [deployment-record] verified production $GITHUB_SHA"
           git push origin HEAD:main
