@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-23-highres-art-startup-gate-v4",
+  "release": "2026-08-23-highres-art-startup-gate-v5",
   "includes": [
-    "materialize the designer-provided loading screens and item art at native resolution",
+    "materialize and commit all designer-provided loading screens and item art at native resolution",
+    "correctly stage newly downloaded untracked image masters before deployment",
     "use semantic Normal, Hard, and Hell key and chest artwork",
     "keep source artwork high resolution while standardizing only UI presentation size",
     "preload critical loading, menu, item, font, and runtime pieces behind the black startup transition",
-    "do not reveal the game shell until the core menus and required asset runtime are operational",
-    "record a durable prepare-art diagnostic so any deployment blocker can be identified and corrected"
+    "do not reveal the game shell until the core menus and required asset runtime are operational"
   ]
 }
