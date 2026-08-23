@@ -1,6 +1,7 @@
 import './bridge-diagnostic-guard-v1.js?v=1';
 import './audio-client-v27.js?v=32';
 import './startup-splash-v26.js?v=31';
+import './startup-gate-v33.js?v=33';
 import './startup-polish-v28.js?v=31';
 import './typography-client-v24.js?v=25';
 import './ui-fusion-v29.js?v=29';
@@ -14,4 +15,4 @@ import './singleplayer-client-v9-core.js?v=9';
 import './message-normalizer-v32.js?v=32';
 import './deck-social-client-v18.js?v=18';
 import './item-inventory-client-v1.js?v=1';
-import './item-art-polish-v2.js?v=2';
+import './item-art-polish-v2.js?v=3';
