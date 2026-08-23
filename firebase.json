@@ -18,45 +18,27 @@
       "ONLINE-MIGRATION.md"
     ],
     "rewrites": [
-      {
-        "source": "/",
-        "destination": "/online.html"
-      }
+      {"source":"/","destination":"/online.html"}
     ],
     "headers": [
       {
-        "source": "**/*.@(html|js|css|json|svg|png|jpg|jpeg|webp)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
+        "source": "/assets/**",
+        "headers": [{"key":"Cache-Control","value":"public, max-age=31536000, immutable"}]
+      },
+      {
+        "source": "**/*.@(html|js|css|json)",
+        "headers": [{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]
       }
     ]
   },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ],
+  "firestore": {"rules":"firestore.rules","indexes":"firestore.indexes.json"},
+  "functions": [{"source":"functions","codebase":"default","ignore":["node_modules",".git","firebase-debug.log","firebase-debug.*.log"]}],
   "emulators": {
-    "auth": { "port": 9099 },
-    "functions": { "port": 5001 },
-    "firestore": { "port": 8080 },
-    "hosting": { "port": 5000 },
-    "ui": { "enabled": true, "port": 4000 },
-    "singleProjectMode": true
+    "auth":{"port":9099},
+    "functions":{"port":5001},
+    "firestore":{"port":8080},
+    "hosting":{"port":5000},
+    "ui":{"enabled":true,"port":4000},
+    "singleProjectMode":true
   }
 }
