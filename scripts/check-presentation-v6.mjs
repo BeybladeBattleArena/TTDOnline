@@ -56,7 +56,7 @@ const resume=presentation.indexOf('resumeRunFromMission(runState)',start);
 if(!(mfn>=0&&preview>mfn&&mission>preview&&start>mission&&resume>start))throw new Error('Mission map preview and voice order changed.');
 
 need(audio,[
-  'window.__TTD_AUDIO_V31',
+  'window.__TTD_AUDIO_V32',
   "const asset=(path)=>{try{return window.__TTD_ASSET_URL?.(path)||path;}",
   "mission:asset('/assets/audio/announcer/Mission.mp3')",
   "start:asset('/assets/audio/announcer/Start.mp3')",
@@ -65,10 +65,13 @@ need(audio,[
   "fail:asset('/assets/audio/announcer/MissionFail.mp3')",
   "finish:asset('/assets/audio/announcer/Finish.mp3')",
   "fetch(url,{cache:'no-store'})",
-  "if(key===lastVoiceKey&&now-lastVoiceAt<300)return true",
-  'if(activeVoice){try{activeVoice.stop();}',
-  'activeVoice=source',
-],'audio v31');
+  "if(key===lastVoiceKey&&now-lastVoiceAt<300)return Promise.resolve(true)",
+  'voiceQueue=Promise.resolve()',
+  'async function playVoiceNow(key)',
+  'const run=()=>playVoiceNow(key);const queued=voiceQueue.then(run,run);voiceQueue=queued.catch(()=>false);return queued;',
+  'window.__TTD_AUDIO_V31=window.__TTD_AUDIO_V32;',
+],'audio v32');
+forbid(audio,['activeVoice.stop()'],'audio v32');
 
 need(continuous,[
   'window.__TTD_CONTINUOUS_WORLD_V2',
@@ -84,4 +87,4 @@ need(battle,['window.__TTD_TEST_MAINMAP_BATTLE_V4=true','presentation?.playComba
 need(platform,["const TEST_ID = 'test_map'",'state.wave===2','state.wave=3','ttd-platform-mode'],'platform traversal');
 need(runUi,['function installPlatformOnlineStartSyncV2()','state.__ttdWorldState','world.cameraX=session.cameraX','objects:wstate.objects,drops:wstate.drops'],'persistent world bridge');
 
-console.log('Presentation V6 verified: all battle text is map-centered, countdown entries replace each other in one slot, START is consistently blue, FAIL/FINISH use Android-safe gradients, cue audio keys remain distinct and cache-busted, CombatStart fires on its visible START frame, and Test Map continuity remains wired.');
+console.log('Presentation V6 verified: all battle text is map-centered, countdown entries replace each other in one slot, START is consistently blue, FAIL/FINISH use Android-safe gradients, announcer cues serialize without pre-emption, CombatStart fires on its visible START frame, and Test Map continuity remains wired.');
