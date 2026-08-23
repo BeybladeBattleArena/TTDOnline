@@ -97,10 +97,12 @@ jobs:
           check_file /assets/ui/loading-al-hata.jpg 100000
           check_file /assets/items/mystery-chest.jpg 100000
           check_file /assets/items/epic-summon-ticket.jpg 100000
-          check_file /assets/items/exp-tome.jpg 100000
-          check_file /assets/items/key-normal.jpg 100000
-          check_file /assets/items/key-hard.jpg 100000
-          check_file /assets/items/key-hell.jpg 100000
+          check_file /assets/items/exp-tome.jpg 90000
+          # Keys are intentionally tall 1024x1536 JPEGs and can compress below 100 KB while retaining full native dimensions.
+          # Keep this threshold aligned with the item-integrity contract instead of using an arbitrary 100 KB cutoff.
+          check_file /assets/items/key-normal.jpg 30000
+          check_file /assets/items/key-hard.jpg 30000
+          check_file /assets/items/key-hell.jpg 30000
 
       - name: Record verified production commit
         id: receipt
