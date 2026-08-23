@@ -123,7 +123,7 @@ const firebaseRequired=[
 for(const marker of firebaseRequired)if(!firebase.includes(marker))throw new Error(`Firebase bridge watchdog contract missing: ${marker}`);
 if(firebase.includes("armBridgeTimer(`The secure game loader stopped during ${message.phase || 'startup'}.`)"))throw new Error('Firebase may not arm the fatal watchdog for arbitrary bridge phases.');
 
-if(!firebaseConfig.includes('"source": "/assets/**"')||!firebaseConfig.includes('public, max-age=31536000, immutable'))throw new Error('Build-tokened assets must be cacheable so startup preloads are reused by the game UI.');
+if(!firebaseConfig.includes('"source": "/assets/**"')||!firebaseConfig.includes('no-cache, no-store, must-revalidate'))throw new Error('Active game assets must remain no-store so replaced art can never be trapped behind a stale immutable cache.');
 if(!firebaseConfig.includes('"source": "**/*.@(html|js|css|json)"')||!firebaseConfig.includes('no-cache, no-store, must-revalidate'))throw new Error('Code and manifest shell files must remain no-store.');
 
 const syncGuardTag='<script src="/online/bridge-session-guard-v2.js?v=2"></script>';
