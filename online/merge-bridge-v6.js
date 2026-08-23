@@ -32,7 +32,7 @@
   // Keep this direct eval inside the injected bridge lexical scope so the extension can reuse the
   // real v33 account, inventory, path, enemy and renderer functions instead of maintaining a shadow game.
   (async()=>{
-    for(const url of ['/online/item-assets-v1.js?v=1','/online/world-items-v1.js?v=1']){
+    for(const url of ['/online/item-assets-v1.js?v=2','/online/world-items-v1.js?v=1']){
       try{const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);eval(`${await response.text()}\n//# sourceURL=${url}`);}
       catch(err){console.error('TTD world/item extension failed to load',url,err);try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:url,message:String(err?.message||err)},location.origin);}catch(_){}}
     }
