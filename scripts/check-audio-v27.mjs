@@ -11,13 +11,15 @@ const requiredAudio=[
   '/assets/audio/announcer/Mission.mp3','/assets/audio/announcer/Start.mp3','/assets/audio/announcer/CombatStart.mp3',
   '/assets/audio/announcer/MissionClear.mp3','/assets/audio/announcer/MissionFail.mp3','/assets/audio/announcer/Finish.mp3',
   '/assets/audio/announcer/RedTeam.mp3','/assets/audio/announcer/BlueTeam.mp3','/assets/audio/announcer/Wins.mp3',
-  'ANNOUNCER','playVoiceCue','ttd:voice-cue','...Object.values(ANNOUNCER).map(load)',
+  'ANNOUNCER','playVoiceCue','playVoiceNow','voiceQueue=Promise.resolve()','voiceQueue.then(run,run)','ttd:voice-cue','...Object.values(ANNOUNCER).map(load)',
   'shopScreen','deckScreen','gachaScreen','gameModesScreen','gameScreen','source.loopStart','source.loopEnd','Math.random()','enterMainMenu','source.start(0,0)'
 ];
-for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v30 missing: ${marker}`);
+for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v32 missing: ${marker}`);
+if(audio.includes('activeVoice.stop()'))throw new Error('Announcer cues must not pre-empt a phrase already playing.');
 if(audio.includes('positions.set(')||audio.includes('positions.get('))throw new Error('Music must not resume saved positions after leaving a page.');
 for(const marker of ["font-family:'CCDangerGirlOpen'",'randomRay(c)','links.push','b.links.forEach','audio?.playWelcome?.()','await sleep(95)','audio?.enterMainMenu?.()','ttdBlackV28'])if(!splash.includes(marker))throw new Error(`Splash polish v28 missing: ${marker}`);
+if(!entry.includes("import './audio-client-v27.js?v=32';"))throw new Error('Single-player client does not load audio v32.');
 if(entry.indexOf('audio-client-v27')>entry.indexOf('startup-splash-v26'))throw new Error('Audio manager must load before splash.');
 if(entry.indexOf('startup-polish-v28')<entry.indexOf('startup-splash-v26'))throw new Error('Splash polish must load after the base splash.');
 if(splash.indexOf('playWelcome')>splash.indexOf('enterMainMenu'))throw new Error('Welcome voice must begin before main-menu music starts.');
-console.log('Audio verified: page music, welcome RNG, and gameplay announcer cues including the dedicated CombatStart countdown clip are wired and preloaded.');
+console.log('Audio v32 verified: page music and welcome RNG remain wired, while announcer phrases serialize so FAIL/CLEAR finish before later cues.');
