@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-23-highres-art-startup-gate-v2",
+  "release": "2026-08-23-highres-art-startup-gate-v3",
   "includes": [
     "materialize the designer-provided loading screens and item art at native resolution",
     "use semantic Normal, Hard, and Hell key and chest artwork",
     "keep source artwork high resolution while standardizing only UI presentation size",
     "preload critical loading, menu, item, font, and runtime pieces behind the black startup transition",
     "do not reveal the game shell until the core menus and required asset runtime are operational",
-    "stabilize the deploy workflow so asset materialization and Firebase deployment complete in one release run"
+    "deploy through the stabilized single-run materialization and Firebase production pipeline"
   ]
 }
