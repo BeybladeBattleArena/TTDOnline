@@ -24,6 +24,7 @@ jobs:
           fetch-depth: 0
 
       - name: Authenticate to Google Cloud
+        id: gcp_auth
         uses: google-github-actions/auth@v3
         with:
           project_id: ttd-online-b8c0f
@@ -35,19 +36,24 @@ jobs:
           node-version: '22'
 
       - name: Install hosting toolchain
+        id: install
         run: npm install
 
       - name: Validate deployable game client
+        id: validate
         run: npm run check:hosting
 
       - name: Stamp exact production build
+        id: stamp
         run: |
           printf '{"commit":"%s","ref":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$GITHUB_REF_NAME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
 
       - name: Deploy Hosting
+        id: hosting_deploy
         run: npx firebase-tools deploy --only hosting --project ttd-online-b8c0f --non-interactive --force
 
       - name: Verify exact commit is live
+        id: live_verify
         env:
           LIVE_URL: https://ttd-online-b8c0f.web.app
         run: |
@@ -64,6 +70,7 @@ jobs:
           exit 1
 
       - name: Verify critical game and high-resolution art
+        id: smoke_verify
         env:
           LIVE_URL: https://ttd-online-b8c0f.web.app
         run: |
@@ -96,6 +103,7 @@ jobs:
           check_file /assets/items/key-hell.jpg 100000
 
       - name: Record verified production commit
+        id: receipt
         shell: bash
         run: |
           printf '{"commit":"%s","verifiedAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > production-verified.json
@@ -104,3 +112,25 @@ jobs:
           git add production-verified.json
           git commit -m "[skip ci] [deployment-record] verified production $GITHUB_SHA"
           git push origin HEAD:main
+
+      - name: Record deployment diagnostic
+        if: always()
+        env:
+          AUTH_OUTCOME: ${{ steps.gcp_auth.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+          STAMP_OUTCOME: ${{ steps.stamp.outcome }}
+          DEPLOY_OUTCOME: ${{ steps.hosting_deploy.outcome }}
+          LIVE_VERIFY_OUTCOME: ${{ steps.live_verify.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke_verify.outcome }}
+          RECEIPT_OUTCOME: ${{ steps.receipt.outcome }}
+        run: |
+          set +e
+          mkdir -p .github
+          printf '{"releaseSha":"%s","runId":"%s","runUrl":"https://github.com/%s/actions/runs/%s","auth":"%s","install":"%s","validate":"%s","deploy":"%s","liveVerify":"%s","smokeVerify":"%s","receipt":"%s","recordedAt":"%s"}\n' \
+            "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$AUTH_OUTCOME" "$INSTALL_OUTCOME" "$VALIDATE_OUTCOME" "$DEPLOY_OUTCOME" "$LIVE_VERIFY_OUTCOME" "$SMOKE_OUTCOME" "$RECEIPT_OUTCOME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/hosting-deploy-diagnostic.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/hosting-deploy-diagnostic.json
+          git commit -m "[skip ci] [deploy-diagnostic] hosting $GITHUB_SHA" || exit 0
+          git push origin HEAD:main || true
