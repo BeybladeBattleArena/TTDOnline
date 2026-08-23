@@ -1,12 +1,12 @@
 {
-  "release": "2026-08-23-highres-art-startup-gate-v6",
+  "release": "2026-08-23-highres-art-startup-gate-v7",
   "includes": [
     "materialize and commit all designer-provided loading screens and item art at native resolution",
-    "correctly stage newly downloaded untracked image masters before deployment",
     "serve active-development game assets with no-store so replaced art cannot remain stale",
-    "satisfy the release-integrity SVG/game-asset cache contract that was blocking npm run check",
-    "use semantic Normal, Hard, and Hell key and chest artwork",
-    "preload critical loading, menu, item, font, and runtime pieces behind the black startup transition",
-    "do not reveal the game shell until the core menus and required asset runtime are operational"
+    "satisfy the release-integrity cache contract before Firebase deployment",
+    "cancel stale production runs instead of allowing them to block later releases",
+    "mark workflow-generated repository commits skip-ci so the release cannot cancel itself",
+    "bound prepare and deploy jobs with explicit timeouts",
+    "preload critical loading, menu, item, font, and runtime pieces behind the black startup transition"
   ]
 }

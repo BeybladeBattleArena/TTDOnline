@@ -11,12 +11,13 @@ permissions:
 
 concurrency:
   group: firebase-production-deploy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   prepare-art:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       deploy_sha: ${{ steps.materialize.outputs.deploy_sha }}
     steps:
@@ -50,7 +51,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m "[asset-materialization] Full-resolution designer art v33"
+            git commit -m "[skip ci] [asset-materialization] Full-resolution designer art v33"
             git push origin HEAD:main
           fi
           echo "deploy_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -58,6 +59,7 @@ jobs:
   deploy:
     needs: prepare-art
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
       DEPLOY_SHA: ${{ needs.prepare-art.outputs.deploy_sha }}
     steps:
@@ -113,5 +115,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add production-verified.json
-          git commit -m "[deployment-record] verified production $DEPLOY_SHA"
+          git commit -m "[skip ci] [deployment-record] verified production $DEPLOY_SHA"
           git push origin HEAD:main
