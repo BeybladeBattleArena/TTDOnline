@@ -1,10 +1,11 @@
 {
-  "release": "2026-08-23-highres-art-startup-gate-v5",
+  "release": "2026-08-23-highres-art-startup-gate-v6",
   "includes": [
     "materialize and commit all designer-provided loading screens and item art at native resolution",
     "correctly stage newly downloaded untracked image masters before deployment",
+    "serve active-development game assets with no-store so replaced art cannot remain stale",
+    "satisfy the release-integrity SVG/game-asset cache contract that was blocking npm run check",
     "use semantic Normal, Hard, and Hell key and chest artwork",
-    "keep source artwork high resolution while standardizing only UI presentation size",
     "preload critical loading, menu, item, font, and runtime pieces behind the black startup transition",
     "do not reveal the game shell until the core menus and required asset runtime are operational"
   ]
