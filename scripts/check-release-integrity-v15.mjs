@@ -7,6 +7,22 @@ const read=(file)=>fs.readFileSync(file,'utf8');
 const manifest=JSON.parse(read('assets/game-assets.json'));
 if(manifest.schemaVersion!==1 || !manifest.assets || typeof manifest.assets!=='object') fail('assets/game-assets.json is invalid.');
 
+const legacyAssetAliases=new Map([
+  ['/assets/ui/epic-summon-ticket.webp','/assets/items/epic-summon-ticket.jpg'],
+  ['/assets/ui/exp-tome.webp','/assets/items/exp-tome.jpg'],
+  ['/assets/ui/loading-endless-horde.webp','/assets/ui/loading-endless-horde.jpg'],
+  ['/assets/ui/loading-al-hata.webp','/assets/ui/loading-al-hata.jpg'],
+  ['/assets/items/epic-summon-ticket.webp','/assets/items/epic-summon-ticket.jpg'],
+  ['/assets/items/exp-tome.webp','/assets/items/exp-tome.jpg'],
+  ['/assets/items/key-normal.webp','/assets/items/key-normal.jpg'],
+  ['/assets/items/key-hard.webp','/assets/items/key-hard.jpg'],
+  ['/assets/items/key-hell.webp','/assets/items/key-hell.jpg'],
+  ['/assets/items/mystery-chest.webp','/assets/items/mystery-chest.jpg'],
+  ['/assets/items/chest-frozen-island-normal.webp','/assets/items/chest-frozen-island-normal.jpg'],
+  ['/assets/items/chest-frozen-island-hard.webp','/assets/items/chest-frozen-island-hard.jpg'],
+  ['/assets/items/chest-frozen-island-hell.webp','/assets/items/chest-frozen-island-hell.jpg'],
+]);
+
 const registeredPaths=new Set();
 for(const [key,asset] of Object.entries(manifest.assets)){
   if(typeof asset.path!=='string' || !asset.path.startsWith('/assets/')) fail(`${key}: invalid asset path.`);
@@ -29,6 +45,9 @@ for(const [key,asset] of Object.entries(manifest.assets)){
     if(usage.rotationDegrees!=null && !Number.isFinite(usage.rotationDegrees)) fail(`${key}.${usageName}: invalid rotationDegrees.`);
   }
 }
+for(const [legacy,canonical] of legacyAssetAliases){
+  if(!registeredPaths.has(canonical)) fail(`Legacy asset alias ${legacy} targets unregistered canonical art ${canonical}.`);
+}
 
 const loaderHtml=read('online/game-loader.html');
 for(const marker of ['release-integrity-v15','__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS','/assets/game-assets.json','cache:\'no-store\'']){
@@ -39,6 +58,10 @@ const firebase=JSON.parse(read('firebase.json'));
 const headerRules=firebase.hosting?.headers||[];
 const noStoreRule=headerRules.find((rule)=>String(rule.source||'').includes('svg') && (rule.headers||[]).some((h)=>String(h.key).toLowerCase()==='cache-control' && String(h.value).includes('no-store')));
 if(!noStoreRule) fail('Firebase Hosting must serve SVG/game assets with no-store during active development.');
+const redirects=new Map((firebase.hosting?.redirects||[]).map((rule)=>[rule.source,rule.destination]));
+for(const [legacy,canonical] of legacyAssetAliases){
+  if(redirects.get(legacy)!==canonical) fail(`Firebase Hosting must redirect legacy art ${legacy} to ${canonical}.`);
+}
 
 const workflow=read('.github/workflows/firebase-deploy.yml');
 if(!workflow.includes('branches: [main]')) fail('Production deployment must have main as its only push source.');
@@ -58,7 +81,7 @@ for(const name of fs.readdirSync(onlineDir)){
   for(const match of refs){
     const assetPath=match[1];
     const suffix=match[2]||'';
-    if(!registeredPaths.has(assetPath)) fail(`${file}: references unregistered game asset ${assetPath}.`);
+    if(!registeredPaths.has(assetPath) && !legacyAssetAliases.has(assetPath)) fail(`${file}: references unregistered game asset ${assetPath}.`);
     if(suffix.includes('?v=')) fail(`${file}: fixed ?v= cache version is forbidden for game assets; use __TTD_ASSET_URL().`);
   }
 }
@@ -85,4 +108,4 @@ if(JSON.stringify(attack.usage?.battle?.box)!=='[49,49]') fail('Soul Saber attac
 const attackSvg=read(attack.path.slice(1));
 if((attackSvg.match(/<path\b/g)||[]).length<20) fail('Soul Saber attack SVG lost expected vector detail.');
 
-console.log(`Release integrity verified: ${registeredPaths.size} registered assets, cache-safe runtime loading, deliberate release-only production deployment, exact live-commit verification, and durable production receipt.`);
+console.log(`Release integrity verified: ${registeredPaths.size} registered assets, ${legacyAssetAliases.size} explicit legacy redirects, cache-safe runtime loading, deliberate release-only production deployment, exact live-commit verification, and durable production receipt.`);
