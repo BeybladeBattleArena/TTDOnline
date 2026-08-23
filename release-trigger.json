@@ -1,10 +1,10 @@
 {
-  "release": "2026-08-23-production-recovery-v9",
+  "release": "2026-08-23-production-recovery-v10",
   "includes": [
     "deploy the already-committed native-resolution designer art without any asset-import side effects",
     "deploy Firebase Hosting independently from Functions and Firestore",
     "redirect every known legacy low-resolution art URL to its canonical native-resolution master",
-    "treat legacy art references as explicit migrations instead of silently serving stale placeholders",
+    "keep active game assets no-store so replaced art cannot be stranded behind stale browser caches",
     "validate only the deployable game client before a Hosting release",
     "verify the exact release commit from live build.json before declaring success",
     "smoke-test the live loading screens and critical item art at production-sized byte counts",
