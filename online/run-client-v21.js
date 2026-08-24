@@ -27,6 +27,8 @@ window.addEventListener('message',async(event)=>{
     if(Number.isSafeInteger(pips)){const node=document.getElementById('cloudPips');if(node)node.textContent=pips.toLocaleString();}
     if(Number.isSafeInteger(astras)){const node=document.getElementById('cloudAstras');if(node)node.textContent=astras.toLocaleString();}
     renderLevel(data.level);
-    frame.contentWindow.postMessage({type:'ttd:v6-run-finish-result',requestId:m.requestId,runId:m.runId,...data},location.origin);
+    const detail={requestId:m.requestId,runId:m.runId,...data};
+    frame.contentWindow.postMessage({type:'ttd:v6-run-finish-result',...detail},location.origin);
+    window.dispatchEvent(new CustomEvent('ttd:verified-run-result-v1',{detail}));
   }catch(err){frame.contentWindow.postMessage({type:'ttd:v6-run-finish-result-error',requestId:m.requestId,runId:m.runId,message:err?.message?.replace(/^FirebaseError:\s*/i,'')||'The server could not finalize this run.'},location.origin);}
 },true);
