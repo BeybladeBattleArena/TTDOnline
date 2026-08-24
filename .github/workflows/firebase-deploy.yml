@@ -33,6 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/materialize-canonical-results-v35.mjs
+          sed -i "s#random-dice-game-33.html?v=34#random-dice-game-33.html?v=35#g" scripts/check-online-loader-v15.mjs
           if ! command -v ffmpeg >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
@@ -62,6 +63,7 @@ jobs:
           ! grep -q "result-summary-client-v26" online/singleplayer-client-v6.js
           ! grep -q "result-reward-polish-v1" online/singleplayer-client-v6.js
           ! grep -q "ensureRewardMetaV1();" online/adventure-continuous-world-v1.js
+          grep -q "random-dice-game-33.html?v=35" scripts/check-online-loader-v15.mjs
 
           git config user.name 'ttd-release-bot'
           git config user.email 'ttd-release-bot@users.noreply.github.com'
@@ -72,7 +74,8 @@ jobs:
             online/run-ui-bridge-v21.js \
             online/singleplayer-client-v6.js \
             online/adventure-continuous-world-v1.js \
-            online/game-loader.js online.html
+            online/game-loader.js online.html \
+            scripts/check-online-loader-v15.mjs
           if ! git diff --cached --quiet; then
             git commit -m '[canonical-materialization] Native result and outcome ownership v35 [skip ci]'
             git push origin HEAD:main
