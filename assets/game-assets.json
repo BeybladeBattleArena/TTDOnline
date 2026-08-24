@@ -47,7 +47,7 @@
     "announcerStart": {"path":"/assets/audio/announcer/Start.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"MISSION START announcer cue"},
     "announcerCombatStart": {"path":"/assets/audio/announcer/CombatStart.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"3 2 1 START combat announcer cue"},
     "announcerMissionClear": {"path":"/assets/audio/announcer/MissionClear.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"CLEAR announcer cue"},
-    "announcerMissionFail": {"path":"/assets/audio/announcer/MissionFail.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"FAIL announcer cue"},
+    "announcerMissionFail": {"path":"/assets/audio/announcer/MissionFail.wav","format":"audio/wav","usage":{"playback":{"box":[1,1]}},"description":"FAIL announcer cue, recovered and materialized as mono 22050 Hz PCM WAV"},
     "announcerFinish": {"path":"/assets/audio/announcer/Finish.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"FINISH announcer cue"},
     "announcerRedTeam": {"path":"/assets/audio/announcer/RedTeam.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"Reserved multiplayer Red Team announcer cue"},
     "announcerWins": {"path":"/assets/audio/announcer/Wins.mp3","format":"audio/mpeg","usage":{"playback":{"box":[1,1]}},"description":"Reserved multiplayer Wins announcer cue"},
