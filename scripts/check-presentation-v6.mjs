@@ -34,7 +34,24 @@ if(!(failFlow>=0&&failExtra>failFlow&&failReveal>failExtra))throw new Error('FAI
 need(audio,['window.__TTD_AUDIO_V32',"fail:asset('/assets/audio/announcer/MissionFail.mp3')","fetch(url,{cache:'no-store'})",'voiceQueue=Promise.resolve()','async function playVoiceNow(key)',"type:'ttd:voice-cue-complete'",'Promise.resolve(playVoiceCue(cue)).then','requestId'],'audio v32');
 forbid(audio,['activeVoice.stop()'],'audio v32');
 need(continuous,['window.__TTD_CONTINUOUS_WORLD_V4',"contract:'one-world-one-camera-persistent-objects'",'async function ensurePresentationV6()',"game-presentation-v1.js?v=6",'async function ensureRewardMetaV1()',"result-reward-meta-v1.js?v=1",'async function ensureSameMapBattleV6()',"adventure-pseudo3d-battle-v1.js?v=6",'ensureRewardMetaV1();','ensureSameMapBattleV6();'],'continuous world');
-need(battle,['window.__TTD_TEST_MAINMAP_BATTLE_V6=true','WORLD_ROUTES','z:-390','z:365','halfX=560,halfZ=430','projectWorldPoint','drawArenaClearing','drawProjectedLaneSurface','drawEnemyGroundShadows','withFlatCorePathSuppressed',"s==='rgba(139,127,232,0.16)'","s==='rgba(217,178,106,0.35)'",'carryCombatCoinsToTraversal',"source:'combat'",'ttl:Math.max(5,remaining+3.5)','clearPriorCombatCoins','presentation?.playCombatCountdown','usesPersistentTraversalRenderer','usesWorldProjectedRoute'],'same-map battle v6');
+need(battle,[
+  'window.__TTD_TEST_MAINMAP_BATTLE_V6=true','ARENA_FOOTPRINT','WORLD_ROUTES','halfX:215,halfZ:195',
+  '{x:515,z:-155,y:0},{x:165,z:-155,y:0}','{x:165,z:-50,y:0},{x:515,z:-50,y:0}','{x:515,z:55,y:0},{x:165,z:55,y:0}','{x:165,z:160,y:0},{x:515,z:160,y:0}',
+  '{x:1665,z:-155,y:0},{x:2015,z:-155,y:0}','{x:2015,z:-50,y:0},{x:1665,z:-50,y:0}','{x:1665,z:55,y:0},{x:2015,z:55,y:0}','{x:2015,z:160,y:0},{x:1665,z:160,y:0}',
+  'function arenaFootprint(area=combatArea())','projectWorldPoint','drawArenaClearing','drawProjectedLaneSurface','drawEnemyGroundShadows','withFlatCorePathSuppressed',
+  "s==='rgba(139,127,232,0.16)'","s==='rgba(217,178,106,0.35)'",'carryCombatCoinsToTraversal',"source:'combat'",'ttl:Math.max(5,remaining+3.5)','clearPriorCombatCoins',
+  'portraitSafeSwitchbacks','presentation?.playCombatCountdown','usesPersistentTraversalRenderer','usesWorldProjectedRoute'
+],'same-map battle v6');
+forbid(battle,['z:-390','z:365','halfX=560,halfZ=430'],'portrait-safe battle framing');
+
+// On a representative 360px portrait battlefield, the world-space switchback endpoints must
+// remain inside a 7% horizontal safe margin while still spanning most of the usable arena.
+const projectX=(x,z,cameraX,W=360)=>{const scale=Math.max(.52,Math.min(.82,W/520)),depth=(z+220)/440,persp=.82+depth*.22;return W*.47+(x-cameraX)*scale*persp;};
+for(const [cameraX,points] of [[340,[[515,-155],[165,-155],[515,160],[165,160]]],[1840,[[1665,-155],[2015,-155],[1665,160],[2015,160]]]]){
+  const xs=points.map(([x,z])=>projectX(x,z,cameraX));
+  if(Math.min(...xs)<25||Math.max(...xs)>335)throw new Error(`Portrait Test Map route escapes safe bounds: ${xs.join(', ')}`);
+  if(Math.max(...xs)-Math.min(...xs)<210)throw new Error('Portrait Test Map route became too cramped to read as an open combat arena.');
+}
 need(runUi,['function installPlatformOnlineStartSyncV2()','state.__ttdWorldState','world.cameraX=session.cameraX','objects:wstate.objects,drops:wstate.drops',"session.phase='materialize'",'Invisible ground event line','await transitionTween(900'],'persistent world bridge');
 
 need(gameBridge,['window.__TTD_TRAVERSAL_SOURCE_PATCH_V1','patchTraversalSourceV1',"path!=='/online/adventure-platforming-v2.js'","d.source==='combat'","g.arc(0,0,7,0,Math.PI*2)","d.isGold?'#f3d491':'#c7d0e0'","isGold:kind==='coin'?value>=5:null",'old EXP approximation marker'],'traversal private-source patch');
@@ -48,4 +65,4 @@ for(const marker of [
 need(rewardPolish,['window.__TTD_RESULT_REWARD_POLISH_V1',"'ttd:verified-run-result-v1'","m.type!=='ttd:run-reward-meta-v1'",'ttdRewardLabelV1','ttdRewardValueV1','ttdRewardNoteV1','linear-gradient(180deg,#f6d77f 0%,#e5b64d 31%,#e27827 50%,#e5b64d 69%,#f6d77f 100%)',"row(pipsNode,'PIPS'","row(exp,'EXP'",'if(num(orbBonus)>0)','if(pct(bonusPct)>0)','result?.rewardBonuses||result?.bonuses||{}'],'reward tally polish');
 need(rewardMeta,['window.__TTD_RESULT_REWARD_META_V1','expOrbs','expOrbBonusXp','adventureXp(completed)-adventureXp(Math.max(0,completed-credits))','account?.avatarRewardBonuses','account?.equipmentBonuses','pipsBonusPct','expBonusPct',"replace(/\\s*\\(~\\+\\d+\\s*base EXP\\)/ig,'')"],'reward metadata');
 
-console.log('Presentation V6 verified: MissionFail gates result reveal on its actual audio end plus 1.2 seconds, reward tallies support orb/equipment annotations, Test Map arenas are world-projected, stale flat paths are suppressed, and both battle-carried and chest coins use the canonical battle coin appearance.');
+console.log('Presentation V6 verified: MissionFail waits for real audio completion, reward tallies remain future-ready, and Test Map combat now uses long multi-switchback world routes that fit a portrait-safe arena without forcing landscape or a dramatic camera zoom.');
