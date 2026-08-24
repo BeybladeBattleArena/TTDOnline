@@ -1,14 +1,11 @@
 {
-  "release": "2026-08-24-results-audio-testmap-continuity-v15",
+  "release": "2026-08-24-testmap-portrait-switchbacks-v16",
   "includes": [
-    "wait for the actual MissionFail announcer source to end before starting the result-card delay, then hold an additional 1.2 seconds before reveal",
-    "keep every other FAIL visual transition timing unchanged while eliminating fixed-duration audio guessing",
-    "simplify the end tally to PIPS and EXP rows with gold-orange-gold labels and white numeric totals",
-    "show exact Test Map EXP-orb bonus XP as a conditional (+X) note and remove the old approximate base-EXP note",
-    "support future avatar equipment Pip and EXP percentage annotations without displaying them when no bonus is active",
-    "replace the second Test Map route with a broad world-space route projected through the Navigator camera and suppress the stale flat core path",
-    "expand both combat clearings while retaining tighter traversal and puzzle corridors between arenas",
-    "carry uncollected combat coins into the following traversal for a short collection window and clear those combat leftovers before the next encounter",
-    "render treasure-chest coins with the same gold/silver circle appearance as enemy-dropped coins"
+    "keep portrait orientation as the canonical Test Map combat view",
+    "replace oversized straight/deep Test Map battle routes with long multi-switchback world-space routes",
+    "fit both battle paths comfortably inside the portrait battlefield while retaining several U-turns of enemy travel distance",
+    "keep the route projected through the same Navigator world-to-screen camera math rather than applying an independent 2D zoom",
+    "tighten the visible active combat footprint around each route while preserving the larger continuous world terrain around it",
+    "retain the existing one-world camera handoff, reward changes, MissionFail timing, and combat-coin continuity"
   ]
 }
