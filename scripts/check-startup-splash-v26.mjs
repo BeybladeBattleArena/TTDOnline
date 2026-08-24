@@ -50,10 +50,10 @@ for(const marker of required)if(!splash.includes(marker))throw new Error(`Startu
 const gateRequired=[
   'window.__TTD_STARTUP_GATE_V33',
   'const CRITICAL_ASSETS=Object.freeze([',
-  "'/assets/ui/loading-endless-horde.jpg'",
-  "'/assets/ui/loading-al-hata.jpg'",
-  "'/assets/items/gift-box-pink.jpg'",
-  "'/assets/items/gift-box-icy.jpg'",
+  "'/assets/ui/loading-endless-horde.png'",
+  "'/assets/ui/loading-al-hata.png'",
+  "'/assets/items/gift-box-pink.png'",
+  "'/assets/items/gift-box-icy.png'",
   'child.__TTD_ASSET_URL(path)',
   'Promise.all(Array.from({length:4},worker))',
   'Promise.race([welcomePromise,sleep(5000)])',
@@ -143,4 +143,4 @@ if(!/DICE_COUNT\s*=\s*(?:2\d\d|[3-9]\d\d)/.test(splash))throw new Error('Startup
 if(splash.indexOf("'Okay, Die Master'")>splash.indexOf("'TAP to DIE'"))throw new Error('Greeting must type before TAP to DIE.');
 if(splash.indexOf('unlockAudioFromGesture()')>splash.indexOf("tapButton.textContent=accountReady()?"))throw new Error('Audio unlock must happen synchronously before post-tap waiting UI.');
 if(splash.indexOf('sequenceToken++;')>splash.indexOf('diceReveal=1'))throw new Error('Early title skip must cancel the in-flight animation before forcing its final state.');
-console.log('Startup v33 verified: the splash remains two-stage, black-screen entry preloads native-resolution critical art with the runtime build token, waits for operational menus/code/fonts, and never reveals a partial game shell.');
+console.log('Startup v34 verified: the splash remains two-stage, black-screen entry preloads native-resolution PNG critical art with the runtime build token, waits for operational menus/code/fonts, and never reveals a partial game shell.');
