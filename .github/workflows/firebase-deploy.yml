@@ -27,14 +27,14 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Materialize canonical game source and fail audio
+      - name: Materialize canonical game source and release assets
         id: canonical
         shell: bash
         run: |
           set -euo pipefail
 
-          # v35 is a one-time migration into the actual monolithic game source. Once it has
-          # landed on main, future releases must validate it rather than trying to transform it again.
+          # v35 is already the canonical result/outcome owner. Keep this idempotent so later
+          # releases validate the monolith instead of stacking another runtime replacement on it.
           if grep -q 'TTD_NATIVE_RESULT_VERSION = 35' random-dice-game-33.html; then
             echo 'Canonical result/outcome v35 is already materialized in the main game source.'
           else
@@ -42,56 +42,37 @@ jobs:
           fi
           sed -i "s#random-dice-game-33.html?v=34#random-dice-game-33.html?v=35#g" scripts/check-online-loader-v15.mjs
 
-          # MissionFail.mp3 on current main is structurally damaged. On the first v35 release,
-          # recover the better-preserved historical source, decode it once into uncompressed PCM,
-          # add a small silence tail, and commit that WAV. Later releases reuse the committed WAV.
-          if [[ ! -s assets/audio/announcer/MissionFail.wav ]]; then
-            clean_ref='origin/feature/items-pillar-terrain-fail-audio'
-            clean_path='assets/audio/announcer/MissionFail.mp3'
-            clean_sha="$(git rev-parse "$clean_ref:$clean_path")"
-            if [[ "$clean_sha" != 'c845545139f48b8a7d8c6399fd9dc351afe0f063' ]]; then
-              echo "Unexpected historical MissionFail source blob: $clean_sha"
-              exit 1
-            fi
-            git show "$clean_ref:$clean_path" > /tmp/MissionFail-recovery.mp3
+          # The user-supplied MissionFail and CombatStart MP3s are the authoritative masters.
+          # Never reconstruct, transcode, trim, pad, or substitute them during deployment.
+          fail_sha="$(git hash-object assets/audio/announcer/MissionFail.mp3)"
+          combat_sha="$(git hash-object assets/audio/announcer/CombatStart.mp3)"
+          [[ "$fail_sha" == '84370d8bf50f4e95c60efae8f205f1fa68e24a50' ]] || { echo "Unexpected MissionFail original: $fail_sha"; exit 1; }
+          [[ "$combat_sha" == '2ce2410a1519cea618b6364acddb90ba693c8058' ]] || { echo "Unexpected CombatStart original: $combat_sha"; exit 1; }
 
-            if ! command -v ffmpeg >/dev/null 2>&1; then
-              sudo apt-get update
-              sudo apt-get install -y ffmpeg
-            fi
-            ffmpeg -hide_banner -loglevel warning -y \
-              -err_detect ignore_err \
-              -i /tmp/MissionFail-recovery.mp3 \
-              -af "aresample=async=1:first_pts=0,apad=pad_dur=0.35" \
-              -ar 22050 -ac 1 -c:a pcm_s16le \
-              assets/audio/announcer/MissionFail.wav
-          fi
+          # Register those exact originals in the canonical asset manifest before release checks.
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='assets/game-assets.json';
+          const manifest=JSON.parse(fs.readFileSync(path,'utf8'));
+          manifest.assets.announcerMissionFail={
+            path:'/assets/audio/announcer/MissionFail.mp3',
+            format:'audio/mpeg',
+            usage:{playback:{box:[1,1]}},
+            description:'FAIL announcer cue — authoritative original MP3'
+          };
+          manifest.assets.announcerCombatStart={
+            path:'/assets/audio/announcer/CombatStart.mp3',
+            format:'audio/mpeg',
+            usage:{playback:{box:[1,1]}},
+            description:'3 2 1 START announcer cue — authoritative original MP3'
+          };
+          fs.writeFileSync(path,JSON.stringify(manifest,null,2)+'\n');
+          NODE
 
-          # Validate the file we will actually ship, not a guessed MP3 duration. Besides the WAV
-          # format contract, require real signal in the latter half of the spoken portion so a
-          # half-phrase decode cannot pass merely because padding made the duration look long.
-          python3 <<'PY'
-          import array, math, wave
-          p='assets/audio/announcer/MissionFail.wav'
-          with wave.open(p,'rb') as w:
-              channels=w.getnchannels(); rate=w.getframerate(); width=w.getsampwidth(); frames=w.getnframes()
-              if channels != 1 or rate != 22050 or width != 2:
-                  raise SystemExit(f'Unexpected MissionFail WAV format: {w.getparams()}')
-              duration=frames/rate
-              if not (1.45 <= duration <= 2.20):
-                  raise SystemExit(f'MissionFail WAV duration is implausible: {duration:.3f}s')
-              samples=array.array('h',w.readframes(frames))
-          # Last ~350 ms is intentional safety tail. Inspect the second half of the spoken body.
-          spoken_frames=max(1,frames-int(rate*0.35))
-          late=samples[spoken_frames//2:spoken_frames]
-          if not late:
-              raise SystemExit('MissionFail WAV has no late spoken region.')
-          peak=max(abs(v) for v in late)
-          rms=math.sqrt(sum(v*v for v in late)/len(late))
-          if peak < 500 or rms < 40:
-              raise SystemExit(f'MissionFail WAV appears truncated/silent in latter half: peak={peak}, rms={rms:.1f}')
-          print(f'Validated MissionFail PCM WAV: {duration:.3f}s, late peak={peak}, late rms={rms:.1f}')
-          PY
+          # Item PNGs must contain real alpha. Materialize the approved black-background masters
+          # into RGBA PNGs while preserving dark linework/interior shading and native dimensions.
+          python3 -m pip install --disable-pip-version-check --quiet 'Pillow==11.3.0'
+          python3 scripts/materialize-transparent-item-art-v2.py
 
           node --check online/audio-client-v27.js
           node --check online/game-presentation-v1.js
@@ -102,7 +83,9 @@ jobs:
           grep -q 'id="overlayPipsValue"' random-dice-game-33.html
           grep -q 'id="overlayExpValue"' random-dice-game-33.html
           grep -q '__ttdOutcomeCommitted' random-dice-game-33.html
-          grep -q 'MissionFail.wav' online/audio-client-v27.js
+          grep -q "fail:asset('/assets/audio/announcer/MissionFail.mp3')" online/audio-client-v27.js
+          grep -q "combatStart:asset('/assets/audio/announcer/CombatStart.mp3')" online/audio-client-v27.js
+          grep -q "nodes\[3\]?.classList.add('in');announce('combatStart')" online/game-presentation-v1.js
           ! grep -q "result-summary-client-v26" online/singleplayer-client-v6.js
           ! grep -q "result-reward-polish-v1" online/singleplayer-client-v6.js
           ! grep -q "ensureRewardMetaV1();" online/adventure-continuous-world-v1.js
@@ -111,7 +94,8 @@ jobs:
           git config user.name 'ttd-release-bot'
           git config user.email 'ttd-release-bot@users.noreply.github.com'
           git add random-dice-game-33.html \
-            assets/audio/announcer/MissionFail.wav \
+            assets/game-assets.json \
+            assets/items/*.png \
             online/audio-client-v27.js \
             online/game-presentation-v1.js \
             online/run-ui-bridge-v21.js \
@@ -120,7 +104,7 @@ jobs:
             online/game-loader.js online.html \
             scripts/check-online-loader-v15.mjs
           if ! git diff --cached --quiet; then
-            git commit -m '[canonical-materialization] Native result and outcome ownership v35 [skip ci]'
+            git commit -m '[canonical-materialization] Original announcer masters and transparent item art [skip ci]'
             git push origin HEAD:main
           fi
           deploy_sha="$(git rev-parse HEAD)"
@@ -169,7 +153,7 @@ jobs:
           echo "Production verification failed: Hosting is not serving $DEPLOY_SHA"
           exit 1
 
-      - name: Verify critical game and lossless PNG art
+      - name: Verify critical game, original audio, and transparent PNG art
         id: smoke_verify
         env:
           LIVE_URL: https://ttd-online-b8c0f.web.app
