@@ -1,20 +1,20 @@
 (() => {
   'use strict';
-  if(window.__TTD_CONTINUOUS_WORLD_V2)return;
+  if(window.__TTD_CONTINUOUS_WORLD_V3)return;
+  window.__TTD_CONTINUOUS_WORLD_V3=true;
   window.__TTD_CONTINUOUS_WORLD_V2=true;
 
   /*
     The actual continuous-world renderer is source-injected into adventure-platforming-v2.js
     before that traversal IIFE executes. This companion file must never reach back for traversal-
     private names such as currentPlatforms, drawBackground or session after that IIFE returns.
-    The previous version did exactly that, throwing here and skipping same-map combat, Test Map
-    state synchronization and the global MISSION/CLEAR/result presentation.
   */
   window.__TTD_CONTINUOUS_WORLD_V1=Object.freeze({
-    version:2,
+    version:3,
     contract:'one-world-one-camera-persistent-objects',
     rendererOwner:'adventure-platforming-v2 transformed scope',
     backdrop:'embedded-continuous-world-renderer',
+    cameraContract:'traversal-freeze -> navigator-vanish -> arena-glide -> combat',
     groundDepth:2400,
     scopeSafe:true,
   });
@@ -42,7 +42,7 @@
       candidate.__ttdPlatformDestroyedSlots=Array.isArray(candidate.__ttdPlatformDestroyedSlots)?candidate.__ttdPlatformDestroyedSlots:[];
       candidate.__ttdCombatIntroSeen=!!candidate.__ttdCombatIntroSeen;
       candidate.__ttdCombatIntroPending=!!candidate.__ttdCombatIntroPending;
-      candidate.__ttdWorldState=candidate.__ttdWorldState||{version:1,cameraX:340,traversalStart:{x:410,z:0,y:0},objects:null,drops:null};
+      candidate.__ttdWorldState=candidate.__ttdWorldState||{version:2,cameraX:340,traversalStart:{x:340,z:0,y:0},objects:null,drops:null};
     }
     if(firstBind){
       lastBoundState=candidate;
@@ -78,15 +78,15 @@
     }
   }
 
-  async function ensureSameMapBattleV4(){
-    if(window.__TTD_TEST_MAINMAP_BATTLE_V4)return;
-    try{await evalScoped('/online/adventure-pseudo3d-battle-v1.js?v=4','Persistent same-map battle');}
+  async function ensureSameMapBattleV5(){
+    if(window.__TTD_TEST_MAINMAP_BATTLE_V5)return;
+    try{await evalScoped('/online/adventure-pseudo3d-battle-v1.js?v=5','Persistent same-map battle');}
     catch(err){
       console.error('Independent same-map combat bootstrap failed.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'same-map-battle-v4',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'same-map-battle-v5',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
 
   ensurePresentationV6();
-  ensureSameMapBattleV4();
+  ensureSameMapBattleV5();
 })();
