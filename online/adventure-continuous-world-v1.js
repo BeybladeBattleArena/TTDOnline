@@ -1,6 +1,7 @@
 (() => {
   'use strict';
-  if(window.__TTD_CONTINUOUS_WORLD_V3)return;
+  if(window.__TTD_CONTINUOUS_WORLD_V4)return;
+  window.__TTD_CONTINUOUS_WORLD_V4=true;
   window.__TTD_CONTINUOUS_WORLD_V3=true;
   window.__TTD_CONTINUOUS_WORLD_V2=true;
 
@@ -10,11 +11,12 @@
     private names such as currentPlatforms, drawBackground or session after that IIFE returns.
   */
   window.__TTD_CONTINUOUS_WORLD_V1=Object.freeze({
-    version:3,
+    version:4,
     contract:'one-world-one-camera-persistent-objects',
     rendererOwner:'adventure-platforming-v2 transformed scope',
     backdrop:'embedded-continuous-world-renderer',
     cameraContract:'traversal-freeze -> navigator-vanish -> arena-glide -> combat',
+    rewardContract:'orb bonus metadata is reported separately from the final server tally',
     groundDepth:2400,
     scopeSafe:true,
   });
@@ -47,46 +49,33 @@
     if(firstBind){
       lastBoundState=candidate;
       if(modeLabel)modeLabel.textContent=candidate.__ttdPlatformDone?'Test Map · Temple Court':'Test Map · Beach Clearing';
-      try{
-        window.__TTD_PLATFORM_TEST_API?.ensureWorldState?.();
-        buildPath(cw,ch);
-      }catch(err){console.warn('Persistent Test Map state bound, but its combat path could not rebuild yet.',err);}
+      try{window.__TTD_PLATFORM_TEST_API?.ensureWorldState?.();buildPath(cw,ch);}catch(err){console.warn('Persistent Test Map state bound, but its combat path could not rebuild yet.',err);}
     }
     return true;
   }
 
-  function watchAuthorizedTestState(){
-    try{bindCurrentTestState();}catch(err){console.warn('Test Map state watcher recovered from an iteration error.',err);}
-    requestAnimationFrame(watchAuthorizedTestState);
-  }
+  function watchAuthorizedTestState(){try{bindCurrentTestState();}catch(err){console.warn('Test Map state watcher recovered from an iteration error.',err);}requestAnimationFrame(watchAuthorizedTestState);}
   requestAnimationFrame(watchAuthorizedTestState);
 
-  async function evalScoped(url,label){
-    const response=await fetch(url,{cache:'no-store'});
-    if(!response.ok)throw new Error(`${label} HTTP ${response.status}`);
-    eval(`${await response.text()}\n//# sourceURL=${url.split('?')[0]}`);
-  }
+  async function evalScoped(url,label){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`${label} HTTP ${response.status}`);eval(`${await response.text()}\n//# sourceURL=${url.split('?')[0]}`);}
 
   async function ensurePresentationV6(){
     if(window.__TTD_GAME_PRESENTATION_V6){window.TTDGamePresentation?.rebind?.();return;}
-    try{
-      await evalScoped('/online/game-presentation-v1.js?v=6','Game presentation');
-      window.TTDGamePresentation?.rebind?.();
-    }catch(err){
-      console.error('Independent game presentation bootstrap failed.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'game-presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){}
-    }
+    try{await evalScoped('/online/game-presentation-v1.js?v=6','Game presentation');window.TTDGamePresentation?.rebind?.();}
+    catch(err){console.error('Independent game presentation bootstrap failed.',err);try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'game-presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){} }
   }
-
-  async function ensureSameMapBattleV5(){
-    if(window.__TTD_TEST_MAINMAP_BATTLE_V5)return;
-    try{await evalScoped('/online/adventure-pseudo3d-battle-v1.js?v=5','Persistent same-map battle');}
-    catch(err){
-      console.error('Independent same-map combat bootstrap failed.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'same-map-battle-v5',message:String(err?.message||err)},location.origin);}catch(_){}
-    }
+  async function ensureSameMapBattleV6(){
+    if(window.__TTD_TEST_MAINMAP_BATTLE_V6)return;
+    try{await evalScoped('/online/adventure-pseudo3d-battle-v1.js?v=6','Persistent same-map battle');}
+    catch(err){console.error('Independent same-map combat bootstrap failed.',err);try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'same-map-battle-v6',message:String(err?.message||err)},location.origin);}catch(_){} }
+  }
+  async function ensureRewardMetaV1(){
+    if(window.__TTD_RESULT_REWARD_META_V1)return;
+    try{await evalScoped('/online/result-reward-meta-v1.js?v=1','Reward result metadata');}
+    catch(err){console.error('Reward result metadata bootstrap failed.',err);try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'result-reward-meta-v1',message:String(err?.message||err)},location.origin);}catch(_){} }
   }
 
   ensurePresentationV6();
-  ensureSameMapBattleV5();
+  ensureRewardMetaV1();
+  ensureSameMapBattleV6();
 })();
