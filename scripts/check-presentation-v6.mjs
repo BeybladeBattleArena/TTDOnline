@@ -60,7 +60,19 @@ forbid(runUi,['Pips banked!','EXP earned!','zSummaryXpV21'],'run bridge stale re
 need(battle,[
   'window.__TTD_TEST_MAINMAP_BATTLE_V6=true','WORLD_ROUTES','projectWorldPoint','drawProjectedLaneSurface',
   'withFlatCorePathSuppressed','carryCombatCoinsToTraversal','clearPriorCombatCoins',
-  'portraitSafeMargin:0.08','usesWorldProjectedRoute',
+  'const ARENA_FOOTPRINT=Object.freeze','halfX:215,halfZ:195','portraitSafeSwitchbacks(){return true;}','usesWorldProjectedRoute',
 ],'Test Map world battle');
+// The actual v6 route must fit inside the declared portrait battle footprint. This replaces the
+// obsolete v5 literal portraitSafeMargin marker with a geometry-level invariant.
+for(const [label,centerX,points] of [
+  ['beach',340,[[515,-155],[165,-155],[165,-50],[515,-50],[515,55],[165,55],[165,160],[515,160]]],
+  ['temple',1840,[[1665,-155],[2015,-155],[2015,-50],[1665,-50],[1665,55],[2015,55],[2015,160],[1665,160]]],
+]){
+  for(const [x,z] of points){
+    if(Math.abs(x-centerX)>215||Math.abs(z)>195)throw new Error(`${label} Test Map route escapes the portrait-safe arena footprint.`);
+    const marker=`{x:${x},z:${z},y:0}`;
+    if(!battle.includes(marker))throw new Error(`${label} Test Map route changed without updating portrait-safe geometry verification: ${marker}`);
+  }
+}
 
-console.log('Presentation verified: the canonical game owns result rows and exactly-once outcomes; outer presentation only supplies mission/countdown/outcome visuals and audio; stale banked/earned result overlays are not loaded; Test Map world projection remains intact.');
+console.log('Presentation verified: the canonical game owns result rows and exactly-once outcomes; outer presentation only supplies mission/countdown/outcome visuals and audio; stale banked/earned result overlays are not loaded; Test Map routes remain world-projected switchbacks inside their portrait-safe arena footprints.');
