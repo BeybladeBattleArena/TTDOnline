@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry5",
+  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry6",
   "includes": [
-    "deploy the canonical v35 PIPS and EXP result UI",
-    "deploy exactly-once CLEAR FAIL and FINISH outcome ownership in the monolithic game source",
-    "serve the registered validated MissionFail PCM WAV and wait for ended plus 1.2 seconds",
-    "validate account progression against the canonical v35 EXP row rather than the removed overlayXpV21 downstream widget",
-    "retain server-authoritative EXP finalization and run-result forwarding",
+    "deploy canonical PIPS and EXP tally rows owned by random-dice-game-33.html",
+    "prevent legacy Pips banked and EXP earned result-summary ownership from loading",
+    "deploy exactly-once CLEAR FAIL and FINISH outcome ownership",
+    "serve validated MissionFail PCM WAV and wait for actual completion plus 1.2 seconds",
+    "validate progression and result-summary regressions against canonical v35 architecture",
     "retain portrait-safe Test Map switchback combat"
   ]
 }
