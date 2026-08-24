@@ -7,6 +7,7 @@ import './typography-client-v24.js?v=25';
 import './ui-fusion-v29.js?v=29';
 import './gacha-atmosphere-v30.js?v=30';
 import './result-summary-client-v26.js?v=26';
+import './result-reward-polish-v1.js?v=1';
 import './deck-guard-client-v10.js?v=10';
 import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
