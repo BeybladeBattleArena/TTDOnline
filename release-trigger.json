@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry6",
+  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry7",
   "includes": [
     "deploy canonical PIPS and EXP tally rows owned by random-dice-game-33.html",
-    "prevent legacy Pips banked and EXP earned result-summary ownership from loading",
+    "prevent legacy Pips banked and EXP earned result ownership from loading",
     "deploy exactly-once CLEAR FAIL and FINISH outcome ownership",
     "serve validated MissionFail PCM WAV and wait for actual completion plus 1.2 seconds",
-    "validate progression and result-summary regressions against canonical v35 architecture",
-    "retain portrait-safe Test Map switchback combat"
+    "validate Test Map portrait safety from the actual world-space switchback footprint instead of a removed marker",
+    "retain server-authoritative progression and continuous-world combat"
   ]
 }
