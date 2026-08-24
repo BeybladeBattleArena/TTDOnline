@@ -14,10 +14,13 @@
   const OUTCOME_HIDE_MS=1400;
   const OUTCOME_REMOVE_MS=1700;
   const RESULT_REVEAL_MS=1850;
+  const FAIL_POST_VOICE_MS=1200;
+  const VOICE_ACK_TIMEOUT_MS=12000;
   const ZOMBIE_SUPPRESS_MS=2600;
 
   let missionBusy=false,countdownBusy=false,adventureClearBusy=false,zombieResultBusy=false,matchResultBusy=false;
-  let rawZombieSummary=null,suppressZombieSummaryUntil=0,lastVoiceCue='',lastVoiceAt=-Infinity;
+  let rawZombieSummary=null,suppressZombieSummaryUntil=0,lastVoiceCue='',lastVoiceAt=-Infinity,voiceRequestSeq=0;
+  const pendingVoiceAcks=new Map();
 
   const style=document.createElement('style');
   style.id='ttdGamePresentationStyleV6';
@@ -29,16 +32,12 @@
     #${SIGNAL_ID} .ttdSignalWord.in{visibility:visible!important;opacity:1!important;transform:scale(1);filter:blur(0);}
     #${SIGNAL_ID}.leaving .ttdSignalWord{opacity:0!important;transform:scale(1.07);filter:blur(2px);transition:opacity .24s ease,transform .26s ease,filter .22s ease;}
 
-    /* START is the same blue in both MISSION START and 3-2-1 START. */
     #${SIGNAL_ID} .ttdStartWord{color:transparent!important;background:linear-gradient(180deg,#b8ecff 0%,#73cef5 48%,#4aa6df 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important;filter:blur(2px) drop-shadow(0 2px 0 rgba(10,30,52,.9)) drop-shadow(0 0 8px rgba(91,198,244,.46));}
     #${SIGNAL_ID} .ttdStartWord.in{filter:blur(0) drop-shadow(0 2px 0 rgba(10,30,52,.9)) drop-shadow(0 0 8px rgba(91,198,244,.46));}
 
-    /* Countdown entries share one physical slot; hidden entries consume no vertical rows. */
     #${SIGNAL_ID}.countdown .ttdSignalStack{display:block;width:min(92vw,560px);height:clamp(62px,13vw,94px);min-width:0;}
     #${SIGNAL_ID}.countdown .ttdSignalWord{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(38px,11vw,70px)!important;}
 
-    /* Android Chrome can paint black through transparent gradient text when text-shadow is used.
-       Use glyph drop-shadows so the gradient remains fully opaque through the center. */
     #${SIGNAL_ID}.outcome-fail .ttdSignalWord{color:transparent!important;background:linear-gradient(180deg,#9bcbe8 0%,#719acb 54%,#7467a7 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important;filter:blur(2px) drop-shadow(0 2px 0 rgba(25,31,54,.86)) drop-shadow(0 0 9px rgba(111,141,197,.36));}
     #${SIGNAL_ID}.outcome-fail .ttdSignalWord.in{filter:blur(0) drop-shadow(0 2px 0 rgba(25,31,54,.86)) drop-shadow(0 0 9px rgba(111,141,197,.36));}
     #${SIGNAL_ID}.outcome-finish .ttdSignalWord{color:transparent!important;background:linear-gradient(180deg,#fff38c 0%,#f9dc68 62%,#edbd52 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important;filter:blur(2px) drop-shadow(0 2px 0 rgba(63,49,17,.86)) drop-shadow(0 0 9px rgba(247,209,96,.38));}
@@ -59,11 +58,26 @@
   document.head.appendChild(style);
 
   const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
-  function announce(cue){
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin||event.source!==window.parent)return;
+    const message=event.data||{};if(message.type!=='ttd:voice-cue-complete')return;
+    const requestId=String(message.requestId||''),resolve=pendingVoiceAcks.get(requestId);if(!resolve)return;
+    pendingVoiceAcks.delete(requestId);resolve(message.ok!==false);
+  });
+  function announce(cue,{waitForEnd=false}={}){
     const now=performance.now();
-    if(cue===lastVoiceCue&&now-lastVoiceAt<250)return;
+    if(cue===lastVoiceCue&&now-lastVoiceAt<250)return Promise.resolve(true);
     lastVoiceCue=cue;lastVoiceAt=now;
-    try{window.parent?.postMessage({type:'ttd:voice-cue',cue},location.origin);}catch(_){}
+    let requestId='',completion=Promise.resolve(true);
+    if(waitForEnd){
+      requestId=`voice-${Date.now().toString(36)}-${++voiceRequestSeq}`;
+      completion=new Promise(resolve=>{
+        const timer=setTimeout(()=>{pendingVoiceAcks.delete(requestId);resolve(false);},VOICE_ACK_TIMEOUT_MS);
+        pendingVoiceAcks.set(requestId,ok=>{clearTimeout(timer);resolve(ok);});
+      });
+    }
+    try{window.parent?.postMessage({type:'ttd:voice-cue',cue,requestId},location.origin);}catch(_){if(requestId){const resolve=pendingVoiceAcks.get(requestId);pendingVoiceAcks.delete(requestId);resolve?.(false);}}
+    return completion;
   }
   function positionSignal(overlay){
     const map=document.getElementById('laneWrap')||document.getElementById('laneCanvas');
@@ -76,19 +90,12 @@
       overlay.style.setProperty('--ttd-map-center-y','42vh');
     }
   }
-  function trackSignalPosition(overlay){
-    const tick=()=>{if(!overlay.isConnected)return;positionSignal(overlay);requestAnimationFrame(tick);};
-    tick();
-  }
+  function trackSignalPosition(overlay){const tick=()=>{if(!overlay.isConnected)return;positionSignal(overlay);requestAnimationFrame(tick);};tick();}
   function makeSignal(words,extraClass=''){
     document.getElementById(SIGNAL_ID)?.remove();
     const overlay=document.createElement('div');overlay.id=SIGNAL_ID;if(extraClass)overlay.classList.add(extraClass);
     const stack=document.createElement('div');stack.className='ttdSignalStack';
-    const nodes=words.map(text=>{
-      const word=document.createElement('div');word.className='ttdSignalWord';word.textContent=text;word.dataset.ttdSignalText=text;
-      if(text==='START!')word.classList.add('ttdStartWord');
-      stack.appendChild(word);return word;
-    });
+    const nodes=words.map(text=>{const word=document.createElement('div');word.className='ttdSignalWord';word.textContent=text;word.dataset.ttdSignalText=text;if(text==='START!')word.classList.add('ttdStartWord');stack.appendChild(word);return word;});
     overlay.appendChild(stack);document.body.appendChild(overlay);positionSignal(overlay);trackSignalPosition(overlay);return{overlay,nodes};
   }
 
@@ -128,7 +135,17 @@
   }
 
   const OUTCOMES=Object.freeze({clear:{text:'CLEAR!',className:'outcome-clear',voice:'clear'},fail:{text:'FAIL',className:'outcome-fail',voice:'fail'},finish:{text:'FINISH!',className:'outcome-finish',voice:'finish'}});
-  function playOutcomeCue(kind='clear'){const spec=OUTCOMES[kind]||OUTCOMES.clear;const{overlay,nodes}=makeSignal([spec.text],spec.className);nodes[0]?.classList.add('in');announce(spec.voice);requestAnimationFrame(()=>overlay.classList.add('show'));setTimeout(()=>{overlay.classList.add('leaving');overlay.classList.remove('show');},OUTCOME_HIDE_MS);setTimeout(()=>overlay.remove(),OUTCOME_REMOVE_MS);return overlay;}
+  function playOutcomeCue(kind='clear'){
+    const spec=OUTCOMES[kind]||OUTCOMES.clear,{overlay,nodes}=makeSignal([spec.text],spec.className);nodes[0]?.classList.add('in');
+    overlay.__ttdVoiceDone=announce(spec.voice,{waitForEnd:kind==='fail'});requestAnimationFrame(()=>overlay.classList.add('show'));
+    setTimeout(()=>{overlay.classList.add('leaving');overlay.classList.remove('show');},OUTCOME_HIDE_MS);setTimeout(()=>overlay.remove(),OUTCOME_REMOVE_MS);return overlay;
+  }
+  function scheduleResultReveal(kind,outcome,reveal,minimumDelay=RESULT_REVEAL_MS){
+    const minDelay=Math.max(0,Number(minimumDelay)||RESULT_REVEAL_MS);
+    if(kind!=='fail'){setTimeout(reveal,minDelay);return;}
+    const voiceDone=Promise.resolve(outcome?.__ttdVoiceDone).catch(()=>false).then(()=>sleep(FAIL_POST_VOICE_MS));
+    Promise.all([sleep(minDelay),voiceDone]).then(reveal);
+  }
   const playClearCue=()=>playOutcomeCue('clear'),playFailCue=()=>playOutcomeCue('fail'),playFinishCue=()=>playOutcomeCue('finish');
 
   function decorateAdventureResult(){document.getElementById('gameOverlay')?.classList.add('ttdResultCardV1');}
@@ -141,14 +158,14 @@
 
   function installOutcomeFlows(){
     if(typeof campaignComplete==='function'&&!campaignComplete.__ttdClearWrappedV6){const baseCampaignComplete=campaignComplete;const wrappedCampaignComplete=function(...args){if(adventureClearBusy)return;adventureClearBusy=true;playClearCue();const result=baseCampaignComplete.apply(this,args);hideAdventureResult();setTimeout(()=>{revealAdventureResult();adventureClearBusy=false;},RESULT_REVEAL_MS);return result;};wrappedCampaignComplete.__ttdClearWrappedV6=true;wrappedCampaignComplete.__ttdClearBaseV6=baseCampaignComplete;campaignComplete=wrappedCampaignComplete;}
-    if(typeof endMatch==='function'&&!endMatch.__ttdOutcomeWrappedV6){const baseEndMatch=endMatch;const wrappedEndMatch=function(reason,...args){if(matchResultBusy)return baseEndMatch.call(this,reason,...args);matchResultBusy=true;const normalized=String(reason||'').toLowerCase();const kind=normalized==='voluntary'?'finish':(normalized==='victory'||normalized==='clear'?'clear':'fail');playOutcomeCue(kind);const result=baseEndMatch.call(this,reason,...args);hideAdventureResult();setTimeout(()=>{revealAdventureResult();matchResultBusy=false;},RESULT_REVEAL_MS);return result;};wrappedEndMatch.__ttdOutcomeWrappedV6=true;wrappedEndMatch.__ttdOutcomeBaseV6=baseEndMatch;endMatch=wrappedEndMatch;}
+    if(typeof endMatch==='function'&&!endMatch.__ttdOutcomeWrappedV6){const baseEndMatch=endMatch;const wrappedEndMatch=function(reason,...args){if(matchResultBusy)return baseEndMatch.call(this,reason,...args);matchResultBusy=true;const normalized=String(reason||'').toLowerCase();const kind=normalized==='voluntary'?'finish':(normalized==='victory'||normalized==='clear'?'clear':'fail');const outcome=playOutcomeCue(kind);const result=baseEndMatch.call(this,reason,...args);hideAdventureResult();scheduleResultReveal(kind,outcome,()=>{revealAdventureResult();matchResultBusy=false;});return result;};wrappedEndMatch.__ttdOutcomeWrappedV6=true;wrappedEndMatch.__ttdOutcomeBaseV6=baseEndMatch;endMatch=wrappedEndMatch;}
     if(typeof endEndlessHorde==='function'&&!endEndlessHorde.__ttdResultWrappedV6){const baseEndHorde=endEndlessHorde;const wrappedEndHorde=function(...args){if(!state?.running||zombieResultBusy)return baseEndHorde.apply(this,args);zombieResultBusy=true;const kills=Math.max(0,Number(state.kills)||0),actualPlayTime=Math.max(0,Number(state.zPlayTime)||0),actualTime=Math.max(0,Number(state.time)||0),pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0;playFinishCue();suppressZombieSummaryUntil=performance.now()+ZOMBIE_SUPPRESS_MS;let result;if(kills<=0){state.zPlayTime=0;state.time=0;}try{result=baseEndHorde.apply(this,args);}finally{if(kills<=0){state.zPlayTime=actualPlayTime;state.time=actualTime;}}const prepared=prepareZombieResult(pipsEarned);setTimeout(()=>{revealZombieResult(prepared);zombieResultBusy=false;},RESULT_REVEAL_MS);return result;};wrappedEndHorde.__ttdResultWrappedV6=true;wrappedEndHorde.__ttdResultBaseV6=baseEndHorde;endEndlessHorde=wrappedEndHorde;}
   }
 
   function presentObjectiveClear({prepare,reveal,delay=RESULT_REVEAL_MS}={}){playClearCue();const prepared=typeof prepare==='function'?prepare():undefined;setTimeout(()=>{if(typeof reveal==='function')reveal(prepared);},Math.max(0,Number(delay)||RESULT_REVEAL_MS));return prepared;}
-  function presentOutcome(kind,{prepare,reveal,delay=RESULT_REVEAL_MS}={}){playOutcomeCue(kind);const prepared=typeof prepare==='function'?prepare():undefined;setTimeout(()=>{if(typeof reveal==='function')reveal(prepared);},Math.max(0,Number(delay)||RESULT_REVEAL_MS));return prepared;}
+  function presentOutcome(kind,{prepare,reveal,delay=RESULT_REVEAL_MS}={}){const outcome=playOutcomeCue(kind);const prepared=typeof prepare==='function'?prepare():undefined;scheduleResultReveal(kind,outcome,()=>{if(typeof reveal==='function')reveal(prepared);},delay);return prepared;}
   function installAll(){if(typeof startGame==='function')bindStart('startGame',()=>startGame,fn=>{startGame=fn;});if(typeof startAdventure==='function')bindStart('startAdventure',()=>startAdventure,fn=>{startAdventure=fn;});if(typeof startAdventureCampaign==='function')bindStart('startAdventureCampaign',()=>startAdventureCampaign,fn=>{startAdventureCampaign=fn;});if(typeof startEndlessHorde==='function')bindStart('startEndlessHorde',()=>startEndlessHorde,fn=>{startEndlessHorde=fn;});installSummaryWrapper();decorateAdventureResult();installOutcomeFlows();scanLegacyMissionNodes();}
 
-  window.TTDGamePresentation=Object.freeze({version:6,mapPreviewMs:MAP_PREVIEW_MS,missionGapMs:MISSION_GAP_MS,combatCountdownStepMs:COUNT_STEP_MS,clearHideMs:OUTCOME_HIDE_MS,resultRevealMs:RESULT_REVEAL_MS,showMissionStart:playMissionCue,playCombatCountdown,showClear:playClearCue,showFail:playFailCue,showFinish:playFinishCue,presentObjectiveClear,presentOutcome,decorateAdventureResult,decorateZombieResult,rebind:installAll});
+  window.TTDGamePresentation=Object.freeze({version:6,mapPreviewMs:MAP_PREVIEW_MS,missionGapMs:MISSION_GAP_MS,combatCountdownStepMs:COUNT_STEP_MS,clearHideMs:OUTCOME_HIDE_MS,resultRevealMs:RESULT_REVEAL_MS,failPostVoiceMs:FAIL_POST_VOICE_MS,showMissionStart:playMissionCue,playCombatCountdown,showClear:playClearCue,showFail:playFailCue,showFinish:playFinishCue,presentObjectiveClear,presentOutcome,decorateAdventureResult,decorateZombieResult,rebind:installAll});
   installAll();let tries=0;const timer=setInterval(()=>{installAll();if(++tries>160)clearInterval(timer);},100);
 })();
