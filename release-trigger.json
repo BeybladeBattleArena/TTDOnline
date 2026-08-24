@@ -1,13 +1,14 @@
 {
-  "release": "2026-08-24-png-art-card-alignment-v13",
+  "release": "2026-08-24-test-map-continuous-camera-v14",
   "includes": [
-    "serve all 18 current designer assets as real PNG binaries at their native pixel dimensions",
-    "route the asset manifest, item runtime, and startup preload gate to canonical PNG masters",
-    "redirect both legacy WebP and interim JPEG art URLs to the canonical PNG files",
-    "align shop item artwork, names, prices, and buttons into consistent card rows",
-    "align inventory item artwork, names, rarity labels, counts, and actions consistently across cards",
-    "keep approved source art native-resolution while CSS alone controls in-game presentation size",
-    "validate PNG signatures and IHDR dimensions before deployment",
-    "verify every canonical PNG from live Firebase Hosting before writing the production receipt"
+    "project Test Map combat routes through the same world-to-screen projection used by Navigator traversal",
+    "anchor marching enemies to the projected ground route with perspective-aware ground shadows",
+    "keep the existing combat arena visible while the player selects the next Navigator die",
+    "spawn the selected Navigator at the center of the current arena and finish its fade-in before movement is enabled",
+    "trigger the second combat phase with an invisible traversal event line instead of swapping to another map",
+    "freeze the continuous map while the Navigator disappears and restore the normal dice tray before camera motion",
+    "glide the same persistent camera from the traversal stop to the Temple Court arena before Wave 3 begins",
+    "remove JUMP and DOUBLE JUMP action-word popups from Navigator traversal",
+    "retain persistent opened objects, drops, terrain, and camera state throughout the single continuous Test Map world"
   ]
 }
