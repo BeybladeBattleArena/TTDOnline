@@ -1,33 +1,38 @@
 import fs from 'node:fs';
 
-const client=fs.readFileSync('online/result-summary-client-v26.js','utf8');
+const legacyClient=fs.readFileSync('online/result-summary-client-v26.js','utf8');
 const entry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
+const game=fs.readFileSync('random-dice-game-33.html','utf8');
+const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 
-const required=[
-  'const START_DELAY_MS = 420',
-  'const EXP_WAIT_MS = 15000',
-  '000 Pips banked!',
-  '000 EXP earned!',
-  ".padStart(3, '0')",
-  'setTimeout(resolve, START_DELAY_MS)',
-  "await animateLine(pipsEl, pipsTarget, 'Pips banked!', PIPS_MS)",
-  "await animateLine(expEl, run.xp, 'EXP earned!', EXP_MS)",
-  "message.type === 'ttd:v6-run-finish-request'",
-  "message.type === 'ttd:v6-run-begin-request'",
-  '#overlayGold, #overlayXpV21, #zSummaryXpV21',
-  '#zSummaryCard > .goldPill',
-  "stats.insertAdjacentElement('afterend', block)",
-  "button.insertAdjacentElement('beforebegin', block)",
-  "Math.round(wave * 10 + kills * 1.2 + coinGold + (message.typhoonDefeated ? 150 : 0))",
-  'kills > 0 ? Math.round(kills * 2 + playSeconds * 0.15) : 0',
-  "getElementById('ttd-result-summary-hide-v26')?.remove()",
-  "frame?.addEventListener('load', resetForNewRun)",
+// v26 remains in the repository only as historical source; after v35 it must never own the
+// live result card again. The canonical game source owns the visible tally and reward notes.
+if(entry.includes("result-summary-client-v26"))throw new Error('Legacy result-summary-v26 is still loaded and could restore Pips banked / EXP earned wording.');
+if(entry.includes("result-reward-polish-v1"))throw new Error('Downstream result-reward-polish is still loaded instead of canonical result ownership.');
+if(!legacyClient.includes('Pips banked!')||!legacyClient.includes('EXP earned!'))throw new Error('Historical v26 fingerprint changed; update this regression check deliberately.');
+if(game.includes('Pips banked!')||game.includes('EXP earned!'))throw new Error('Canonical game source still contains obsolete result wording.');
+
+const requiredGame=[
+  'TTD_NATIVE_RESULT_VERSION = 35',
+  'class="resultTallyLabel">PIPS</span>',
+  'class="resultTallyLabel">EXP</span>',
+  'id="overlayPipsValue"',
+  'id="overlayExpValue"',
+  'id="overlayPipsNotes"',
+  'id="overlayExpNotes"',
+  'function nativeNotesHtml(orbBonus,bonusPct)',
+  "if(nativeRewardNum(orbBonus)>0)",
+  "if(nativeRewardPct(bonusPct)>0)",
+  'function renderNativeTallies',
+  "expValue.textContent=xp==null?'…':nativeRewardNum(xp).toLocaleString()",
+  'function applyVerifiedRunResultV35(result)',
+  'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35=applyVerifiedRunResultV35',
+  '.resultTallyLabel{',
+  'linear-gradient(180deg,#f6d77f 0%,#e5b64d 31%,#e27827 50%,#e5b64d 69%,#f6d77f 100%)',
+  '.resultTallyValue{font-size:18px',
+  'color:#fff',
 ];
-for(const marker of required)if(!client.includes(marker))throw new Error(`Result-summary v26 missing: ${marker}`);
-if(!entry.includes("import './result-summary-client-v26.js?v=26';"))throw new Error('Online client does not load result-summary-client-v26.');
-if(entry.includes('result-summary-client-v25'))throw new Error('Legacy result-summary v25 is still loaded.');
-if(entry.indexOf('result-summary-client-v26')>entry.indexOf('singleplayer-client-v9-core'))throw new Error('Result-summary listener must load before legacy online core.');
-if(/\+\$\{[^}]+\}\s*(?:Pips|EXP)/.test(client)||/>\+\d*\s*(?:Pips|EXP)/.test(client))throw new Error('Animated Pips/EXP lines must not use + prefixes.');
-if(client.indexOf('setTimeout(resolve, START_DELAY_MS)')>client.indexOf('await animateLine(pipsEl'))throw new Error('Pips delay must occur before Pips animation.');
-if(client.indexOf('await animateLine(pipsEl')>client.indexOf('await animateLine(expEl'))throw new Error('Pips must tally before EXP.');
-console.log('Result summary v26 verified: final stats pause at 000, Pips tally before EXP, and zero-kill Zombie runs predict zero Pips.');
+for(const marker of requiredGame)if(!game.includes(marker))throw new Error(`Canonical result summary v35 missing: ${marker}`);
+for(const marker of ["m.type!=='ttd:v6-run-finish-result'",'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)'])if(!runUi.includes(marker))throw new Error(`Verified run result bridge missing: ${marker}`);
+
+console.log('Canonical result summary v35 verified: legacy Pips banked / EXP earned ownership is unloaded, native PIPS and EXP rows live in the monolith, EXP-orb and percent notes are conditional, and verified server EXP feeds the canonical tally.');
