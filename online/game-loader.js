@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const ORIGIN=location.origin;
-  const GAME_PATH='/random-dice-game-33.html?v=34';
+  const GAME_PATH='/random-dice-game-33.html?v=35';
   const DICE_PATH='/dicefile.json?v=2';
   const BRIDGES=[
     '/online/dice-catalog-bridge-v8.js?v=8',

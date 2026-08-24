@@ -45,7 +45,7 @@ for(const marker of ['__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS',"
 for(const marker of ['ensureCollectionAuthority','ttdCollectionAuthorityScript',"window.__TTD_ASSET_URL('/online/collection-portrait-fit-v16.js')",'collectionAuthorityAttempts<200']){
   if(!loaderHtml.includes(marker)) throw new Error(`Post-load Collection authority fallback missing: ${marker}`);
 }
-if(!loader.includes("const GAME_PATH='/random-dice-game-33.html?v=34'")) throw new Error('Base runtime source contract changed unexpectedly.');
+if(!loader.includes("const GAME_PATH='/random-dice-game-33.html?v=35'")) throw new Error('Base runtime source contract changed unexpectedly.');
 
 const expectedUrls=[
   '/online/dice-catalog-bridge-v8.js?v=8',

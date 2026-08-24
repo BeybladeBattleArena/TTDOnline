@@ -18,7 +18,7 @@
     start:asset('/assets/audio/announcer/Start.mp3'),
     combatStart:asset('/assets/audio/announcer/CombatStart.mp3'),
     clear:asset('/assets/audio/announcer/MissionClear.mp3'),
-    fail:asset('/assets/audio/announcer/MissionFail.mp3'),
+    fail:asset('/assets/audio/announcer/MissionFail.wav'),
     finish:asset('/assets/audio/announcer/Finish.mp3'),
     redTeam:asset('/assets/audio/announcer/RedTeam.mp3'),
     blueTeam:asset('/assets/audio/announcer/BlueTeam.mp3'),

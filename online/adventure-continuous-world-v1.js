@@ -69,13 +69,7 @@
     try{await evalScoped('/online/adventure-pseudo3d-battle-v1.js?v=6','Persistent same-map battle');}
     catch(err){console.error('Independent same-map combat bootstrap failed.',err);try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'same-map-battle-v6',message:String(err?.message||err)},location.origin);}catch(_){} }
   }
-  async function ensureRewardMetaV1(){
-    if(window.__TTD_RESULT_REWARD_META_V1)return;
-    try{await evalScoped('/online/result-reward-meta-v1.js?v=1','Reward result metadata');}
-    catch(err){console.error('Reward result metadata bootstrap failed.',err);try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'result-reward-meta-v1',message:String(err?.message||err)},location.origin);}catch(_){} }
-  }
 
   ensurePresentationV6();
-  ensureRewardMetaV1();
   ensureSameMapBattleV6();
 })();
