@@ -11,24 +11,24 @@
   if(!splash||!tap||!frame)return;
 
   const CRITICAL_ASSETS=Object.freeze([
-    '/assets/ui/loading-endless-horde.jpg',
-    '/assets/ui/loading-al-hata.jpg',
-    '/assets/items/chest-frozen-island-normal.jpg',
-    '/assets/items/chest-frozen-island-hard.jpg',
-    '/assets/items/chest-frozen-island-hell.jpg',
-    '/assets/items/key-normal.jpg',
-    '/assets/items/key-hard.jpg',
-    '/assets/items/key-hell.jpg',
-    '/assets/items/mystery-chest.jpg',
-    '/assets/items/epic-summon-ticket.jpg',
-    '/assets/items/exp-tome.jpg',
-    '/assets/items/ore-common.jpg',
-    '/assets/items/ore-rare.jpg',
-    '/assets/items/ore-unique.jpg',
-    '/assets/items/ore-legendary.jpg',
-    '/assets/items/ore-omni.jpg',
-    '/assets/items/gift-box-pink.jpg',
-    '/assets/items/gift-box-icy.jpg'
+    '/assets/ui/loading-endless-horde.png',
+    '/assets/ui/loading-al-hata.png',
+    '/assets/items/chest-frozen-island-normal.png',
+    '/assets/items/chest-frozen-island-hard.png',
+    '/assets/items/chest-frozen-island-hell.png',
+    '/assets/items/key-normal.png',
+    '/assets/items/key-hard.png',
+    '/assets/items/key-hell.png',
+    '/assets/items/mystery-chest.png',
+    '/assets/items/epic-summon-ticket.png',
+    '/assets/items/exp-tome.png',
+    '/assets/items/ore-common.png',
+    '/assets/items/ore-rare.png',
+    '/assets/items/ore-unique.png',
+    '/assets/items/ore-legendary.png',
+    '/assets/items/ore-omni.png',
+    '/assets/items/gift-box-pink.png',
+    '/assets/items/gift-box-icy.png'
   ]);
 
   const gateStyle=document.createElement('style');
