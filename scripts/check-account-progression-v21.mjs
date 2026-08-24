@@ -12,8 +12,7 @@ const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 const clientEntry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const friendClient=fs.readFileSync('online/deck-social-client-v18.js','utf8');
-const presentation=fs.readFileSync('online/game-presentation-v1.js','utf8');
-const resultSummary=fs.readFileSync('online/result-summary-client-v26.js','utf8');
+const game=fs.readFileSync('random-dice-game-33.html','utf8');
 
 const expectedEarly=[0,150,350,600,900,1250,1650,2100,2600,3150];
 expectedEarly.forEach((xp,index)=>{if(progression.xpThresholdForLevel(index+1)!==xp)throw new Error(`Level ${index+1} threshold must be ${xp} XP.`);});
@@ -56,17 +55,19 @@ markers(rewards,[
 markers(deckSocial,['progressionV21.publicLevel','progressionV21.curveSummary()','schemaVersion:21'],'friend/account level source');
 markers(friendClient,['v18FriendLevel','Level ${friend.level?.level||1}','ttd:account-progression-v21'],'friend list/client level UI');
 markers(runClient,['renderLevel(data.level)','ttd:account-progression-v21',"type:'ttd:v6-run-finish-result'",'...data'],'run EXP client');
-markers(runUi,['overlayXpV21','zSummaryXpV21','+${xp} EXP',"family==='adventure'","family==='zombie'"],'run result EXP UI');
-markers(presentation,[
-  'pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0',
-  'if(kills<=0){state.zPlayTime=0;state.time=0;}',
-  'if(kills<=0){state.zPlayTime=actualPlayTime;state.time=actualTime;}',
-],'zero-kill Horde finish gate');
-markers(resultSummary,[
-  'kills > 0 ? Math.round(kills * 2 + playSeconds * 0.15) : 0',
-],'zero-kill Horde result prediction');
+markers(runUi,["m.type!=='ttd:v6-run-finish-result'",'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)'],'verified run-result forwarding');
+markers(game,[
+  'TTD_NATIVE_RESULT_VERSION = 35',
+  'id="overlayPipsValue"',
+  'id="overlayExpValue"',
+  'function applyVerifiedRunResultV35(result)',
+  'xp:result.xpAwarded',
+  'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35=applyVerifiedRunResultV35',
+  'state.__ttdOutcomeCommitted',
+],'canonical run result EXP UI');
+if(clientEntry.includes("result-summary-client-v26")||clientEntry.includes("result-reward-polish-v1"))throw new Error('Legacy downstream result owners must not be loaded after canonical v35 materialization.');
 if(!clientEntry.includes("import './run-client-v21.js?v=21';"))throw new Error('Single-player client does not load run-client-v21.');
-if(!loader.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Game loader does not load EXP-aware result bridge v21.');
+if(!loader.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Game loader does not load the authoritative run-result forwarding bridge v21.');
 if(!main.includes('getAccountProgressionV21:accountProgression.getAccountProgressionV21'))throw new Error('Account progression v21 callable is not exported.');
 
-console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, zero rewards before the first Zombie kill, extensible empty per-level rewards, EXP result UI, and friend-list levels are wired end to end.');
+console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, zero EXP before the first Zombie kill, extensible empty per-level rewards, canonical v35 PIPS/EXP result rows, verified server EXP forwarding, and friend-list levels are wired end to end.');
