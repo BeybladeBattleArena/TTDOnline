@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry4",
+  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry5",
   "includes": [
-    "deploy the already-materialized canonical v35 result UI and exactly-once outcome lifecycle",
-    "serve the registered MissionFail PCM WAV and wait for its actual ended event plus 1.2 seconds before results",
-    "remove legacy result-summary and downstream reward-polish ownership",
-    "retain EXP-orb and future avatar reward bonus notations in the native PIPS and EXP rows",
-    "retain the portrait-safe Test Map switchback combat implementation",
-    "register the canonical MissionFail WAV in the game asset manifest so release integrity validates the runtime asset"
+    "deploy the canonical v35 PIPS and EXP result UI",
+    "deploy exactly-once CLEAR FAIL and FINISH outcome ownership in the monolithic game source",
+    "serve the registered validated MissionFail PCM WAV and wait for ended plus 1.2 seconds",
+    "validate account progression against the canonical v35 EXP row rather than the removed overlayXpV21 downstream widget",
+    "retain server-authoritative EXP finalization and run-result forwarding",
+    "retain portrait-safe Test Map switchback combat"
   ]
 }
