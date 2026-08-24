@@ -34,23 +34,44 @@ jobs:
           set -euo pipefail
           node scripts/materialize-canonical-results-v35.mjs
           sed -i "s#random-dice-game-33.html?v=34#random-dice-game-33.html?v=35#g" scripts/check-online-loader-v15.mjs
+
+          # The current main-branch MissionFail.mp3 is structurally damaged. Recover the older,
+          # known-clean source blob from the dedicated FAIL-audio branch before decoding it.
+          clean_ref='origin/feature/items-pillar-terrain-fail-audio'
+          clean_path='assets/audio/announcer/MissionFail.mp3'
+          clean_sha="$(git rev-parse "$clean_ref:$clean_path")"
+          if [[ "$clean_sha" != 'c845545139f48b8a7d8c6399fd9dc351afe0f063' ]]; then
+            echo "Unexpected clean MissionFail source blob: $clean_sha"
+            exit 1
+          fi
+          git show "$clean_ref:$clean_path" > /tmp/MissionFail-clean.mp3
+
           if ! command -v ffmpeg >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          ffmpeg -hide_banner -loglevel error -y \
-            -i assets/audio/announcer/MissionFail.mp3 \
+          ffmpeg -xerror -hide_banner -loglevel error -y \
+            -i /tmp/MissionFail-clean.mp3 \
             -af "apad=pad_dur=0.25" \
             -ar 22050 -ac 1 -c:a pcm_s16le \
             assets/audio/announcer/MissionFail.wav
           duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/audio/announcer/MissionFail.wav)"
-          echo "MissionFail.wav duration: ${duration}s"
+          echo "Rebuilt MissionFail.wav duration: ${duration}s"
           python3 - "$duration" <<'PY'
-          import sys
+          import sys, wave
+          p='assets/audio/announcer/MissionFail.wav'
           d=float(sys.argv[1])
-          if d < 1.20:
-              raise SystemExit(f'MissionFail WAV is unexpectedly short: {d:.3f}s')
+          if not (1.30 <= d <= 1.65):
+              raise SystemExit(f'MissionFail WAV duration outside full-phrase + tail contract: {d:.3f}s')
+          with wave.open(p,'rb') as w:
+              actual=w.getnframes()/w.getframerate()
+              if w.getnchannels()!=1 or w.getframerate()!=22050 or w.getsampwidth()!=2:
+                  raise SystemExit(f'Unexpected MissionFail WAV format: {w.getparams()}')
+              if abs(actual-d) > .02:
+                  raise SystemExit(f'MissionFail WAV duration disagreement: wave={actual:.3f}, probe={d:.3f}')
+          print(f'Validated clean PCM MissionFail.wav: {d:.3f}s')
           PY
+
           node --check online/audio-client-v27.js
           node --check online/game-presentation-v1.js
           node --check online/run-ui-bridge-v21.js
