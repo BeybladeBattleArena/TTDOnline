@@ -1,5 +1,5 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35",
+  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry1",
   "includes": [
     "materialize the agreed PIPS and EXP tally directly into random-dice-game-33.html instead of layering a post-load replacement over the old result UI",
     "remove the stale result-summary client that still rendered Pips banked and EXP earned",
