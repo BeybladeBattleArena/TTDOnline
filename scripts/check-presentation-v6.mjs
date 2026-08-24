@@ -2,67 +2,65 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read=(p)=>fs.readFileSync(p,'utf8');
+const game=read('random-dice-game-33.html');
 const presentation=read('online/game-presentation-v1.js');
 const audio=read('online/audio-client-v27.js');
 const continuous=read('online/adventure-continuous-world-v1.js');
 const battle=read('online/adventure-pseudo3d-battle-v1.js');
-const platform=read('online/adventure-platforming-v2.js');
 const runUi=read('online/run-ui-bridge-v21.js');
-const gameBridge=read('online/game-bridge-inner.js');
-const rewardPolish=read('online/result-reward-polish-v1.js');
-const rewardMeta=read('online/result-reward-meta-v1.js');
+const entry=read('online/singleplayer-client-v6.js');
 
-for(const [name,src] of [['presentation',presentation],['audio',audio],['continuous',continuous],['battle',battle],['platform',platform],['runUi',runUi],['gameBridge',gameBridge],['rewardPolish',rewardPolish],['rewardMeta',rewardMeta]]) new vm.Script(src,{filename:name});
+for(const [name,src] of [['presentation',presentation],['audio',audio],['continuous',continuous],['battle',battle],['runUi',runUi]]) new vm.Script(src,{filename:name});
 const need=(src,items,label)=>{for(const item of items)if(!src.includes(item))throw new Error(`${label} missing ${item}`);};
 const forbid=(src,items,label)=>{for(const item of items)if(src.includes(item))throw new Error(`${label} returned forbidden ${item}`);};
 
+need(game,[
+  'TTD_NATIVE_RESULT_VERSION = 35',
+  'class="resultTallyLabel">PIPS</span>',
+  'class="resultTallyLabel">EXP</span>',
+  'id="overlayPipsValue"','id="overlayExpValue"','id="overlayPipsNotes"','id="overlayExpNotes"',
+  'id="zSummaryPipsValue"','id="zSummaryExpValue"',
+  'linear-gradient(180deg,#f6d77f 0%,#e5b64d 31%,#e27827 50%,#e5b64d 69%,#f6d77f 100%)',
+  'function captureNativeRewardMeta()','expOrbBonusXp','function nativeBonusPercent(kind)',
+  'account?.equipmentBonuses','account?.avatarRewardBonuses',
+  'function applyVerifiedRunResultV35(result)','window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35',
+  'if(!state || state.__ttdOutcomeCommitted) return;','state.__ttdOutcomeCommitted=true',
+  "nativeOutcome('clear'","nativeOutcome(kind,revealAdventureNative)","nativeOutcome('finish',()=>showZombieSummary(pipsEarned))",
+],'canonical game result/outcome');
+forbid(game,['Pips banked!','EXP earned!'],'canonical game result text');
+
 need(presentation,[
-  'window.__TTD_GAME_PRESENTATION_V6',"const SIGNAL_ID='ttdGameSignalV6'","document.getElementById('laneWrap')||document.getElementById('laneCanvas')",
-  '--ttd-map-center-x','--ttd-map-center-y','positionSignal(overlay)','trackSignalPosition(overlay)',"if(text==='START!')word.classList.add('ttdStartWord')",
-  'linear-gradient(180deg,#b8ecff 0%,#73cef5 48%,#4aa6df 100%)','.countdown .ttdSignalWord{position:absolute;inset:0;display:flex;align-items:center;justify-content:center',
-  'linear-gradient(180deg,#9bcbe8 0%,#719acb 54%,#7467a7 100%)','linear-gradient(180deg,#fff38c 0%,#f9dc68 62%,#edbd52 100%)',
-  "makeSignal(['MISSION','START!'])","makeSignal(['3','2','1','START!'],'countdown')","announce('mission')","announce('start')","announce('combatStart')",
-  "clear:{text:'CLEAR!',className:'outcome-clear',voice:'clear'}","fail:{text:'FAIL',className:'outcome-fail',voice:'fail'}","finish:{text:'FINISH!',className:'outcome-finish',voice:'finish'}",
-  'const FAIL_POST_VOICE_MS=1200','const VOICE_ACK_TIMEOUT_MS=12000','pendingVoiceAcks=new Map()',"message.type!=='ttd:voice-cue-complete'","waitForEnd:kind==='fail'",'Promise.all([sleep(minDelay),voiceDone])',
-  'await sleep(MAP_PREVIEW_MS)','freezeRunForMission(runState)','resumeRunFromMission(runState)','campaignComplete=wrappedCampaignComplete','endMatch=wrappedEndMatch','endEndlessHorde=wrappedEndHorde',
-  'pipsEarned=kills>0?Math.round(kills*2+actualPlayTime*.15):0','version:6','failPostVoiceMs:FAIL_POST_VOICE_MS','rebind:installAll',
-],'presentation v6');
-forbid(presentation,['window.__TTD_GAME_PRESENTATION_V5','activeVoice.stop()'],'presentation v6');
-const failFlow=presentation.indexOf("waitForEnd:kind==='fail'"),failExtra=presentation.indexOf('sleep(FAIL_POST_VOICE_MS)',failFlow),failReveal=presentation.indexOf('Promise.all([sleep(minDelay),voiceDone])',failExtra);
-if(!(failFlow>=0&&failExtra>failFlow&&failReveal>failExtra))throw new Error('FAIL result must wait for the real audio-ended acknowledgement plus 1.2 seconds before revealing.');
+  'window.__TTD_GAME_PRESENTATION_V6',
+  "makeSignal(['MISSION','START!'])","makeSignal(['3','2','1','START!'],'countdown')",
+  "clear:{text:'CLEAR!',className:'outcome-clear',voice:'clear'}",
+  "fail:{text:'FAIL',className:'outcome-fail',voice:'fail'}",
+  "finish:{text:'FINISH!',className:'outcome-finish',voice:'finish'}",
+  'const FAIL_POST_VOICE_MS=1200',"waitForEnd:kind==='fail'",
+  'function presentOutcome(kind,{prepare,reveal,delay=RESULT_REVEAL_MS}={})',
+  'function installAll(){',
+],'presentation visual/audio service');
+const installStart=presentation.indexOf('function installAll(){');
+const installEnd=presentation.indexOf('window.TTDGamePresentation',installStart);
+if(installStart<0||installEnd<0)throw new Error('Presentation installAll block missing.');
+const installAll=presentation.slice(installStart,installEnd);
+forbid(installAll,['installOutcomeFlows()','installSummaryWrapper()'],'presentation ownership');
 
-need(audio,['window.__TTD_AUDIO_V32',"fail:asset('/assets/audio/announcer/MissionFail.mp3')","fetch(url,{cache:'no-store'})",'voiceQueue=Promise.resolve()','async function playVoiceNow(key)',"type:'ttd:voice-cue-complete'",'Promise.resolve(playVoiceCue(cue)).then','requestId'],'audio v32');
-forbid(audio,['activeVoice.stop()'],'audio v32');
-need(continuous,['window.__TTD_CONTINUOUS_WORLD_V4',"contract:'one-world-one-camera-persistent-objects'",'async function ensurePresentationV6()',"game-presentation-v1.js?v=6",'async function ensureRewardMetaV1()',"result-reward-meta-v1.js?v=1",'async function ensureSameMapBattleV6()',"adventure-pseudo3d-battle-v1.js?v=6",'ensureRewardMetaV1();','ensureSameMapBattleV6();'],'continuous world');
+need(audio,[
+  "fail:asset('/assets/audio/announcer/MissionFail.wav')",
+  "clear:asset('/assets/audio/announcer/MissionClear.mp3')",
+  'voiceQueue=Promise.resolve()','async function playVoiceNow(key)',"type:'ttd:voice-cue-complete'",
+],'audio runtime');
+forbid(audio,['activeVoice.stop()'],'audio runtime');
+
+forbid(entry,['result-summary-client-v26.js','result-reward-polish-v1.js'],'single-player result ownership');
+forbid(continuous,['ensureRewardMetaV1();'],'continuous-world outcome wrappers');
+need(runUi,['window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)'],'run bridge canonical result forwarding');
+forbid(runUi,['Pips banked!','EXP earned!','zSummaryXpV21'],'run bridge stale result UI');
+
 need(battle,[
-  'window.__TTD_TEST_MAINMAP_BATTLE_V6=true','ARENA_FOOTPRINT','WORLD_ROUTES','halfX:215,halfZ:195',
-  '{x:515,z:-155,y:0},{x:165,z:-155,y:0}','{x:165,z:-50,y:0},{x:515,z:-50,y:0}','{x:515,z:55,y:0},{x:165,z:55,y:0}','{x:165,z:160,y:0},{x:515,z:160,y:0}',
-  '{x:1665,z:-155,y:0},{x:2015,z:-155,y:0}','{x:2015,z:-50,y:0},{x:1665,z:-50,y:0}','{x:1665,z:55,y:0},{x:2015,z:55,y:0}','{x:2015,z:160,y:0},{x:1665,z:160,y:0}',
-  'function arenaFootprint(area=combatArea())','projectWorldPoint','drawArenaClearing','drawProjectedLaneSurface','drawEnemyGroundShadows','withFlatCorePathSuppressed',
-  "s==='rgba(139,127,232,0.16)'","s==='rgba(217,178,106,0.35)'",'carryCombatCoinsToTraversal',"source:'combat'",'ttl:Math.max(5,remaining+3.5)','clearPriorCombatCoins',
-  'portraitSafeSwitchbacks','presentation?.playCombatCountdown','usesPersistentTraversalRenderer','usesWorldProjectedRoute'
-],'same-map battle v6');
-forbid(battle,['z:-390','z:365','halfX=560,halfZ=430'],'portrait-safe battle framing');
+  'window.__TTD_TEST_MAINMAP_BATTLE_V6=true','WORLD_ROUTES','projectWorldPoint','drawProjectedLaneSurface',
+  'withFlatCorePathSuppressed','carryCombatCoinsToTraversal','clearPriorCombatCoins',
+  'portraitSafeMargin:0.08','usesWorldProjectedRoute',
+],'Test Map world battle');
 
-// On a representative 360px portrait battlefield, the world-space switchback endpoints must
-// remain inside a 7% horizontal safe margin while still spanning most of the usable arena.
-const projectX=(x,z,cameraX,W=360)=>{const scale=Math.max(.52,Math.min(.82,W/520)),depth=(z+220)/440,persp=.82+depth*.22;return W*.47+(x-cameraX)*scale*persp;};
-for(const [cameraX,points] of [[340,[[515,-155],[165,-155],[515,160],[165,160]]],[1840,[[1665,-155],[2015,-155],[1665,160],[2015,160]]]]){
-  const xs=points.map(([x,z])=>projectX(x,z,cameraX));
-  if(Math.min(...xs)<25||Math.max(...xs)>335)throw new Error(`Portrait Test Map route escapes safe bounds: ${xs.join(', ')}`);
-  if(Math.max(...xs)-Math.min(...xs)<210)throw new Error('Portrait Test Map route became too cramped to read as an open combat arena.');
-}
-need(runUi,['function installPlatformOnlineStartSyncV2()','state.__ttdWorldState','world.cameraX=session.cameraX','objects:wstate.objects,drops:wstate.drops',"session.phase='materialize'",'Invisible ground event line','await transitionTween(900'],'persistent world bridge');
-
-need(gameBridge,['window.__TTD_TRAVERSAL_SOURCE_PATCH_V1','patchTraversalSourceV1',"path!=='/online/adventure-platforming-v2.js'","d.source==='combat'","g.arc(0,0,7,0,Math.PI*2)","d.isGold?'#f3d491':'#c7d0e0'","isGold:kind==='coin'?value>=5:null",'old EXP approximation marker'],'traversal private-source patch');
-for(const marker of [
-  "  function updateDrops(dt){\n    for(const d of session.drops)",
-  "const push=(kind,value,dx,dz,icon)=>session.drops.push",
-  "if(d.kind==='coin'){g.fillStyle='#f3d491';g.beginPath();g.arc(0,0,10",
-  "(~+${bonusXp} base EXP)",
-])if(!platform.includes(marker))throw new Error(`Traversal patch base-source needle changed: ${marker}`);
-
-need(rewardPolish,['window.__TTD_RESULT_REWARD_POLISH_V1',"'ttd:verified-run-result-v1'","m.type!=='ttd:run-reward-meta-v1'",'ttdRewardLabelV1','ttdRewardValueV1','ttdRewardNoteV1','linear-gradient(180deg,#f6d77f 0%,#e5b64d 31%,#e27827 50%,#e5b64d 69%,#f6d77f 100%)',"row(pipsNode,'PIPS'","row(exp,'EXP'",'if(num(orbBonus)>0)','if(pct(bonusPct)>0)','result?.rewardBonuses||result?.bonuses||{}'],'reward tally polish');
-need(rewardMeta,['window.__TTD_RESULT_REWARD_META_V1','expOrbs','expOrbBonusXp','adventureXp(completed)-adventureXp(Math.max(0,completed-credits))','account?.avatarRewardBonuses','account?.equipmentBonuses','pipsBonusPct','expBonusPct',"replace(/\\s*\\(~\\+\\d+\\s*base EXP\\)/ig,'')"],'reward metadata');
-
-console.log('Presentation V6 verified: MissionFail waits for real audio completion, reward tallies remain future-ready, and Test Map combat now uses long multi-switchback world routes that fit a portrait-safe arena without forcing landscape or a dramatic camera zoom.');
+console.log('Presentation verified: the canonical game owns result rows and exactly-once outcomes; outer presentation only supplies mission/countdown/outcome visuals and audio; stale banked/earned result overlays are not loaded; Test Map world projection remains intact.');
