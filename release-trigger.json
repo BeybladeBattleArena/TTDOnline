@@ -1,13 +1,13 @@
 {
-  "release": "2026-08-23-production-recovery-v12",
+  "release": "2026-08-24-png-art-card-alignment-v13",
   "includes": [
-    "deploy the already-committed native-resolution designer art without any asset-import side effects",
-    "deploy Firebase Hosting independently from Functions and Firestore",
-    "redirect every known legacy low-resolution art URL to its canonical native-resolution master",
-    "keep active game assets no-store so replaced art cannot be stranded behind stale browser caches",
-    "validate the current client, startup gate, serialized announcer behavior, and item mappings before release",
-    "verify the exact release commit from live build.json before declaring success",
-    "smoke-test live loading screens and critical item art with thresholds matched to their native-resolution contracts",
-    "write the durable production receipt only after live build and art verification both succeed"
+    "serve all 18 current designer assets as real PNG binaries at their native pixel dimensions",
+    "route the asset manifest, item runtime, and startup preload gate to canonical PNG masters",
+    "redirect both legacy WebP and interim JPEG art URLs to the canonical PNG files",
+    "align shop item artwork, names, prices, and buttons into consistent card rows",
+    "align inventory item artwork, names, rarity labels, counts, and actions consistently across cards",
+    "keep approved source art native-resolution while CSS alone controls in-game presentation size",
+    "validate PNG signatures and IHDR dimensions before deployment",
+    "verify every canonical PNG from live Firebase Hosting before writing the production receipt"
   ]
 }
