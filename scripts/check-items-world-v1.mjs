@@ -131,10 +131,14 @@ must(artPolish.includes('source art remains native-resolution')||artPolish.inclu
 must(entry.includes("import './item-art-polish-v2.js?v=4';"),'single-player entry does not load item art polish v4 behavior');
 
 must(presentation.includes("fail:{text:'FAIL',className:'outcome-fail',voice:'fail'}"),'FAIL presentation is not routed to the fail announcer key');
-must(audio.includes("clear:asset('/assets/audio/announcer/MissionClear.mp3')")&&audio.includes("fail:asset('/assets/audio/announcer/MissionFail.mp3')"),'CLEAR/FAIL announcer files are not independently mapped');
+must(audio.includes("clear:asset('/assets/audio/announcer/MissionClear.mp3')")&&audio.includes("fail:asset('/assets/audio/announcer/MissionFail.wav')"),'CLEAR/FAIL announcer files are not independently mapped to their canonical sources');
+must(manifest.assets?.announcerMissionClear?.path==='/assets/audio/announcer/MissionClear.mp3'&&manifest.assets?.announcerMissionClear?.format==='audio/mpeg','MissionClear MP3 is not independently registered');
+must(manifest.assets?.announcerMissionFail?.path==='/assets/audio/announcer/MissionFail.wav'&&manifest.assets?.announcerMissionFail?.format==='audio/wav','MissionFail PCM WAV is not independently registered');
 const missionClear=file('assets/audio/announcer/MissionClear.mp3');
-const missionFail=file('assets/audio/announcer/MissionFail.mp3');
-must(missionFail.length>10000,'MissionFail announcer file is unexpectedly small');
+const missionFail=file('assets/audio/announcer/MissionFail.wav');
+must(missionClear.length>8000,'MissionClear announcer file is unexpectedly small');
+must(missionFail.length>50000,'MissionFail PCM WAV is unexpectedly small');
+must(missionFail.subarray(0,4).toString('ascii')==='RIFF'&&missionFail.subarray(8,12).toString('ascii')==='WAVE','MissionFail announcer file is not a real RIFF/WAVE file');
 must(!missionFail.equals(missionClear),'MissionFail announcer binary must not be identical to MissionClear');
 
-console.log('Items/world v4 verified: real lossless PNG masters at native dimensions, semantic item routing, aligned art/text/button rows, secure item flows, terrain routing, and distinct FAIL audio.');
+console.log('Items/world v4 verified: real lossless PNG masters at native dimensions, semantic item routing, aligned art/text/button rows, secure item flows, terrain routing, independent MissionClear MP3, and registered PCM MissionFail WAV.');
