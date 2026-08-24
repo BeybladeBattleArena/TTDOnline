@@ -1,12 +1,12 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry1",
+  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry2",
   "includes": [
     "materialize the agreed PIPS and EXP tally directly into random-dice-game-33.html instead of layering a post-load replacement over the old result UI",
     "remove the stale result-summary client that still rendered Pips banked and EXP earned",
     "make the canonical run lifecycle dispatch CLEAR FAIL or FINISH exactly once per run",
     "stop the presentation rebinding loop from wrapping campaignComplete endMatch and Endless Horde completion functions",
     "keep MissionFail result reveal gated on the actual announcer-ended acknowledgement plus 1.2 seconds",
-    "rebuild MissionFail into a PCM WAV with a silence tail and use that WAV as the runtime FAIL cue instead of the problematic MP3 decode path",
+    "recover the known-clean historical MissionFail source blob and rebuild it as validated mono 22050 Hz PCM WAV with a silence tail",
     "retain EXP-orb plus-X notation and future avatar Pip/EXP percentage notation inside the canonical result rows",
     "bump the canonical game source URL to v35 so force-cached v34 clients cannot hide the update",
     "retain the portrait-safe continuous-world Test Map switchback combat implementation"
