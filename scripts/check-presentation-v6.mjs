@@ -74,17 +74,60 @@ need(audio,[
 forbid(audio,['activeVoice.stop()'],'audio v32');
 
 need(continuous,[
-  'window.__TTD_CONTINUOUS_WORLD_V2',
+  'window.__TTD_CONTINUOUS_WORLD_V3',
   "contract:'one-world-one-camera-persistent-objects'",
+  "cameraContract:'traversal-freeze -> navigator-vanish -> arena-glide -> combat'",
   'async function ensurePresentationV6()',
-  'window.__TTD_GAME_PRESENTATION_V6',
+  'async function ensureSameMapBattleV5()',
+  'window.__TTD_TEST_MAINMAP_BATTLE_V5',
+  "adventure-pseudo3d-battle-v1.js?v=5",
   "game-presentation-v1.js?v=6",
-  'ensurePresentationV6();',
-],'continuous world');
-forbid(continuous,['game-presentation-v1.js?v=4'],'continuous world');
+  'ensureSameMapBattleV5();',
+],'continuous world v3');
+forbid(continuous,['game-presentation-v1.js?v=4','ensureSameMapBattleV4'],'continuous world v3');
 
-need(battle,['window.__TTD_TEST_MAINMAP_BATTLE_V4=true','presentation?.playCombatCountdown','usesPersistentTraversalRenderer'],'same-map battle');
-need(platform,["const TEST_ID = 'test_map'",'state.wave===2','state.wave=3','ttd-platform-mode'],'platform traversal');
-need(runUi,['function installPlatformOnlineStartSyncV2()','state.__ttdWorldState','world.cameraX=session.cameraX','objects:wstate.objects,drops:wstate.drops'],'persistent world bridge');
+need(battle,[
+  'window.__TTD_TEST_MAINMAP_BATTLE_V5=true',
+  'function projectionFor(w,h,area=combatArea())',
+  'projectBattleRoute',
+  'drawProjectedLaneSurface',
+  'drawEnemyGroundShadows',
+  "function traversalVisible(){return document.getElementById('gameScreen')?.classList.contains('ttd-platform-mode');}",
+  'presentation?.playCombatCountdown',
+  'usesPersistentTraversalRenderer',
+  'usesWorldProjectedRoute',
+  'version:5',
+],'same-map battle v5');
 
-console.log('Presentation V6 verified: all battle text is map-centered, countdown entries replace each other in one slot, START is consistently blue, FAIL/FINISH use Android-safe gradients, announcer cues serialize without pre-emption, CombatStart fires on its visible START frame, and Test Map continuity remains wired.');
+need(platform,["const TEST_ID = 'test_map'",'state.wave===2','state.wave=3','ttd-platform-mode'],'platform traversal source');
+need(runUi,[
+  'function installPlatformOnlineStartSyncV2()',
+  'function requiredReplaceSection(',
+  'state.__ttdWorldState={version:2,cameraX:340,traversalStart:{x:340,z:0,y:0}',
+  'const __TTD_ARENAS_V5=Object.freeze',
+  "2:Object.freeze({id:'temple-court',cameraX:1840",
+  'function projectWorldPoint(',
+  'function projectBattleRoute(',
+  'battleRouteWorld(area=1)',
+  "session.phase='materialize'",
+  "session.phase==='materialize'&&session.nav",
+  'remove traversal jump action words',
+  'Invisible ground event line',
+  'async function finishPlatform()',
+  'restoreTrayChildren();',
+  'await transitionTween(900',
+  "activeSession.phase='combat-transition'",
+  'world.cameraX=activeSession.cameraX',
+  'arenaCameraX:(area)=>arenaCameraX(area)',
+  'projectBattleRoute:(w,h,area,cameraX)=>projectBattleRoute(w,h,area,cameraX)',
+  "adventure-pseudo3d-battle-v1.js?v=5",
+  'objects:wstate.objects,drops:wstate.drops',
+],'persistent world bridge v5');
+
+const vanish=runUi.indexOf("activeSession.phase='combat-transition'");
+const tray=runUi.indexOf('restoreTrayChildren();',vanish);
+const glide=runUi.indexOf('await transitionTween(900',tray);
+const battleState=runUi.indexOf('state.__ttdPlatformDone=true',glide);
+if(!(vanish>=0&&tray>vanish&&glide>tray&&battleState>glide))throw new Error('Traversal-to-combat order must be Navigator vanish -> combat tray restore -> one-camera arena glide -> battle state.');
+
+console.log('Presentation/Test Map verified: battle cues remain correct, combat routes are projected through the Navigator world camera, navigator selection stays over the existing arena, manifestation completes before movement, jump/double-jump action words are stripped at runtime, and the invisible event-line handoff preserves one continuous camera into the next combat area.');
