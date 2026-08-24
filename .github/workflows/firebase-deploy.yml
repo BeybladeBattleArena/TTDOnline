@@ -69,40 +69,11 @@ jobs:
           echo "Production verification failed: Hosting is not serving $GITHUB_SHA"
           exit 1
 
-      - name: Verify critical game and high-resolution art
+      - name: Verify critical game and lossless PNG art
         id: smoke_verify
         env:
           LIVE_URL: https://ttd-online-b8c0f.web.app
-        run: |
-          set -euo pipefail
-          check_file() {
-            local path="$1"
-            local min_bytes="$2"
-            local tmp
-            tmp="$(mktemp)"
-            curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL$path?verify=$GITHUB_SHA" -o "$tmp"
-            local bytes
-            bytes="$(wc -c < "$tmp" | tr -d ' ')"
-            rm -f "$tmp"
-            if [ "$bytes" -lt "$min_bytes" ]; then
-              echo "Production asset $path is unexpectedly small: $bytes bytes"
-              exit 1
-            fi
-            echo "Verified $path ($bytes bytes)"
-          }
-          check_file /online.html 1000
-          check_file /online/startup-gate-v33.js 1000
-          check_file /assets/game-assets.json 1000
-          check_file /assets/ui/loading-endless-horde.jpg 100000
-          check_file /assets/ui/loading-al-hata.jpg 100000
-          check_file /assets/items/mystery-chest.jpg 100000
-          check_file /assets/items/epic-summon-ticket.jpg 100000
-          check_file /assets/items/exp-tome.jpg 90000
-          # Keys are intentionally tall 1024x1536 JPEGs and can compress below 100 KB while retaining full native dimensions.
-          # Keep this threshold aligned with the item-integrity contract instead of using an arbitrary 100 KB cutoff.
-          check_file /assets/items/key-normal.jpg 30000
-          check_file /assets/items/key-hard.jpg 30000
-          check_file /assets/items/key-hell.jpg 30000
+        run: bash scripts/smoke-hosting-png-v34.sh
 
       - name: Record verified production commit
         id: receipt
