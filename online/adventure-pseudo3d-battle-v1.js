@@ -8,14 +8,25 @@
   const TEST_ID='test_map';
   const BACK_ID='ttdMainMapCombatBackV6';
   const FRONT_ID='ttdMainMapCombatFrontV6';
+
+  // Portrait-first battle design: enemy travel distance comes from repeated switchbacks
+  // inside a comfortably framed arena, not from stretching the arena beyond the viewport.
+  const ARENA_FOOTPRINT=Object.freeze({
+    1:Object.freeze({halfX:215,halfZ:195}),
+    2:Object.freeze({halfX:215,halfZ:195}),
+  });
   const WORLD_ROUTES=Object.freeze({
     1:Object.freeze([
-      {x:760,z:-390,y:0},{x:650,z:-245,y:0},{x:535,z:80,y:0},{x:390,z:345,y:0},
-      {x:225,z:105,y:0},{x:75,z:-325,y:0},{x:-125,z:95,y:0},
+      {x:515,z:-155,y:0},{x:165,z:-155,y:0},
+      {x:165,z:-50,y:0},{x:515,z:-50,y:0},
+      {x:515,z:55,y:0},{x:165,z:55,y:0},
+      {x:165,z:160,y:0},{x:515,z:160,y:0},
     ]),
     2:Object.freeze([
-      {x:2320,z:-405,y:0},{x:2180,z:-245,y:0},{x:2050,z:125,y:0},{x:1880,z:365,y:0},
-      {x:1695,z:105,y:0},{x:1515,z:-345,y:0},{x:1320,z:110,y:0},
+      {x:1665,z:-155,y:0},{x:2015,z:-155,y:0},
+      {x:2015,z:-50,y:0},{x:1665,z:-50,y:0},
+      {x:1665,z:55,y:0},{x:2015,z:55,y:0},
+      {x:2015,z:160,y:0},{x:1665,z:160,y:0},
     ]),
   });
   let countdownArmed=false,coinsCarriedForTraversal=false,lastSelecting=false,lastArea=0;
@@ -79,9 +90,10 @@
     for(let i=0;i<projectedRouteLens.length;i++){const len=projectedRouteLens[i]||1;if(d<=len){const t=Math.max(0,Math.min(1,d/len)),a=Number(projectedRoute[i].scale)||1,b=Number(projectedRoute[i+1].scale)||a;return a+(b-a)*t;}d-=len;}
     return Number(projectedRoute[projectedRoute.length-1]?.scale)||1;
   }
+  function arenaFootprint(area=combatArea()){return ARENA_FOOTPRINT[Number(area)===2?2:1];}
   function drawArenaClearing(g,w,h){
     const api=platformApi(),area=combatArea(),center=api?.arenaCenter?.(area),project=api?.projectWorldPoint;if(!center||typeof project!=='function')return;
-    const cam=cameraForArea(area),halfX=560,halfZ=430,corners=[[-halfX,-halfZ],[halfX,-halfZ],[halfX,halfZ],[-halfX,halfZ]].map(([dx,dz])=>project(center.x+dx,center.z+dz,center.y||0,w,h,cam));
+    const cam=cameraForArea(area),{halfX,halfZ}=arenaFootprint(area),corners=[[-halfX,-halfZ],[halfX,-halfZ],[halfX,halfZ],[-halfX,halfZ]].map(([dx,dz])=>project(center.x+dx,center.z+dz,center.y||0,w,h,cam));
     g.save();g.beginPath();g.moveTo(corners[0].x,corners[0].y);for(let i=1;i<corners.length;i++)g.lineTo(corners[i].x,corners[i].y);g.closePath();
     g.fillStyle=area===1?'rgba(237,214,159,.13)':'rgba(164,166,150,.13)';g.fill();g.strokeStyle='rgba(243,212,145,.10)';g.lineWidth=1;g.stroke();g.restore();
   }
@@ -104,10 +116,10 @@
   function drawCombatBounds(){
     const pack=ensureCanvas(FRONT_ID,3);if(!pack)return;const{g,w,h}=pack;g.clearRect(0,0,w,h);const pulse=.20+.06*Math.sin(performance.now()/540),api=platformApi(),area=combatArea(),cam=cameraForArea(area),center=api?.arenaCenter?.(area);
     if(center&&typeof api?.projectWorldPoint==='function'){
-      const halfX=560,halfZ=430,lf=api.projectWorldPoint(center.x-halfX,center.z-halfZ,0,w,h,cam),ln=api.projectWorldPoint(center.x-halfX,center.z+halfZ,0,w,h,cam),rf=api.projectWorldPoint(center.x+halfX,center.z-halfZ,0,w,h,cam),rn=api.projectWorldPoint(center.x+halfX,center.z+halfZ,0,w,h,cam);
+      const {halfX,halfZ}=arenaFootprint(area),lf=api.projectWorldPoint(center.x-halfX,center.z-halfZ,0,w,h,cam),ln=api.projectWorldPoint(center.x-halfX,center.z+halfZ,0,w,h,cam),rf=api.projectWorldPoint(center.x+halfX,center.z-halfZ,0,w,h,cam),rn=api.projectWorldPoint(center.x+halfX,center.z+halfZ,0,w,h,cam);
       g.strokeStyle=`rgba(143,196,232,${pulse})`;g.lineWidth=1.1;[[lf,ln],[rf,rn]].forEach(([a,b])=>{g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();});return;
     }
-    g.strokeStyle=`rgba(143,196,232,${pulse})`;g.strokeRect(w*.035,h*.10,w*.93,h*.82);
+    g.strokeStyle=`rgba(143,196,232,${pulse})`;g.strokeRect(w*.06,h*.10,w*.88,h*.82);
   }
   function showCombatWorld(){
     const lane=document.getElementById('laneWrap');if(!lane)return;const area=combatArea();
@@ -120,7 +132,7 @@
     const lane=document.getElementById('laneWrap');lane?.classList.remove('ttd-mainmap-combat-v2','ttd-mainmap-combat-v3','ttd-mainmap-combat-v4','ttd-mainmap-combat-v5','ttd-mainmap-combat-v6');
     [BACK_ID,FRONT_ID,'ttdMainMapCombatBackV2','ttdMainMapCombatFrontV2','ttdMainMapCombatBackV3','ttdMainMapCombatFrontV3','ttdMainMapCombatBackV4','ttdMainMapCombatFrontV4','ttdMainMapCombatBackV5','ttdMainMapCombatFrontV5'].forEach(id=>document.getElementById(id)?.remove());
   }
-  function installFallbackPath(w,h,area){pathPts=area===1?[{x:w*.96,y:h*.15},{x:w*.75,y:h*.26},{x:w*.60,y:h*.58},{x:w*.42,y:h*.78},{x:w*.24,y:h*.57},{x:w*.08,y:h*.32}]:[{x:w*.96,y:h*.14},{x:w*.76,y:h*.28},{x:w*.61,y:h*.62},{x:w*.43,y:h*.82},{x:w*.25,y:h*.58},{x:w*.07,y:h*.30}];rebuildProjectedMeta(pathPts.map(p=>({...p,scale:1})));}
+  function installFallbackPath(w,h,area){pathPts=area===1?[{x:w*.88,y:h*.20},{x:w*.16,y:h*.20},{x:w*.16,y:h*.39},{x:w*.88,y:h*.39},{x:w*.88,y:h*.58},{x:w*.16,y:h*.58},{x:w*.16,y:h*.77},{x:w*.88,y:h*.77}]:[{x:w*.14,y:h*.20},{x:w*.86,y:h*.20},{x:w*.86,y:h*.39},{x:w*.14,y:h*.39},{x:w*.14,y:h*.58},{x:w*.86,y:h*.58},{x:w*.86,y:h*.77},{x:w*.14,y:h*.77}];rebuildProjectedMeta(pathPts.map(p=>({...p,scale:1})));}
   function installCombatPath(w,h){
     const area=combatArea(),route=projectionFor(w,h,area);if(route){pathPts=route.points.map(p=>({x:p.x,y:p.y}));rebuildProjectedMeta(route.points);}else installFallbackPath(w,h,area);
     segLens=[];totalLen=0;for(let i=1;i<pathPts.length;i++){const dx=pathPts[i].x-pathPts[i-1].x,dy=pathPts[i].y-pathPts[i-1].y,len=Math.hypot(dx,dy);segLens.push(len);totalLen+=len;}towerPos=pathPts[pathPts.length-1];
@@ -159,7 +171,7 @@
     try{return withFlatCorePathSuppressed(()=>baseDrawLane(dt));}finally{if(theme&&saved)Object.assign(theme,saved);drawExactBackdrop();drawCombatBounds();}
   };
 
-  const baseRenderStageScreen=renderStageScreen;renderStageScreen=function renderStageScreenWithPersistentWorld(){baseRenderStageScreen();if(selectedAdventureId!==TEST_ID)return;const p=document.querySelector('#stageList .stageCard p');if(p)p.textContent='One continuous beach, jungle and temple world: broad combat clearings open around world-space marching routes, while traversal and puzzle corridors remain tighter between them.';};
+  const baseRenderStageScreen=renderStageScreen;renderStageScreen=function renderStageScreenWithPersistentWorld(){baseRenderStageScreen();if(selectedAdventureId!==TEST_ID)return;const p=document.querySelector('#stageList .stageCard p');if(p)p.textContent='One continuous beach, jungle and temple world: portrait-safe combat clearings use long world-space switchback routes, while traversal and puzzle corridors remain tighter between them.';};
 
-  window.__TTD_TEST_PSEUDO3D_BATTLE_API={version:6,get active(){return combatVisible();},get usesPersistentTraversalRenderer(){return hasWorldRenderer();},get usesWorldProjectedRoute(){return typeof platformApi()?.projectWorldPoint==='function';},get clearsPriorCombatCoins(){return true;},get area(){return combatArea();},get routeLength(){return Number(totalLen)||0;}};
+  window.__TTD_TEST_PSEUDO3D_BATTLE_API={version:6,get active(){return combatVisible();},get usesPersistentTraversalRenderer(){return hasWorldRenderer();},get usesWorldProjectedRoute(){return typeof platformApi()?.projectWorldPoint==='function';},get portraitSafeSwitchbacks(){return true;},get clearsPriorCombatCoins(){return true;},get area(){return combatArea();},get routeLength(){return Number(totalLen)||0;}};
 })();
