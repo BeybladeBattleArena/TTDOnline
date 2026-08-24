@@ -15,6 +15,45 @@
     window.parent.postMessage({ type, ...payload }, ORIGIN);
   }
 
+  // The Test Map traversal source owns private draw/drop helpers inside its IIFE. Patch those
+  // helpers before run-ui evaluates that source so traversal coins use the exact same visual
+  // language as battle drops and combat carry-over can expire naturally in the shared world.
+  const nativeFetchForTraversal = window.fetch.bind(window);
+  function patchTraversalSourceV1(source) {
+    let out=String(source||'');
+    const requiredReplace=(needle,replacement,label)=>{
+      if(!out.includes(needle))throw new Error(`Traversal continuity patch missing ${label}.`);
+      out=out.replace(needle,replacement);
+    };
+    requiredReplace(
+      "  function updateDrops(dt){\n    for(const d of session.drops){d.t+=dt;if(d.bounceT>0){d.bounceT-=dt;d.y=d.baseY+Math.abs(Math.sin(d.t*8))*22*Math.max(0,d.bounceT);}else d.y=d.baseY;}\n  }",
+      "  function updateDrops(dt){\n    for(let i=session.drops.length-1;i>=0;i--){const d=session.drops[i];d.t+=dt;if(d.bounceT>0){d.bounceT-=dt;d.y=d.baseY+Math.abs(Math.sin(d.t*8))*22*Math.max(0,d.bounceT);}else d.y=d.baseY;if(d.source==='combat'&&d.t>=Math.max(.1,Number(d.ttl)||6))session.drops.splice(i,1);}\n  }",
+      'combat coin lifetime'
+    );
+    requiredReplace(
+      "    const push=(kind,value,dx,dz,icon)=>session.drops.push({kind,value,x:o.x+dx,z:o.z+dz,baseY:o.y+10,y:o.y+10,t:0,bounceT:1.1,collected:false,icon});",
+      "    const push=(kind,value,dx,dz,icon)=>session.drops.push({kind,value,x:o.x+dx,z:o.z+dz,baseY:o.y+10,y:o.y+10,t:0,bounceT:1.1,collected:false,icon,isGold:kind==='coin'?value>=5:null});",
+      'treasure coin identity'
+    );
+    requiredReplace(
+      "    if(d.kind==='coin'){g.fillStyle='#f3d491';g.beginPath();g.arc(0,0,10,0,Math.PI*2);g.fill();g.fillStyle='#6b5125';g.font='bold 12px sans-serif';g.fillText('P',0,1);}",
+      "    if(d.kind==='coin'){g.fillStyle=d.isGold?'#f3d491':'#c7d0e0';g.beginPath();g.arc(0,0,7,0,Math.PI*2);g.fill();g.strokeStyle='rgba(0,0,0,0.4)';g.lineWidth=1;g.stroke();}",
+      'battle-matching treasure coin art'
+    );
+    const approximation="${bonusXp?` (~+${bonusXp} base EXP)`:''}";
+    if(!out.includes(approximation))throw new Error('Traversal continuity patch missing old EXP approximation marker.');
+    out=out.replace(approximation,'');
+    return out;
+  }
+  window.fetch=async function ttdTraversalAwareFetch(input,init){
+    const response=await nativeFetchForTraversal(input,init);
+    let path='';try{path=new URL(typeof input==='string'||input instanceof URL?String(input):input?.url,location.href).pathname;}catch(_){}
+    if(path!=='/online/adventure-platforming-v2.js')return response;
+    const source=await response.text(),patched=patchTraversalSourceV1(source),headers=new Headers(response.headers);headers.delete('content-length');
+    return new Response(patched,{status:response.status,statusText:response.statusText,headers});
+  };
+  window.__TTD_TRAVERSAL_SOURCE_PATCH_V1=Object.freeze({patchTraversalSourceV1});
+
   function validGameState(gameState) {
     const pips = gameState?.economy?.pips;
     const astras = gameState?.economy?.astras;
@@ -140,9 +179,7 @@
       return true;
     } catch (err) {
       console.error('Canonical online sync failed inside v33.', err);
-      send('ttd:bridge-sync-error', {
-        message: `The secure game state could not be applied: ${err?.message || 'unknown bridge error'}`,
-      });
+      send('ttd:bridge-sync-error', { message: `The secure game state could not be applied: ${err?.message || 'unknown bridge error'}` });
       return false;
     } finally {
       suppressDeckSync = false;
@@ -174,85 +211,39 @@
 
   function failGacha(message) {
     setGachaPending(false);
-    if (typeof showNotice === 'function') {
-      showNotice('Online Gacha', message || 'The server could not complete that pull.');
-    }
+    if (typeof showNotice === 'function') showNotice('Online Gacha', message || 'The server could not complete that pull.');
   }
 
   document.addEventListener('click', (event) => {
     const button = event.target?.closest?.('#pull1, #pull10');
     if (!button) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
     if (gachaPending || !cloudSynced) return;
     const count = button.id === 'pull10' ? 10 : 1;
     const requestId = `${Date.now().toString(36)}-${++requestCounter}`;
-    setGachaPending(true);
-    send('ttd:gacha-request', { requestId, count });
+    setGachaPending(true);send('ttd:gacha-request', { requestId, count });
   }, true);
 
   window.addEventListener('message', (event) => {
     if (event.origin !== ORIGIN || event.source !== window.parent) return;
     const message = event.data || {};
-
-    if (message.type === 'ttd:cloud-sync') {
-      applyCloudSync(message.gameState, message.dice || [], message.decks || []);
-      return;
-    }
-
+    if (message.type === 'ttd:cloud-sync') { applyCloudSync(message.gameState, message.dice || [], message.decks || []); return; }
     if (message.type === 'ttd:gacha-result') {
-      if (!validGameState(message.gameState) || !Array.isArray(message.results) || !message.results.every(validDie)) {
-        failGacha('The server returned an invalid pull result.');
-        return;
-      }
-      account.gold = message.gameState.economy.pips;
-      account.astras = message.gameState.economy.astras;
-      for (const grant of message.results) mergeGrant(grant);
-      renderPullResults(message.results);
-      if (typeof renderHome === 'function') renderHome();
-      if (typeof renderGachaTop === 'function') renderGachaTop();
-      if (typeof renderCollection === 'function') renderCollection();
-      saveLocalOnly();
-      setGachaPending(false);
-      return;
+      if (!validGameState(message.gameState) || !Array.isArray(message.results) || !message.results.every(validDie)) { failGacha('The server returned an invalid pull result.'); return; }
+      account.gold = message.gameState.economy.pips;account.astras = message.gameState.economy.astras;for (const grant of message.results) mergeGrant(grant);renderPullResults(message.results);
+      if (typeof renderHome === 'function') renderHome();if (typeof renderGachaTop === 'function') renderGachaTop();if (typeof renderCollection === 'function') renderCollection();saveLocalOnly();setGachaPending(false);return;
     }
-
-    if (message.type === 'ttd:gacha-error') {
-      failGacha(message.message);
-      return;
-    }
-
+    if (message.type === 'ttd:gacha-error') { failGacha(message.message); return; }
     if (message.type === 'ttd:deck-state-result') {
-      if (!validGameState(message.gameState) || !validDecks(message.decks)) return;
-      suppressDeckSync = true;
-      applyCanonicalDecks(message.decks, message.gameState.activeDeckIdx);
-      if (typeof renderDeckScreen === 'function') renderDeckScreen();
-      saveLocalOnly();
-      deckBaseline = deckSignature();
-      suppressDeckSync = false;
-      return;
+      if (!validGameState(message.gameState) || !validDecks(message.decks)) return;suppressDeckSync = true;applyCanonicalDecks(message.decks, message.gameState.activeDeckIdx);if (typeof renderDeckScreen === 'function') renderDeckScreen();saveLocalOnly();deckBaseline = deckSignature();suppressDeckSync = false;return;
     }
-
-    if (message.type === 'ttd:deck-state-error') {
-      if (typeof showNotice === 'function') {
-        showNotice('Deck Sync', message.message || 'The server rejected that deck change and restored the canonical deck.');
-      }
-    }
+    if (message.type === 'ttd:deck-state-error' && typeof showNotice === 'function') showNotice('Deck Sync', message.message || 'The server rejected that deck change and restored the canonical deck.');
   });
 
   function announceReadyWhenBooted() {
     readyAttempts += 1;
-    if (account && typeof account === 'object' && account.owned && Array.isArray(account.decks)) {
-      send('ttd:bridge-ready', { version: 4 });
-      return;
-    }
-    if (readyAttempts >= 500) {
-      send('ttd:bridge-sync-error', {
-        message: 'The game loaded, but its account state never became ready for secure synchronization.',
-      });
-      return;
-    }
+    if (account && typeof account === 'object' && account.owned && Array.isArray(account.decks)) { send('ttd:bridge-ready', { version: 4 }); return; }
+    if (readyAttempts >= 500) { send('ttd:bridge-sync-error', { message: 'The game loaded, but its account state never became ready for secure synchronization.' }); return; }
     setTimeout(announceReadyWhenBooted, 20);
   }
 
