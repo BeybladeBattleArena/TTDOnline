@@ -12,6 +12,7 @@ const requiredAudio=[
   '/assets/audio/announcer/MissionClear.mp3','/assets/audio/announcer/MissionFail.mp3','/assets/audio/announcer/Finish.mp3',
   '/assets/audio/announcer/RedTeam.mp3','/assets/audio/announcer/BlueTeam.mp3','/assets/audio/announcer/Wins.mp3',
   'ANNOUNCER','playVoiceCue','playVoiceNow','voiceQueue=Promise.resolve()','voiceQueue.then(run,run)','ttd:voice-cue','...Object.values(ANNOUNCER).map(load)',
+  "type:'ttd:voice-cue-complete'",'requestId','Promise.resolve(playVoiceCue(cue)).then',
   'shopScreen','deckScreen','gachaScreen','gameModesScreen','gameScreen','source.loopStart','source.loopEnd','Math.random()','enterMainMenu','source.start(0,0)'
 ];
 for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v32 missing: ${marker}`);
@@ -22,4 +23,4 @@ if(!entry.includes("import './audio-client-v27.js?v=32';"))throw new Error('Sing
 if(entry.indexOf('audio-client-v27')>entry.indexOf('startup-splash-v26'))throw new Error('Audio manager must load before splash.');
 if(entry.indexOf('startup-polish-v28')<entry.indexOf('startup-splash-v26'))throw new Error('Splash polish must load after the base splash.');
 if(splash.indexOf('playWelcome')>splash.indexOf('enterMainMenu'))throw new Error('Welcome voice must begin before main-menu music starts.');
-console.log('Audio v32 verified: page music and welcome RNG remain wired, while announcer phrases serialize so FAIL/CLEAR finish before later cues.');
+console.log('Audio v32 verified: page music and welcome RNG remain wired, announcer phrases serialize, and the game receives an ended-event acknowledgement for result timing.');
