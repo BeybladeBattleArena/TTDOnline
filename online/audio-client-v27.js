@@ -18,7 +18,7 @@
     start:asset('/assets/audio/announcer/Start.mp3'),
     combatStart:asset('/assets/audio/announcer/CombatStart.mp3'),
     clear:asset('/assets/audio/announcer/MissionClear.mp3'),
-    fail:asset('/assets/audio/announcer/MissionFail.wav'),
+    fail:asset('/assets/audio/announcer/MissionFail.mp3'),
     finish:asset('/assets/audio/announcer/Finish.mp3'),
     redTeam:asset('/assets/audio/announcer/RedTeam.mp3'),
     blueTeam:asset('/assets/audio/announcer/BlueTeam.mp3'),
@@ -72,8 +72,8 @@
   function playVoiceCue(key){
     if(!ANNOUNCER[key])return Promise.resolve(false);
     const now=performance.now();if(key===lastVoiceKey&&now-lastVoiceAt<300)return Promise.resolve(true);lastVoiceKey=key;lastVoiceAt=now;
-    // Do not pre-empt the current phrase. Result follow-up cues wait their turn so a long
-    // MissionFail/MissionClear recording is heard all the way through.
+    // Never pre-empt an announcer phrase. MissionFail in particular must reach its natural
+    // ended event before the fail-result lifecycle is allowed to continue.
     const run=()=>playVoiceNow(key);const queued=voiceQueue.then(run,run);voiceQueue=queued.catch(()=>false);return queued;
   }
   async function enterMainMenu(){entered=true;lastScreen='';await playTrack('main');}
