@@ -78,7 +78,18 @@
   }
   async function enterMainMenu(){entered=true;lastScreen='';await playTrack('main');}
   function silence(){stopCurrent(.15);}
-  window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame?.contentWindow)return;const message=event.data||{};if(message.type!=='ttd:voice-cue')return;playVoiceCue(String(message.cue||'')).catch(error=>console.error('TTD announcer cue failed',error));});
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin||event.source!==frame?.contentWindow)return;
+    const message=event.data||{};if(message.type!=='ttd:voice-cue')return;
+    const cue=String(message.cue||''),requestId=String(message.requestId||'');
+    Promise.resolve(playVoiceCue(cue)).then(ok=>{
+      if(!requestId)return;
+      try{frame?.contentWindow?.postMessage({type:'ttd:voice-cue-complete',requestId,cue,ok:ok!==false},location.origin);}catch(_){}
+    }).catch(error=>{
+      console.error('TTD announcer cue failed',error);
+      if(requestId){try{frame?.contentWindow?.postMessage({type:'ttd:voice-cue-complete',requestId,cue,ok:false},location.origin);}catch(_){} }
+    });
+  });
   frame?.addEventListener('load',()=>setTimeout(()=>syncRoute(true),80));window.setInterval(syncRoute,180);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){context?.suspend?.().catch?.(()=>{});}else if(entered){context?.resume?.().catch?.(()=>{});syncRoute(true);}});
   window.__TTD_AUDIO_V32=Object.freeze({TRACKS,WELCOME,ANNOUNCER,SILENT_SCREENS,preloadPromise,unlock,playWelcome,playVoiceCue,enterMainMenu,syncRoute,silence});
