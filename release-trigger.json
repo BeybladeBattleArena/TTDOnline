@@ -1,14 +1,11 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry3",
+  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry4",
   "includes": [
-    "materialize the agreed PIPS and EXP tally directly into random-dice-game-33.html instead of layering a post-load replacement over the old result UI",
-    "remove stale result-summary and result-reward-polish runtime layers",
-    "make CLEAR FAIL and FINISH exactly-once outcomes owned by the canonical game lifecycle",
-    "stop presentation rebinding from repeatedly wrapping completion functions",
-    "use a committed PCM MissionFail WAV and wait for its actual ended event plus 1.2 seconds before results",
-    "validate the recovered FAIL phrase by PCM structure and late-phrase signal rather than a brittle guessed duration ceiling",
-    "make v35 source materialization idempotent for future releases",
-    "retain EXP orb and future avatar reward bonus notation in the canonical tally rows",
-    "retain portrait-safe Test Map switchback combat"
+    "deploy the already-materialized canonical v35 result UI and exactly-once outcome lifecycle",
+    "serve the registered MissionFail PCM WAV and wait for its actual ended event plus 1.2 seconds before results",
+    "remove legacy result-summary and downstream reward-polish ownership",
+    "retain EXP-orb and future avatar reward bonus notations in the native PIPS and EXP rows",
+    "retain the portrait-safe Test Map switchback combat implementation",
+    "register the canonical MissionFail WAV in the game asset manifest so release integrity validates the runtime asset"
   ]
 }
