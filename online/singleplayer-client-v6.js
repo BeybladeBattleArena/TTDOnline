@@ -15,4 +15,4 @@ import './singleplayer-client-v9-core.js?v=9';
 import './message-normalizer-v32.js?v=32';
 import './deck-social-client-v18.js?v=18';
 import './item-inventory-client-v1.js?v=1';
-import './item-art-polish-v2.js?v=3';
+import './item-art-polish-v2.js?v=4';
