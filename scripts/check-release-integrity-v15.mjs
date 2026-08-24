@@ -8,19 +8,38 @@ const manifest=JSON.parse(read('assets/game-assets.json'));
 if(manifest.schemaVersion!==1 || !manifest.assets || typeof manifest.assets!=='object') fail('assets/game-assets.json is invalid.');
 
 const legacyAssetAliases=new Map([
-  ['/assets/ui/epic-summon-ticket.webp','/assets/items/epic-summon-ticket.jpg'],
-  ['/assets/ui/exp-tome.webp','/assets/items/exp-tome.jpg'],
-  ['/assets/ui/loading-endless-horde.webp','/assets/ui/loading-endless-horde.jpg'],
-  ['/assets/ui/loading-al-hata.webp','/assets/ui/loading-al-hata.jpg'],
-  ['/assets/items/epic-summon-ticket.webp','/assets/items/epic-summon-ticket.jpg'],
-  ['/assets/items/exp-tome.webp','/assets/items/exp-tome.jpg'],
-  ['/assets/items/key-normal.webp','/assets/items/key-normal.jpg'],
-  ['/assets/items/key-hard.webp','/assets/items/key-hard.jpg'],
-  ['/assets/items/key-hell.webp','/assets/items/key-hell.jpg'],
-  ['/assets/items/mystery-chest.webp','/assets/items/mystery-chest.jpg'],
-  ['/assets/items/chest-frozen-island-normal.webp','/assets/items/chest-frozen-island-normal.jpg'],
-  ['/assets/items/chest-frozen-island-hard.webp','/assets/items/chest-frozen-island-hard.jpg'],
-  ['/assets/items/chest-frozen-island-hell.webp','/assets/items/chest-frozen-island-hell.jpg'],
+  ['/assets/ui/epic-summon-ticket.webp','/assets/items/epic-summon-ticket.png'],
+  ['/assets/ui/exp-tome.webp','/assets/items/exp-tome.png'],
+  ['/assets/ui/loading-endless-horde.webp','/assets/ui/loading-endless-horde.png'],
+  ['/assets/ui/loading-al-hata.webp','/assets/ui/loading-al-hata.png'],
+  ['/assets/items/epic-summon-ticket.webp','/assets/items/epic-summon-ticket.png'],
+  ['/assets/items/exp-tome.webp','/assets/items/exp-tome.png'],
+  ['/assets/items/key-normal.webp','/assets/items/key-normal.png'],
+  ['/assets/items/key-hard.webp','/assets/items/key-hard.png'],
+  ['/assets/items/key-hell.webp','/assets/items/key-hell.png'],
+  ['/assets/items/mystery-chest.webp','/assets/items/mystery-chest.png'],
+  ['/assets/items/chest-frozen-island-normal.webp','/assets/items/chest-frozen-island-normal.png'],
+  ['/assets/items/chest-frozen-island-hard.webp','/assets/items/chest-frozen-island-hard.png'],
+  ['/assets/items/chest-frozen-island-hell.webp','/assets/items/chest-frozen-island-hell.png'],
+
+  ['/assets/ui/loading-endless-horde.jpg','/assets/ui/loading-endless-horde.png'],
+  ['/assets/ui/loading-al-hata.jpg','/assets/ui/loading-al-hata.png'],
+  ['/assets/items/chest-frozen-island-normal.jpg','/assets/items/chest-frozen-island-normal.png'],
+  ['/assets/items/chest-frozen-island-hard.jpg','/assets/items/chest-frozen-island-hard.png'],
+  ['/assets/items/chest-frozen-island-hell.jpg','/assets/items/chest-frozen-island-hell.png'],
+  ['/assets/items/key-normal.jpg','/assets/items/key-normal.png'],
+  ['/assets/items/key-hard.jpg','/assets/items/key-hard.png'],
+  ['/assets/items/key-hell.jpg','/assets/items/key-hell.png'],
+  ['/assets/items/mystery-chest.jpg','/assets/items/mystery-chest.png'],
+  ['/assets/items/epic-summon-ticket.jpg','/assets/items/epic-summon-ticket.png'],
+  ['/assets/items/exp-tome.jpg','/assets/items/exp-tome.png'],
+  ['/assets/items/ore-common.jpg','/assets/items/ore-common.png'],
+  ['/assets/items/ore-rare.jpg','/assets/items/ore-rare.png'],
+  ['/assets/items/ore-unique.jpg','/assets/items/ore-unique.png'],
+  ['/assets/items/ore-legendary.jpg','/assets/items/ore-legendary.png'],
+  ['/assets/items/ore-omni.jpg','/assets/items/ore-omni.png'],
+  ['/assets/items/gift-box-pink.jpg','/assets/items/gift-box-pink.png'],
+  ['/assets/items/gift-box-icy.jpg','/assets/items/gift-box-icy.png'],
 ]);
 
 const registeredPaths=new Set();
@@ -37,6 +56,13 @@ for(const [key,asset] of Object.entries(manifest.assets)){
     if(!svg.match(new RegExp(`\\bheight=["']${asset.height}["']`))) fail(`${key}: SVG height does not match asset contract.`);
     if(/<script\b|javascript:/i.test(svg)) fail(`${key}: executable content is forbidden in game SVG assets.`);
     if(/<image\b|data:image/i.test(svg)) fail(`${key}: embedded raster/image content is forbidden in registered SVG game assets; SVG art must remain pure vector.`);
+  }
+  if(asset.format==='image/png'){
+    const bytes=fs.readFileSync(file);
+    if(bytes.length<24 || !bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) fail(`${key}: registered PNG is not a real PNG binary.`);
+    if(bytes.subarray(12,16).toString('ascii')!=='IHDR') fail(`${key}: registered PNG is missing IHDR.`);
+    const w=bytes.readUInt32BE(16),h=bytes.readUInt32BE(20);
+    if(w!==asset.width || h!==asset.height) fail(`${key}: PNG dimensions ${w}x${h} do not match manifest ${asset.width}x${asset.height}.`);
   }
   if(!asset.usage || typeof asset.usage!=='object' || !Object.keys(asset.usage).length) fail(`${key}: at least one usage contract is required.`);
   for(const [usageName,usage] of Object.entries(asset.usage)){
@@ -108,4 +134,4 @@ if(JSON.stringify(attack.usage?.battle?.box)!=='[49,49]') fail('Soul Saber attac
 const attackSvg=read(attack.path.slice(1));
 if((attackSvg.match(/<path\b/g)||[]).length<20) fail('Soul Saber attack SVG lost expected vector detail.');
 
-console.log(`Release integrity verified: ${registeredPaths.size} registered assets, ${legacyAssetAliases.size} explicit legacy redirects, cache-safe runtime loading, deliberate release-only production deployment, exact live-commit verification, and durable production receipt.`);
+console.log(`Release integrity verified: ${registeredPaths.size} registered assets, ${legacyAssetAliases.size} explicit legacy redirects, real PNG raster validation, cache-safe runtime loading, deliberate release-only production deployment, exact live-commit verification, and durable production receipt.`);
