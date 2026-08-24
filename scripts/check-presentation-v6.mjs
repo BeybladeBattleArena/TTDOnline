@@ -32,13 +32,20 @@ forbid(game,['Pips banked!','EXP earned!'],'canonical game result text');
 need(presentation,[
   'window.__TTD_GAME_PRESENTATION_V6',
   "makeSignal(['MISSION','START!'])","makeSignal(['3','2','1','START!'],'countdown')",
+  "nodes[2]?.classList.remove('in');nodes[3]?.classList.add('in');announce('combatStart');",
   "clear:{text:'CLEAR!',className:'outcome-clear',voice:'clear'}",
   "fail:{text:'FAIL',className:'outcome-fail',voice:'fail'}",
   "finish:{text:'FINISH!',className:'outcome-finish',voice:'finish'}",
   'const FAIL_POST_VOICE_MS=1200',"waitForEnd:kind==='fail'",
+  'const voiceDone=Promise.resolve(outcome?.__ttdVoiceDone).catch(()=>false).then(()=>sleep(FAIL_POST_VOICE_MS))',
   'function presentOutcome(kind,{prepare,reveal,delay=RESULT_REVEAL_MS}={})',
   'function installAll(){',
 ],'presentation visual/audio service');
+const countdownStart=presentation.indexOf("makeSignal(['3','2','1','START!'],'countdown')");
+const combatCue=presentation.indexOf("announce('combatStart')",countdownStart);
+const visualStart=presentation.indexOf("nodes[3]?.classList.add('in')",countdownStart);
+if(countdownStart<0||visualStart<0||combatCue<0||combatCue<visualStart)throw new Error('CombatStart must fire on the visual START after 3, 2, 1.');
+if(presentation.indexOf("announce('combatStart')",combatCue+1)>=0)throw new Error('CombatStart must have one countdown-owned cue point.');
 const installStart=presentation.indexOf('function installAll(){');
 const installEnd=presentation.indexOf('window.TTDGamePresentation',installStart);
 if(installStart<0||installEnd<0)throw new Error('Presentation installAll block missing.');
@@ -46,9 +53,10 @@ const installAll=presentation.slice(installStart,installEnd);
 forbid(installAll,['installOutcomeFlows()','installSummaryWrapper()'],'presentation ownership');
 
 need(audio,[
-  "fail:asset('/assets/audio/announcer/MissionFail.wav')",
+  "fail:asset('/assets/audio/announcer/MissionFail.mp3')",
+  "combatStart:asset('/assets/audio/announcer/CombatStart.mp3')",
   "clear:asset('/assets/audio/announcer/MissionClear.mp3')",
-  'voiceQueue=Promise.resolve()','async function playVoiceNow(key)',"type:'ttd:voice-cue-complete'",
+  'voiceQueue=Promise.resolve()','async function playVoiceNow(key)',"source.addEventListener('ended',()=>finish(true),{once:true})", "type:'ttd:voice-cue-complete'",
 ],'audio runtime');
 forbid(audio,['activeVoice.stop()'],'audio runtime');
 
@@ -62,8 +70,6 @@ need(battle,[
   'withFlatCorePathSuppressed','carryCombatCoinsToTraversal','clearPriorCombatCoins',
   'const ARENA_FOOTPRINT=Object.freeze','halfX:215,halfZ:195','portraitSafeSwitchbacks(){return true;}','usesWorldProjectedRoute',
 ],'Test Map world battle');
-// The actual v6 route must fit inside the declared portrait battle footprint. This replaces the
-// obsolete v5 literal portraitSafeMargin marker with a geometry-level invariant.
 for(const [label,centerX,points] of [
   ['beach',340,[[515,-155],[165,-155],[165,-50],[515,-50],[515,55],[165,55],[165,160],[515,160]]],
   ['temple',1840,[[1665,-155],[2015,-155],[2015,-50],[1665,-50],[1665,55],[2015,55],[2015,160],[1665,160]]],
@@ -75,4 +81,4 @@ for(const [label,centerX,points] of [
   }
 }
 
-console.log('Presentation verified: the canonical game owns result rows and exactly-once outcomes; outer presentation only supplies mission/countdown/outcome visuals and audio; stale banked/earned result overlays are not loaded; Test Map routes remain world-projected switchbacks inside their portrait-safe arena footprints.');
+console.log('Presentation verified: CombatStart fires exactly on visual START after 3-2-1; FAIL waits for the original MissionFail phrase natural ended acknowledgement before its post-voice delay; canonical result ownership and portrait-safe Test Map routes remain intact.');
