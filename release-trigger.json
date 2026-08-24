@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-24-canonical-results-outcome-audio-v35-retry8",
+  "release": "2026-08-24-original-announcer-transparent-items-v36",
   "includes": [
-    "deploy canonical PIPS and EXP tally rows owned by random-dice-game-33.html",
-    "prevent legacy Pips banked and EXP earned result ownership from loading",
-    "deploy exactly-once CLEAR FAIL and FINISH outcome ownership",
-    "serve validated MissionFail PCM WAV and wait for actual completion plus 1.2 seconds",
-    "validate independent MissionClear MP3 and registered MissionFail PCM WAV in the final item/world check",
-    "retain server-authoritative progression and portrait-safe continuous-world combat"
+    "use the user-supplied MissionFail.mp3 byte-for-byte as the canonical FAIL announcer master",
+    "allow MissionFail to reach its natural ended event in full before the post-FAIL result delay",
+    "use the user-supplied CombatStart.mp3 byte-for-byte exactly when START! appears after 3 2 1",
+    "materialize every active raster item PNG with real transparent backing while preserving native dimensions and dark item detail",
+    "verify transparent item alpha on the live Firebase build",
+    "retain canonical v35 result ownership, aligned item cards, server-authoritative progression, and portrait-safe combat"
   ]
 }
