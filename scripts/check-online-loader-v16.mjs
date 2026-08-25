@@ -22,15 +22,22 @@ new vm.Script(loader,{filename:'online/game-loader.js'});
 
 must(loader.includes("const GAME_PATH='/random-dice-game-33.html?v=35'"),'Base runtime source contract changed unexpectedly.');
 must(loader.includes("let transformed=installCanonicalDice(gameHtml,catalog);"),'dicefile.json is no longer installed as the canonical runtime dice catalog.');
-must(loader.includes("if(!gameHtml.includes('TTD_NATIVE_LOADER_TRANSFORMS_V1')){"),'native runtime migration gate is missing.');
-must((loader.match(/transformed=installCatalogHooks\(transformed\)/g)||[]).length===1,'catalog hook textual surgery must exist only as the one guarded migration fallback.');
-must((loader.match(/transformed=installMobileDeckRuntime\(transformed\)/g)||[]).length===1,'mobile deck textual surgery must exist only as the one guarded migration fallback.');
 
-for(const marker of ['const isolatedSources=sources.slice(3).map','failed without blocking later bridges.','window.parent?.postMessage','TTD_BATTLE_HOOK_SCOPE_V20','__TTD_BATTLE_HOOKS.updateSoulScimitars(dt)','__TTD_BATTLE_HOOKS.updateSlitherVines(dt)']){
-  must(loader.includes(marker),`runtime bridge isolation/battle-scope contract missing: ${marker}`);
+const hasMigrationFallback=loader.includes("if(!gameHtml.includes('TTD_NATIVE_LOADER_TRANSFORMS_V1')){");
+if(hasMigrationFallback){
+  must((loader.match(/transformed=installCatalogHooks\(transformed\)/g)||[]).length===1,'catalog hook textual surgery must exist only as the one guarded migration fallback.');
+  must((loader.match(/transformed=installMobileDeckRuntime\(transformed\)/g)||[]).length===1,'mobile deck textual surgery must exist only as the one guarded migration fallback.');
+  for(const marker of ["case 'magmaForce'",'__TTD_BATTLE_HOOKS.updateMagmaForce(dt)','drawMagmaForceGround','drawMagmaForceOverlay','fireMagmaForce,updateMagmaForce']){
+    must(loader.includes(marker),`guarded migration fallback lost catalog transform source: ${marker}`);
+  }
+}else{
+  for(const forbidden of ['function installCatalogHooks(','function installMobileDeckRuntime(','function replaceOnce(','function replaceSection(','const SKILL_SWITCH=','const LOOP_TIME=','const DRAW_LANE=','const ADVENTURE_SKILLS=','const ZOMBIE_SKILLS=','const TARGET_LABEL=']){
+    must(!loader.includes(forbidden),`retired runtime textual-surgery authority remains in loader: ${forbidden}`);
+  }
 }
-for(const marker of ["case 'magmaForce'",'__TTD_BATTLE_HOOKS.updateMagmaForce(dt)','drawMagmaForceGround','drawMagmaForceOverlay','fireMagmaForce,updateMagmaForce']){
-  must(loader.includes(marker),`guarded migration fallback lost Magma Force transform source: ${marker}`);
+
+for(const marker of ['const isolatedSources=sources.slice(3).map','failed without blocking later bridges.','window.parent?.postMessage','TTD_BATTLE_HOOK_SCOPE_V20']){
+  must(loader.includes(marker),`runtime bridge isolation/battle-scope contract missing: ${marker}`);
 }
 
 const expectedUrls=[
@@ -106,4 +113,4 @@ must(attackContract?.path==='/assets/soul-saber-attack.svg','Soul Saber attack a
 must(JSON.stringify(attackContract?.usage?.battle?.box)==='[49,49]','Soul Saber attack size is not the approved visual scale.');
 for(const marker of ['window.__TTD_GAME_ASSETS?.soulScimitar','window.__TTD_GAME_ASSETS?.soulSaberAttack','drawGhostScimitarExactSvg','ctx.drawImage(__ttdSoulSaberAttackImage'])must(soulBridge.includes(marker),`Soul Saber exact-art runtime contract missing: ${marker}`);
 
-console.log('Loader v16 native runtime verified: catalog combat hooks and mobile deck input are committed in the game source; dicefile remains the catalog authority; cloud bridges retain their guarded lexical injection and final Collection authority.');
+console.log(`Loader v16 native runtime verified: catalog combat hooks and mobile deck input are committed in the game source; ${hasMigrationFallback?'the guarded one-time fallback is still present':'the retired catalog/mobile textual-surgery fallback is gone'}; dicefile remains the catalog authority; cloud bridges retain guarded lexical injection and final Collection authority.`);
