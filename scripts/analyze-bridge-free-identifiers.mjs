@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import * as espree from 'espree';
-import eslintScope from 'eslint-scope';
+import * as eslintScope from 'eslint-scope';
 
 const files=[
   'online/dice-catalog-bridge-v8.js',
