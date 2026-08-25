@@ -20,8 +20,6 @@
     '/online/avatar-inventory-v22.js?v=22',
   ];
   const IIFE_END_MARKER='\n})();\n</'+'script>';
-  const DICE_START='  const DICE = {';
-  const DICE_KEYS='  const DICE_KEYS = Object.keys(DICE);';
 
 
   function send(type,payload={}){window.parent.postMessage({type,...payload},ORIGIN);}
@@ -30,7 +28,7 @@
     if(!response.ok)throw new Error(`${url} returned HTTP ${response.status}.`);
     return response.text();
   }
-  function installCanonicalDice(source,catalog){
+  function validateCanonicalCatalog(catalog){
     if(!catalog || catalog.schemaVersion!==1 || !catalog.dice || typeof catalog.dice!=='object'){
       throw new Error('dicefile.json is missing a supported canonical dice catalog.');
     }
@@ -43,17 +41,7 @@
     if(!catalog.dice.magmaforce || catalog.dice.magmaforce?.special?.kind!=='magmaForce'){
       throw new Error('dicefile.json does not contain the Magma Force runtime definition.');
     }
-    const start=source.indexOf(DICE_START);
-    const keys=source.indexOf(DICE_KEYS,start);
-    if(start<0 || keys<0)throw new Error('The v33 DICE definition block could not be located.');
-    const safeLiteral=JSON.stringify(catalog).replace(/</g,'\\u003c');
-    return source.slice(0,start)
-      +`  /* Canonical runtime catalog: /dicefile.json */\n  const __TTD_DICEFILE = ${safeLiteral};\n  const DICE = __TTD_DICEFILE.dice;\n`
-      +source.slice(keys);
   }
-
-
-
 
   async function boot(){
     send('ttd:bridge-phase',{phase:'loader-started',message:'Preparing complete cloud game…'});
@@ -64,9 +52,11 @@
     ]);
     let catalog;
     try{catalog=JSON.parse(catalogText);}catch(err){throw new Error(`dicefile.json is invalid JSON: ${err.message}`);}
+    validateCanonicalCatalog(catalog);
+    window.__TTD_DICEFILE=catalog;
 
     send('ttd:bridge-phase',{phase:'assets-loaded',message:'Online account systems and dice catalog loaded…'});
-    let transformed=installCanonicalDice(gameHtml,catalog);
+    let transformed=gameHtml;
 
     const markerIndex=transformed.lastIndexOf(IIFE_END_MARKER);
     if(markerIndex<0)throw new Error('The v33 game closure marker could not be located.');
