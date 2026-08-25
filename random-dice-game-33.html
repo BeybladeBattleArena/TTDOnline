@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- TTD_NATIVE_LOADER_TRANSFORMS_V1: exact catalog-hook and mobile-deck transforms materialized from online/game-loader.js -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -197,6 +198,9 @@
   .pityNote{font-size:11px; color:var(--mist-dim); text-align:center; max-width:320px;}
 
   /* ---------- DECK ---------- */
+  /* TTD_MOBILE_DECK_RUNTIME_V14 */
+  #deckScreen.active{display:grid;grid-template-rows:auto auto auto auto minmax(0,1fr) auto;min-height:0;overflow:hidden;}
+  #deckScreen.active > *{min-width:0;}
   .deckTabs{display:flex; gap:6px; padding:10px 14px 0; flex-shrink:0; background:var(--ink-900);}
   .deckTab{flex:1; text-align:center; padding:8px 4px; border-radius:9px 9px 0 0; border:1px solid var(--ink-700); border-bottom:none;
     background:var(--ink-850); color:var(--mist-dim); font-family:'Cinzel',serif; font-size:11.5px; font-weight:700;}
@@ -209,9 +213,10 @@
   .deckSlot.filled{border-style:solid;}
   .deckSlot.dropHover{border-color:var(--gold-glow); box-shadow:0 0 10px rgba(217,178,106,.5);}
   .deckSlot .glyphWrap{width:30px; height:30px;}
-  #collectionGrid{flex:1; padding:12px; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-content:start;}
+  #collectionGrid{flex:1 1 0; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:12px; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-content:start;}
+  #collectionGrid.ttdDiePointerActive{overflow-y:hidden!important;touch-action:none!important;}
   .colCard{border-radius:10px; padding:8px 4px 6px; display:flex; flex-direction:column; align-items:center;
-    background:var(--ink-850); border:1px solid var(--ink-700); position:relative; touch-action:pan-y;}
+    background:var(--ink-850); border:1px solid var(--ink-700); position:relative; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;}
   .colCard.locked{opacity:0.28;}
   .colCard.dragging{opacity:0.25;}
   .colCard.mergeHover{box-shadow:0 0 0 2px var(--gold-glow), 0 0 12px rgba(217,178,106,.6);}
@@ -2811,9 +2816,9 @@
   }
 
   let instDrag = null;
-  const LIFT_MS = 1000;   // still-hold required before the die "lifts" and becomes draggable
-  const INFO_MS = 1850;   // still-hold required for the spinner to fill and open the info page
-  const MOVE_THRESHOLD = 12; // px of movement outside the small threshold area that cancels the hold
+  const LIFT_MS = 360;    // mobile: reserve the pointer immediately, then lift quickly
+  const INFO_MS = 1100;   // stationary long-hold opens die info
+  const MOVE_THRESHOLD = 8; // motion is remembered while waiting for lift; it never becomes scroll
   const SPINNER_CIRC = 81.68; // 2*PI*13, matches the spinner SVG's circle radius
 
   function createHoldSpinner(){
@@ -2831,91 +2836,114 @@
   }
 
   function attachInstanceCardEvents(card, key, instId){
+    card.draggable = false;
+    card.addEventListener('dragstart', ev=>ev.preventDefault());
+    card.addEventListener('contextmenu', ev=>ev.preventDefault());
     card.addEventListener('pointerdown', (ev)=>{
-      const startX = ev.clientX, startY = ev.clientY;
-      instDrag = {
-        key, instId, active:false, moved:false, cancelled:false, detailFired:false, lifted:false,
-        startX, startY, ghostEl:null, srcCard:card, spinnerEl:null, rafId:null, startTime:performance.now(),
-      };
-      const spinner = createHoldSpinner();
-      card.appendChild(spinner);
-      instDrag.spinnerEl = spinner;
-      const fillEl = spinner.querySelector('.spinnerFill');
+      if(ev.isPrimary===false || ev.target.closest?.('.favBtn')) return;
+      ev.preventDefault();
 
-      const tick = ()=>{
-        if(!instDrag || instDrag.cancelled || instDrag.active || instDrag.detailFired) return;
-        const elapsed = performance.now() - instDrag.startTime;
-        const progress = Math.min(1, elapsed / INFO_MS);
-        fillEl.style.strokeDashoffset = (SPINNER_CIRC*(1-progress)).toFixed(2);
-        if(elapsed >= LIFT_MS && !instDrag.lifted){
-          instDrag.lifted = true;
+      const scrollHost=document.getElementById('collectionGrid');
+      const dragState={
+        key,instId,active:false,moved:false,cancelled:false,detailFired:false,lifted:false,
+        startX:ev.clientX,startY:ev.clientY,lastX:ev.clientX,lastY:ev.clientY,lastDist:0,
+        ghostEl:null,srcCard:card,spinnerEl:null,rafId:null,startTime:performance.now(),pointerId:ev.pointerId,
+      };
+      instDrag=dragState;
+
+      // A pointer that begins on a die belongs to that die for its entire lifetime. Chrome is
+      // never allowed to convert a slightly-early vertical drag into collection scrolling.
+      scrollHost?.classList.add('ttdDiePointerActive');
+      try{card.setPointerCapture(ev.pointerId);}catch(_){}
+
+      const spinner=createHoldSpinner();
+      card.appendChild(spinner);
+      dragState.spinnerEl=spinner;
+      const fillEl=spinner.querySelector('.spinnerFill');
+
+      const removeListeners=()=>{
+        card.removeEventListener('pointermove',onMove);
+        card.removeEventListener('pointerup',onUp);
+        card.removeEventListener('pointercancel',onCancel);
+        card.removeEventListener('lostpointercapture',onLost);
+        try{if(card.hasPointerCapture?.(dragState.pointerId))card.releasePointerCapture(dragState.pointerId);}catch(_){}
+      };
+      const unlock=()=>scrollHost?.classList.remove('ttdDiePointerActive');
+      const beginDrag=()=>{
+        if(instDrag!==dragState || dragState.active || dragState.cancelled || dragState.detailFired)return;
+        dragState.moved=true;
+        teardownHold(dragState);
+        beginInstDrag(card,key,dragState.lastX,dragState.lastY);
+      };
+      const finishCommon=()=>{
+        teardownHold(dragState);
+        removeListeners();
+        unlock();
+        window.__dragKey=null;
+        document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
+      };
+
+      const tick=()=>{
+        if(instDrag!==dragState || dragState.cancelled || dragState.active || dragState.detailFired)return;
+        const elapsed=performance.now()-dragState.startTime;
+        const progress=Math.min(1,elapsed/INFO_MS);
+        if(fillEl)fillEl.style.strokeDashoffset=(SPINNER_CIRC*(1-progress)).toFixed(2);
+        if(elapsed>=LIFT_MS && !dragState.lifted){
+          dragState.lifted=true;
           card.classList.add('lifting');
-          if(navigator.vibrate) navigator.vibrate(18);
+          if(navigator.vibrate)navigator.vibrate(12);
+          if(dragState.lastDist>MOVE_THRESHOLD){beginDrag();return;}
         }
-        if(progress >= 1){
-          instDrag.detailFired = true;
-          teardownHold(instDrag);
-          showDieDetail(key, {collectionInstId: instId});
+        if(progress>=1 && dragState.lastDist<=MOVE_THRESHOLD){
+          dragState.detailFired=true;
+          finishCommon();
+          if(instDrag===dragState)instDrag=null;
+          showDieDetail(key,{collectionInstId:instId});
           return;
         }
-        instDrag.rafId = requestAnimationFrame(tick);
+        dragState.rafId=requestAnimationFrame(tick);
       };
-      instDrag.rafId = requestAnimationFrame(tick);
 
-      const onMove = (mv)=>{
-        if(!instDrag || instDrag.cancelled || instDrag.detailFired) return;
-        const dist = Math.hypot(mv.clientX-instDrag.startX, mv.clientY-instDrag.startY);
-        if(dist > MOVE_THRESHOLD){
-          if(!instDrag.active){
-            if(instDrag.lifted){
-              mv.preventDefault();
-              instDrag.moved = true;
-              teardownHold(instDrag);
-              beginInstDrag(card, key, mv.clientX, mv.clientY);
-            } else {
-              // moved before the die ever lifted — treat as a scroll gesture, back off entirely
-              instDrag.cancelled = true;
-              teardownHold(instDrag);
-              return;
-            }
-          }
+      const onMove=(mv)=>{
+        if(instDrag!==dragState || dragState.cancelled || dragState.detailFired || mv.pointerId!==dragState.pointerId)return;
+        mv.preventDefault();
+        dragState.lastX=mv.clientX;
+        dragState.lastY=mv.clientY;
+        dragState.lastDist=Math.hypot(mv.clientX-dragState.startX,mv.clientY-dragState.startY);
+        if(dragState.active){moveInstGhost(mv.clientX,mv.clientY);return;}
+        if(dragState.lifted || performance.now()-dragState.startTime>=LIFT_MS){
+          beginDrag();
+          if(dragState.active)moveInstGhost(mv.clientX,mv.clientY);
         }
-        if(instDrag.active){ mv.preventDefault(); moveInstGhost(mv.clientX, mv.clientY); }
+        // Before lift we intentionally do nothing except remember position. Scrolling remains locked.
       };
-      const onUp = (up)=>{
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onCancel);
-        teardownHold(instDrag);
-        window.__dragKey = null;
-        document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
-        if(instDrag && instDrag.active){
-          endInstDrag(up.clientX, up.clientY);
-        } else if(instDrag && !instDrag.cancelled && !instDrag.moved && !instDrag.detailFired && !instDrag.lifted){
-          quickEquip(key, instId);
+      const onUp=(up)=>{
+        if(up.pointerId!==dragState.pointerId)return;
+        finishCommon();
+        if(instDrag===dragState && dragState.active){
+          endInstDrag(up.clientX,up.clientY);
+        }else if(instDrag===dragState && !dragState.cancelled && !dragState.detailFired && !dragState.lifted && dragState.lastDist<=MOVE_THRESHOLD){
+          quickEquip(key,instId);
         }
-        instDrag = null;
+        if(instDrag===dragState)instDrag=null;
       };
-      // The browser fires pointercancel (not another pointermove) the moment it hands this
-      // touch off to native scrolling — without handling it, the time-based spinner above has
-      // no way to know the finger ever left, and keeps ticking to completion regardless.
-      const onCancel = ()=>{
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onCancel);
-        teardownHold(instDrag);
-        if(instDrag && instDrag.active){
-          if(instDrag.srcCard) instDrag.srcCard.classList.remove('dragging');
-          if(instDrag.ghostEl) instDrag.ghostEl.remove();
+      const onCancel=()=>{
+        dragState.cancelled=true;
+        finishCommon();
+        if(dragState.active){
+          card.classList.remove('dragging');
+          dragState.ghostEl?.remove();
         }
-        window.__dragKey = null;
-        document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
-        instDrag = null;
+        if(instDrag===dragState)instDrag=null;
       };
-      window.addEventListener('pointermove', onMove, {passive:false});
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onCancel);
-    });
+      const onLost=()=>{if(instDrag===dragState)onCancel();};
+
+      card.addEventListener('pointermove',onMove,{passive:false});
+      card.addEventListener('pointerup',onUp);
+      card.addEventListener('pointercancel',onCancel);
+      card.addEventListener('lostpointercapture',onLost);
+      dragState.rafId=requestAnimationFrame(tick);
+    },{passive:false});
   }
   function beginInstDrag(card, key, x, y){
     if(!instDrag) return;
@@ -3081,7 +3109,7 @@
     const d = DICE[key]; const lore = DICE_LORE[key] || {flavor:'', desc:''};
     const cardEl = document.getElementById('dieDetailCard');
     const rarityColor = d.rarity==='legendary'?'var(--gold)':d.rarity==='unique'?'var(--c-unique)':d.rarity==='rare'?'var(--c-rare)':'var(--c-common)';
-    const targetLabel = {front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', none:'Does not attack'}[d.target]||d.target;
+    const targetLabel = d.special?.kind==='magmaForce' ? 'Random battlefield areas' : ({front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', fastest:'Fastest enemy (ties: highest current HP)', none:'Does not attack'}[d.target]||d.target);
 
     const battleMode = !!opts.battle;
     const liveTiles = battleMode && state ? state.board.map((die,idx)=>({die,idx})).filter(o=>o.die && o.die.key===key) : [];
@@ -4754,6 +4782,20 @@
     if(!sp){ damageEnemy(target, dmg, null, dieAff); fx(die.key==='wind'?'whirlwind':'crack', pt); if(isCrit) fx('critFlash', pt); return; }
 
     switch(sp.kind){
+      case 'magmaForce': {
+        if(!__TTD_BATTLE_HOOKS.fireMagmaForce(idx, die, d, dmg, dieAff, potencyBonus, isCrit)){
+          die.sinceLastShot = Math.max(die.sinceLastShot, effAtk(die)*0.85);
+        }
+        break;
+      }
+      case 'soulScimitar': {
+        __TTD_BATTLE_HOOKS.fireSoulScimitar(idx, die, d, dmg, dieAff, potencyBonus, isCrit);
+        break;
+      }
+      case 'slitherVine': {
+        __TTD_BATTLE_HOOKS.fireSlitherVine(idx, die, d, dmg, dieAff, potencyBonus, isCrit);
+        break;
+      }
       case 'fireball': {
         const cls = slottedClassOf(die.key);
         const T = fireballTierStats(cls);
@@ -6491,6 +6533,8 @@
       }
     }
 
+    __TTD_BATTLE_HOOKS.drawMagmaForceGround();
+
     for(const e of state.enemies){
       if(!e.alive) continue;
       const groundP = enemyRenderPos(e);
@@ -7206,10 +7250,10 @@
         if(e.actionCdT>0) e.actionCdT -= dt;
         if(e.pausedT>0){ e.pausedT -= dt; continue; }
         updateZombieMovement(e, dt);
-        if(!silenced) tickZombieSkills(e);
+        if(!silenced && !e._slitherBlocked) tickZombieSkills(e);
         continue;
       }
-      if(state.adventure && !silenced) tickMonsterSkills(e, dt);
+      if(state.adventure && !silenced && !e._slitherBlocked) tickMonsterSkills(e, dt);
       let speedMult = e.slowMult;
       if(e.enrageFlag){
         const pct = e.hp/e.maxHp;
@@ -7272,6 +7316,9 @@
     if(!lastT) lastT = ts;
     let dt = (ts-lastT)/1000; lastT = ts; dt = Math.min(dt, 0.05);
     state.time += dt;
+    __TTD_BATTLE_HOOKS.updateMagmaForce(dt);
+    __TTD_BATTLE_HOOKS.updateSoulScimitars(dt);
+    __TTD_BATTLE_HOOKS.updateSlitherVines(dt);
     if(state.zombieMode) state.zPlayTime += dt;
 
     for(let i=0;i<15;i++) tickTile(i,dt);
@@ -7298,9 +7345,9 @@
     const passiveSpGen = boardJewelBonus('spGen');
     if(passiveSpGen>0) state.sp += passiveSpGen*dt;
     checkWipeout();
-    if(!state.running){ renderHUD(); renderBoard(); drawLane(dt); return; }
+    if(!state.running){ renderHUD(); renderBoard(); drawLane(dt); __TTD_BATTLE_HOOKS.drawSlitherVines(); __TTD_BATTLE_HOOKS.drawSoulScimitars(); __TTD_BATTLE_HOOKS.drawMagmaForceOverlay(); return; }
 
-    renderHUD(); renderBoard(); drawLane(dt);
+    renderHUD(); renderBoard(); drawLane(dt); __TTD_BATTLE_HOOKS.drawSlitherVines(); __TTD_BATTLE_HOOKS.drawSoulScimitars(); __TTD_BATTLE_HOOKS.drawMagmaForceOverlay();
     requestAnimationFrame(loop);
   }
 

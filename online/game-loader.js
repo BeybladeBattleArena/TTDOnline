@@ -269,8 +269,10 @@
 
     send('ttd:bridge-phase',{phase:'assets-loaded',message:'Online account systems and dice catalog loaded…'});
     let transformed=installCanonicalDice(gameHtml,catalog);
-    transformed=installCatalogHooks(transformed);
-    transformed=installMobileDeckRuntime(transformed);
+    if(!gameHtml.includes('TTD_NATIVE_LOADER_TRANSFORMS_V1')){
+      transformed=installCatalogHooks(transformed);
+      transformed=installMobileDeckRuntime(transformed);
+    }
 
     const markerIndex=transformed.lastIndexOf(IIFE_END_MARKER);
     if(markerIndex<0)throw new Error('The v33 game closure marker could not be located.');
