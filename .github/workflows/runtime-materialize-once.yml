@@ -1,0 +1,47 @@
+name: One-time Runtime Source Materialization
+
+on:
+  push:
+    branches: [cleanup/lossless-infrastructure]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: startsWith(github.event.head_commit.message, '[runtime-materialize-v1]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: cleanup/lossless-infrastructure
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Materialize exact current runtime transforms
+        run: node scripts/materialize-native-runtime-v1.mjs
+      - name: Install validation toolchain
+        run: |
+          npm install
+          npm --prefix functions install
+      - name: Validate materialized candidate before committing it
+        run: npm run check
+      - name: Assert approved immutable assets were untouched
+        run: npm run check:immutable-assets
+      - name: Commit the validated migration result to the cleanup branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --exit-code -- assets/ assets/game-assets.json || {
+            echo 'Runtime migration attempted to change approved assets.'
+            exit 1
+          }
+          git add random-dice-game-33.html online/game-loader.js
+          git diff --cached --quiet && { echo 'Nothing to materialize.'; exit 0; }
+          git config user.name 'ttd-cleanup-bot'
+          git config user.email 'ttd-cleanup-bot@users.noreply.github.com'
+          git commit -m 'infra: materialize existing runtime source transforms [skip runtime-materialize-v1]'
+          git push origin HEAD:cleanup/lossless-infrastructure
