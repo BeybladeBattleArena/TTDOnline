@@ -5,21 +5,60 @@ on:
     branches: [cleanup/lossless-infrastructure]
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: ttd-native-bridge-runtime-once
+  cancel-in-progress: false
 
 jobs:
-  bridge-audit:
-    if: startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
+  native-bridge-runtime:
+    if: startsWith(github.event.head_commit.message, '[bridge-native-v1]')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           ref: cleanup/lossless-infrastructure
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install temporary parser dependencies
-        run: npm install --no-save --package-lock=false espree eslint-scope
-      - name: Report bridge lexical dependencies
-        run: node scripts/analyze-bridge-free-identifiers.mjs
+
+      - name: Validate migration script syntax
+        run: node --check scripts/materialize-native-bridge-runtime-v1.mjs
+
+      - name: Materialize native bridge compatibility facade
+        run: node scripts/materialize-native-bridge-runtime-v1.mjs
+
+      - name: Constrain migration scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only | sort)
+          printf '%s\n' "${changed[@]}"
+          [[ "${#changed[@]}" -eq 2 ]]
+          [[ "${changed[0]}" == 'online/game-loader.js' ]]
+          [[ "${changed[1]}" == 'random-dice-game-33.html' ]]
+
+      - name: Install validation toolchain
+        run: |
+          npm install
+          npm --prefix functions install
+
+      - name: Validate native bridge runtime
+        run: npm run check
+
+      - name: Recheck immutable assets
+        run: npm run check:immutable-assets
+
+      - name: Commit validated native bridge runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'ttd-cleanup-bot'
+          git config user.email 'ttd-cleanup-bot@users.noreply.github.com'
+          git add online/game-loader.js random-dice-game-33.html
+          git diff --cached --quiet && { echo 'No migration changes to commit.'; exit 1; }
+          git commit -m 'infra: replace lexical bridge injection with native compatibility runtime [skip bridge-native-v1]'
+          git push origin HEAD:cleanup/lossless-infrastructure
