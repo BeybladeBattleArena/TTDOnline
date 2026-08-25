@@ -2,18 +2,22 @@ name: Verify
 
 on:
   pull_request:
+  push:
+    branches: [cleanup/lossless-infrastructure]
 
 permissions:
   contents: read
 
-# Development branches are assembled before a PR is opened. If a PR is updated,
-# only the newest complete candidate matters; stale verification runs are cancelled.
+# Development branches are assembled before a PR is opened. Pull-request verification remains
+# the authoritative full gate. The temporary push-only audit job reports lexical bridge dependencies
+# without changing source and is removed after the bridge migration is complete.
 concurrency:
-  group: verify-${{ github.event.pull_request.number }}
+  group: verify-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
   syntax:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,3 +38,17 @@ jobs:
             exit 1
           fi
           echo 'Validation completed without changing tracked source.'
+
+  bridge-audit:
+    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install temporary parser dependencies
+        run: npm install --no-save --package-lock=false espree eslint-scope
+      - name: Report bridge lexical dependencies
+        run: node scripts/analyze-bridge-free-identifiers.mjs
