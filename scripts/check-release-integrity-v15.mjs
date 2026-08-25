@@ -93,10 +93,15 @@ const workflow=read('.github/workflows/firebase-deploy.yml');
 if(!workflow.includes('branches: [main]')) fail('Production deployment must have main as its only push source.');
 if(workflow.includes('branches: [main, agent/firebase-foundation]')) fail('Legacy multi-branch production deployment is forbidden.');
 if(!workflow.includes("startsWith(github.event.head_commit.message, '[release]')")) fail('Automatic production deployment must require one deliberate [release] commit.');
-for(const marker of ['group: firebase-production-deploy','Stamp exact production build','Verify exact commit is live','Record verified production commit','production-verified.json']){
+for(const marker of ['group: firebase-production-deploy','Pin exact source commit','Validate deployable game client','Verify source tree is unchanged','Stamp exact production build','Verify exact commit is live']){
   if(!workflow.includes(marker)) fail(`Production deployment verification is missing: ${marker}`);
 }
-if(!workflow.includes('contents: write')) fail('Production workflow must be able to write its durable verification receipt.');
+if(!workflow.includes('contents: read')) fail('Production deployment must have read-only repository contents permission.');
+if(workflow.includes('contents: write')) fail('Production deployment may not have repository write permission.');
+if(!workflow.includes('DEPLOY_SHA=$GITHUB_SHA')) fail('Production deployment must pin the exact triggering GitHub SHA.');
+for(const forbidden of ['git push','git commit','materialize-canonical-results','materialize-transparent-item-art','materialize-highres-art','sed -i','production-verified.json','hosting-deploy-diagnostic.json']){
+  if(workflow.includes(forbidden)) fail(`Production deployment contains forbidden source/repository mutation behavior: ${forbidden}`);
+}
 
 const onlineDir='online';
 for(const name of fs.readdirSync(onlineDir)){
@@ -134,4 +139,4 @@ if(JSON.stringify(attack.usage?.battle?.box)!=='[49,49]') fail('Soul Saber attac
 const attackSvg=read(attack.path.slice(1));
 if((attackSvg.match(/<path\b/g)||[]).length<20) fail('Soul Saber attack SVG lost expected vector detail.');
 
-console.log(`Release integrity verified: ${registeredPaths.size} registered assets, ${legacyAssetAliases.size} explicit legacy redirects, real PNG raster validation, cache-safe runtime loading, deliberate release-only production deployment, exact live-commit verification, and durable production receipt.`);
+console.log(`Release integrity verified: ${registeredPaths.size} registered assets, ${legacyAssetAliases.size} explicit legacy redirects, immutable-asset validation, cache-safe runtime loading, deliberate release-only production deployment, read-only deployment permissions, clean-source enforcement, and exact live-commit verification.`);

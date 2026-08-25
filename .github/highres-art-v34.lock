@@ -1,3 +1,0 @@
-TTD high-resolution designer art v34
-Approved masters are stored as lossless PNG files at their native pixel dimensions.
-Runtime presentation size is controlled by UI/CSS, never by destructive source downsampling.
