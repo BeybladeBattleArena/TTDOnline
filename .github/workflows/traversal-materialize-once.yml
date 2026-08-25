@@ -5,56 +5,23 @@ on:
     branches: [cleanup/lossless-infrastructure]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: ttd-traversal-materialize-once
+  group: ttd-temporary-runtime-audit
   cancel-in-progress: false
 
 jobs:
-  materialize:
-    if: startsWith(github.event.head_commit.message, '[traversal-materialize-v1]')
+  bridge-audit:
+    if: startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Materialize existing traversal continuity patch
-        run: node scripts/materialize-traversal-continuity-v1.mjs
-
-      - name: Constrain migration scope
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t changed < <(git diff --name-only | sort)
-          printf '%s\n' "${changed[@]}"
-          [[ "${#changed[@]}" -eq 2 ]]
-          [[ "${changed[0]}" == 'online/adventure-platforming-v2.js' ]]
-          [[ "${changed[1]}" == 'online/game-bridge-inner.js' ]]
-
-      - name: Install validation toolchain
-        run: |
-          npm install
-          npm --prefix functions install
-
-      - name: Validate materialized runtime
-        run: npm run check
-
-      - name: Recheck immutable assets
-        run: npm run check:immutable-assets
-
-      - name: Commit validated traversal cleanup
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'ttd-cleanup-bot'
-          git config user.email 'ttd-cleanup-bot@users.noreply.github.com'
-          git add online/adventure-platforming-v2.js online/game-bridge-inner.js
-          git diff --cached --quiet && { echo 'No migration changes to commit.'; exit 1; }
-          git commit -m 'infra: materialize traversal continuity source [skip traversal-materialize-v1]'
-          git push origin HEAD:cleanup/lossless-infrastructure
+      - name: Install temporary parser dependencies
+        run: npm install --no-save --package-lock=false espree eslint-scope
+      - name: Report bridge lexical dependencies
+        run: node scripts/analyze-bridge-free-identifiers.mjs
