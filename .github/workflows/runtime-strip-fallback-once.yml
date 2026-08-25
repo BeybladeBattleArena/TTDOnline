@@ -5,43 +5,21 @@ on:
     branches: [cleanup/lossless-infrastructure]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  strip:
-    if: startsWith(github.event.head_commit.message, '[runtime-strip-fallback-v1]')
+  bridge-audit:
+    if: startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           ref: cleanup/lossless-infrastructure
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Remove retired loader textual surgery
-        run: node scripts/strip-native-loader-fallback-v1.mjs
-      - name: Install validation toolchain
-        run: |
-          npm install
-          npm --prefix functions install
-      - name: Validate simplified loader before committing it
-        run: npm run check
-      - name: Recheck immutable assets
-        run: npm run check:immutable-assets
-      - name: Commit validated loader cleanup
-        shell: bash
-        run: |
-          set -euo pipefail
-          git diff --check
-          git diff --exit-code -- random-dice-game-33.html assets/ assets/game-assets.json || {
-            echo 'Loader fallback removal attempted to change committed game source or approved assets.'
-            exit 1
-          }
-          git add online/game-loader.js
-          git diff --cached --quiet && { echo 'Nothing to strip.'; exit 0; }
-          git config user.name 'ttd-cleanup-bot'
-          git config user.email 'ttd-cleanup-bot@users.noreply.github.com'
-          git commit -m 'infra: remove retired runtime textual-surgery fallback [skip runtime-strip-fallback-v1]'
-          git push origin HEAD:cleanup/lossless-infrastructure
+      - name: Install temporary parser dependencies
+        run: npm install --no-save --package-lock=false espree eslint-scope
+      - name: Report bridge lexical dependencies
+        run: node scripts/analyze-bridge-free-identifiers.mjs
