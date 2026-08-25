@@ -1,8 +1,6 @@
 import fs from 'node:fs';
 
 const read=(p)=>fs.readFileSync(new URL(`../${p}`,import.meta.url),'utf8');
-const file=(p)=>fs.readFileSync(new URL(`../${p}`,import.meta.url));
-const exists=(p)=>fs.existsSync(new URL(`../${p}`,import.meta.url));
 const must=(cond,msg)=>{if(!cond)throw new Error(msg);};
 const world=read('online/world-items-v1.js');
 const assets=read('online/item-assets-v1.js');
@@ -12,8 +10,6 @@ const client=read('online/item-inventory-client-v1.js');
 const merge=read('online/merge-bridge-v6.js');
 const entry=read('online/singleplayer-client-v6.js');
 const artPolish=read('online/item-art-polish-v2.js');
-const presentation=read('online/game-presentation-v1.js');
-const audio=read('online/audio-client-v27.js');
 const manifest=JSON.parse(read('assets/game-assets.json'));
 
 must(world.includes("epic_summon_ticket")&&world.includes("exp_tome"),'reward items missing');
@@ -35,41 +31,6 @@ must(funcs.includes("useExpTomeV1")&&funcs.includes("useXp:60"),'EXP Tome 60 EXP
 must(main.includes("./items-v1")&&main.includes("...items"),'item functions not exported');
 must(client.includes("ttd:item-purchase-request")&&client.includes("ttd:item-use-request"),'item client bridge missing');
 must(merge.includes("item-assets-v1.js?v=2")&&merge.includes("world-items-v1.js"),'world item runtime not loaded');
-
-function pngDimensions(bytes){
-  must(bytes.length>=26,'PNG file is truncated');
-  must(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'file is not a real PNG');
-  must(bytes.subarray(12,16).toString('ascii')==='IHDR','PNG IHDR missing');
-  return [bytes.readUInt32BE(16),bytes.readUInt32BE(20),bytes[25]];
-}
-const imageSpecs={
-  'assets/ui/loading-endless-horde.png':{w:1536,h:1152,min:1000*1024},
-  'assets/ui/loading-al-hata.png':{w:1536,h:1157,min:1000*1024},
-  'assets/items/chest-frozen-island-normal.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/chest-frozen-island-hard.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/chest-frozen-island-hell.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/key-normal.png':{w:1024,h:1536,min:300*1024},
-  'assets/items/key-hard.png':{w:1024,h:1536,min:300*1024},
-  'assets/items/key-hell.png':{w:1024,h:1536,min:500*1024},
-  'assets/items/mystery-chest.png':{w:1536,h:1152,min:1000*1024},
-  'assets/items/epic-summon-ticket.png':{w:1536,h:1024,min:1000*1024},
-  'assets/items/exp-tome.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/ore-common.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/ore-rare.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/ore-unique.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/ore-legendary.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/ore-omni.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/gift-box-pink.png':{w:1536,h:1536,min:1000*1024},
-  'assets/items/gift-box-icy.png':{w:1536,h:1499,min:1000*1024},
-};
-for(const [path,spec] of Object.entries(imageSpecs)){
-  must(exists(path),`lossless high-resolution PNG missing: ${path}`);
-  const bytes=file(path);
-  must(bytes.length>spec.min,`PNG looks unexpectedly small for the approved native-resolution master: ${path}`);
-  const [w,h,colorType]=pngDimensions(bytes);
-  must(w===spec.w&&h===spec.h,`PNG dimensions mismatch for ${path}: ${w}x${h}`);
-  if(path.startsWith('assets/items/'))must(colorType===6,`item PNG does not carry an RGBA alpha channel: ${path}`);
-}
 
 for(const marker of [
   "window.__TTD_ITEM_ASSETS_V4=Object.freeze",
@@ -131,14 +92,4 @@ for(const marker of [
 must(artPolish.includes('source art remains native-resolution')||artPolish.includes('Source art remains native-resolution'),'item presentation no longer documents the native-resolution source rule');
 must(entry.includes("import './item-art-polish-v2.js?v=4';"),'single-player entry does not load item art polish v4 behavior');
 
-must(presentation.includes("fail:{text:'FAIL',className:'outcome-fail',voice:'fail'}"),'FAIL presentation is not routed to the fail announcer key');
-must(audio.includes("clear:asset('/assets/audio/announcer/MissionClear.mp3')")&&audio.includes("fail:asset('/assets/audio/announcer/MissionFail.mp3')"),'CLEAR/FAIL announcer files are not independently mapped to their canonical original sources');
-must(manifest.assets?.announcerMissionClear?.path==='/assets/audio/announcer/MissionClear.mp3'&&manifest.assets?.announcerMissionClear?.format==='audio/mpeg','MissionClear MP3 is not independently registered');
-must(manifest.assets?.announcerMissionFail?.path==='/assets/audio/announcer/MissionFail.mp3'&&manifest.assets?.announcerMissionFail?.format==='audio/mpeg','MissionFail original MP3 is not independently registered');
-const missionClear=file('assets/audio/announcer/MissionClear.mp3');
-const missionFail=file('assets/audio/announcer/MissionFail.mp3');
-must(missionClear.length>8000,'MissionClear announcer file is unexpectedly small');
-must(missionFail.length>25000,'MissionFail original MP3 is unexpectedly small');
-must(!missionFail.equals(missionClear),'MissionFail announcer binary must not be identical to MissionClear');
-
-console.log('Items/world v5 verified: lossless native-resolution PNG masters carry alpha channels, semantic item routing and aligned card rows remain intact, and FAIL uses the independently registered original MissionFail MP3.');
+console.log('Items/world v5 verified: semantic item routing, registered PNG contracts, aligned item-card presentation, world interactions, purchases, and item use remain wired end to end. Asset byte identity is owned by check:immutable-assets and announcer behavior by check:audio.');
