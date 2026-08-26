@@ -49,8 +49,17 @@ function replaceExactly(source,from,to,label){
     const oldLine="const AS={avatar:A('/assets/ui/avatar-test-base.webp'),ticket:A('/assets/ui/epic-summon-ticket.webp'),tome:A('/assets/ui/exp-tome.webp'),horde:A('/assets/ui/loading-endless-horde.webp'),hata:A('/assets/ui/loading-al-hata.webp')};Object.values(AS).forEach(s=>{let i=new Image;i.src=s});";
     const newLine="// TTD_APPROVED_ITEM_ART_V1\nconst ITEM_ASSETS=window.__TTD_ITEM_ASSETS_V4||window.__TTD_ITEM_ASSETS_V1||{};\nconst AS={avatar:A('/assets/ui/avatar-test-base.webp'),ticket:ITEM_ASSETS.epic_summon_ticket||A('/assets/items/epic-summon-ticket.png'),tome:ITEM_ASSETS.exp_tome||A('/assets/items/exp-tome.png'),horde:A(window.__TTD_GAME_ASSETS?.loadingEndlessHorde?.path||'/assets/ui/loading-endless-horde.png'),hata:A(window.__TTD_GAME_ASSETS?.loadingAlHata?.path||'/assets/ui/loading-al-hata.png')};Object.values(AS).forEach(s=>{let i=new Image;i.src=s});";
     source=replaceExactly(source,oldLine,newLine,'avatar approved art routing');
-    fs.writeFileSync(file,source);
   }
+
+  // 3) Server-synced items intentionally carry semantic itemId/count data rather than copied
+  //    image paths. The final Inventory renderer must resolve those IDs through the one approved
+  //    item-art authority, otherwise ores/Mystery Chest/etc. degrade to generic fallback icons.
+  if(!source.includes('TTD_APPROVED_ITEM_ID_ART_V1')){
+    const oldIcon="function icon(i){if(i?.asset)return `<img src=\"${i.asset}\">`;if(i?.type==='chest')return chestSVG(i.difficultyKey);if(i?.type==='key')return keySVG(i.difficultyKey);if(i?.kind==='jewel')return gemSVG(i.jewelId);if(i?.kind==='card')return cardSVG(i.cardId);return '◆'}";
+    const newIcon="// TTD_APPROVED_ITEM_ID_ART_V1\nfunction icon(i){const itemArt=i?.itemId&&ITEM_ASSETS[i.itemId];if(i?.asset)return `<img src=\"${i.asset}\">`;if(itemArt)return `<img src=\"${itemArt}\">`;if(i?.type==='chest')return chestSVG(i.difficultyKey);if(i?.type==='key')return keySVG(i.difficultyKey);if(i?.kind==='jewel')return gemSVG(i.jewelId);if(i?.kind==='card')return cardSVG(i.cardId);return '◆'}";
+    source=replaceExactly(source,oldIcon,newIcon,'avatar semantic item art routing');
+  }
+  fs.writeFileSync(file,source);
 }
 
-console.log('Materialized independent presentation loading and approved Inventory/loading art routing.');
+console.log('Materialized independent presentation loading and approved Inventory/loading/item-id art routing.');
