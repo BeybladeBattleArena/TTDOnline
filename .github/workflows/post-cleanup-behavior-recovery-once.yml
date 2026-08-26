@@ -36,11 +36,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          changed="$(git diff --name-only | sort)"
-          expected="$(printf '%s\n' online/avatar-inventory-v22.js online/run-ui-bridge-v21.js | sort)"
-          [[ "$changed" == "$expected" ]] || {
+          changed="$(git diff --name-only)"
+          [[ -n "$changed" ]] || { echo 'Behavior recovery produced no changes.'; exit 1; }
+          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(online/avatar-inventory-v22\.js|online/run-ui-bridge-v21\.js)$' || true)"
+          [[ -z "$unexpected" ]] || {
             echo "Behavior recovery changed an unexpected scope:"
-            printf '%s\n' "$changed"
+            printf '%s\n' "$unexpected"
             exit 1
           }
 
@@ -63,5 +64,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add online/avatar-inventory-v22.js online/run-ui-bridge-v21.js
-          git commit -m "fix: restore presentation isolation and approved item art [skip behavior-recovery-v1]"
+          git commit -m "fix: complete approved item art routing [skip behavior-recovery-v1]"
           git push origin HEAD:fix/post-cleanup-regressions
