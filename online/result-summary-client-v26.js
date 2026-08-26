@@ -123,18 +123,6 @@
     if (pipsMatch) pending.actualPips = Math.max(0, Number(pipsMatch[1]) || 0);
   }
 
-  function applyVerifiedResult(detail) {
-    if (!pending || !detail || typeof detail !== 'object') return;
-    const xp = Number(detail.xpAwarded ?? detail.xpGranted ?? detail.accountExp);
-    const pips = Number(detail.pipsEarned ?? detail.pipsAwarded);
-    if (Number.isFinite(xp)) pending.xp = Math.max(0, Math.floor(xp));
-    if (Number.isFinite(pips)) pending.actualPips = Math.max(0, Math.floor(pips));
-    const level = Number(detail.level?.level ?? detail.accountLevel?.level ?? detail.levelAfter);
-    const levelsGained = Array.isArray(detail.levelsGained) ? detail.levelsGained : [];
-    if (levelsGained.length && Number.isFinite(level)) pending.levelText = `LEVEL UP! Lv.${Math.floor(level)}`;
-    maybeStartSequence();
-  }
-
   async function maybeStartSequence() {
     if (!pending || pending.sequenceStarted) return;
     const block = ensureRewardBlock();
@@ -204,7 +192,6 @@
     doc?.getElementById('ttd-result-summary-hide-v26')?.remove();
   }
 
-  window.addEventListener('ttd:verified-run-result-v1', (event) => applyVerifiedResult(event.detail));
   window.addEventListener('message', (event) => {
     if (event.origin !== location.origin || event.source !== frame?.contentWindow) return;
     const message = event.data || {};
