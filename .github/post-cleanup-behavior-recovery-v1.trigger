@@ -1,1 +1,1 @@
-Resolve every final Inventory itemId through the approved PNG item-asset authority without changing authoritative asset bytes.
+Finalize nested Test Map/presentation readiness and semantic itemId artwork routing through the approved PNG authority.
