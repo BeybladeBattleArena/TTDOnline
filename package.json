@@ -2,8 +2,8 @@
   "name": "ttd-online",
   "private": true,
   "scripts": {
-    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items",
-    "check:hosting": "npm run check:release && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items",
+    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items && npm run check:item-art",
+    "check:hosting": "npm run check:release && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items && npm run check:item-art",
     "check:backend": "npm run check:catalog && npm run check:functions",
     "check:release": "node scripts/check-release-integrity-v15.mjs && npm run check:immutable-assets",
     "check:immutable-assets": "node scripts/check-immutable-assets.mjs",
@@ -28,6 +28,7 @@
     "check:page-polish": "node scripts/check-page-polish-v32.mjs",
     "check:platforming": "node scripts/check-presentation-v6.mjs",
     "check:items": "node scripts/check-items-world-v1.mjs",
+    "check:item-art": "node scripts/check-item-art-routing-v1.mjs",
     "emulators": "firebase emulators:start",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
