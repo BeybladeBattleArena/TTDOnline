@@ -1,0 +1,66 @@
+name: One-time Post-cleanup Runtime Compatibility Recovery
+
+on:
+  push:
+    branches: [fix/post-cleanup-regressions]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: post-cleanup-runtime-compat-v1
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: startsWith(github.event.head_commit.message, '[runtime-compat-recovery-v1]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/post-cleanup-regressions
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify migration script syntax
+        run: node --check scripts/apply-post-cleanup-runtime-compat-v1.mjs
+
+      - name: Materialize bounded compatibility facade
+        run: node scripts/apply-post-cleanup-runtime-compat-v1.mjs
+
+      - name: Enforce migration scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          [[ "$changed" == "random-dice-game-33.html" ]] || {
+            echo "Recovery migration changed an unexpected scope:"
+            printf '%s\n' "$changed"
+            exit 1
+          }
+
+      - name: Install validation toolchain
+        run: npm install
+
+      - name: Install Functions dependencies
+        run: npm --prefix functions install
+
+      - name: Validate complete repository
+        run: npm run check
+
+      - name: Reverify immutable masters
+        run: npm run check:immutable-assets
+
+      - name: Commit recovered native compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add random-dice-game-33.html
+          git commit -m "fix: restore audited runtime compatibility [skip runtime-compat-recovery-v1]"
+          git push origin HEAD:fix/post-cleanup-regressions
