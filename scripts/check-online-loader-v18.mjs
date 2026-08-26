@@ -28,9 +28,15 @@ const expectedUrls=[
   '/online/game-bridge-inner.js?v=4','/online/progression-bridge-v5.js?v=5','/online/singleplayer-bridge-v6.js?v=6',
   '/online/merge-bridge-v6.js?v=6','/online/run-ui-bridge-v21.js?v=21','/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9','/online/interaction-effects-v10.js?v=10','/online/collection-portrait-fit-v16.js?v=16',
-  '/online/deck-editor-v18.js?v=18','/online/avatar-inventory-v22.js?v=22',
+  '/online/deck-editor-v18.js?v=18','/online/item-assets-v1.js?v=4','/online/avatar-inventory-v22.js?v=22','/online/world-items-v1.js?v=1',
 ];
-for(const url of expectedUrls)must(runtime.includes(url),`native runtime bridge order is missing ${url}.`);
+let lastRuntimeIndex=-1;
+for(const url of expectedUrls){
+  const index=runtime.indexOf(url);
+  must(index>=0,`native runtime bridge order is missing ${url}.`);
+  must(index>lastRuntimeIndex,`native runtime authority order regressed at ${url}.`);
+  lastRuntimeIndex=index;
+}
 for(const marker of [
   "link.rel='preload'","link.as='script'",'script.async=false',"window.addEventListener('error',onRuntimeError,true)",
   "event.preventDefault?.()",'failed without blocking later bridges.','bridge-load-error','bridge-runtime-error',
@@ -53,8 +59,8 @@ for(const marker of [
   'TTD_MOBILE_DECK_RUNTIME_V14',
 ])must(game.includes(marker),`native bridge/core source contract missing: ${marker}`);
 
-const readOnly=['ADVENTURES','DICE','DICE_LORE','ENCHANT_CARDS','GLYPHS','JEWEL_DEFS','MAX_JEWEL_TIER','PU_COSTS','__TTD_DICEFILE','aliveEnemies','applySilence','applySlow','beginDrag','beginInstDrag','buildBoardDOM','buildPath','cardSVG','chestSVG','classMultFor','classMultFromLevel','createHoldSpinner','ctx','cw','damageEnemy','deckEntryKey','dieJewelBonus','effAffinities','effAtk','effDmg','enchantTarget','endDrag','endInstDrag','enemyElementalMult','enemyRenderPos','findInstance','fx','gemSVG','getActiveDeck','getBonusChestChance','getKeyCount','healDie','hideEnchantAttempt','hideItemDetail','hideJewelPicker','highlightDrop','isFavoriteInstance','jewelDisplayName','jewelEffectText','jewelTierValue','keySVG','loop','modeLabel','moveGhost','moveInstGhost','pathPts','pickTarget','playEnchantAnimation','quickEquip','renderCollectionGrid','renderEnchantScreen','renderGachaTop','renderHome','renderItemDetailView','renderOptionsScreen','renderPullCard','renderShopScreen','showDieDetail','showNotice','slottedClassOf','startLift','state','statusResistDuration','statusRoll','teardownHold','tileEls','toast','toastGlobal','triggerTilePulse'];
-const writable=['account','attachInstanceCardEvents','attachTileEvents','campaignComplete','currentAttackerDieKey','dieDamage','drag','drawLane','endEndlessHorde','endMatch','instDrag','invActiveTab','isAsclepiusReady','lastT','mergeInstances','openEnchantAttempt','openJewelPicker','playClassUpAnimation','renderBoard','renderDeckScreen','renderGlyph','renderInventoryScreen','saveAccount','shopItemView','showBuyConfirm','showItemDetail','showScreen','showSellConfirm','startAdventure','startAdventureCampaign','startEndlessHorde','startGame','tapTile','tickTile','triggerAsclepiusHeal','tryMergeAtPoint','updatePlayerShots'];
+const readOnly=['ADVENTURES','DICE','DICE_LORE','ENCHANT_CARDS','GLYPHS','JEWEL_DEFS','MAX_JEWEL_TIER','PU_COSTS','__TTD_DICEFILE','aliveEnemies','applySilence','applySlow','beginDrag','beginInstDrag','buildAdventureWave','cardSVG','ch','classMultFor','classMultFromLevel','createHoldSpinner','ctx','cw','damageEnemy','deckEntryKey','dieJewelBonus','effAffinities','effAtk','effDmg','effHp','enchantTarget','endDrag','endInstDrag','enemyElementalMult','findInstance','fx','gemSVG','getActiveDeck','getBonusChestChance','getKeyCount','healDie','hideEnchantAttempt','hideItemDetail','hideJewelPicker','highlightDrop','isFavoriteInstance','jewelDisplayName','jewelEffectText','jewelTierValue','loop','modeLabel','moveGhost','moveInstGhost','pickTarget','playEnchantAnimation','posAtDistance','quickEquip','renderAdventureList','renderCollectionGrid','renderDeckTray','renderEnchantScreen','renderGachaTop','renderHome','renderHUD','renderItemDetailView','renderOptionsScreen','renderPullCard','renderShopScreen','resizeCanvas','selectedAdventureId','selectedDifficulty','shopActiveSub','shopActiveTab','showDieDetail','showNotice','slottedClassOf','startLift','state','statusResistDuration','statusRoll','STAGE_THEMES','teardownHold','tileEls','toast','toastGlobal','triggerTilePulse'];
+const writable=['account','attachInstanceCardEvents','attachTileEvents','buildPath','campaignComplete','chestSVG','currentAttackerDieKey','dieDamage','drag','drawLane','endEndlessHorde','endMatch','enemyRenderPos','instDrag','invActiveTab','isAsclepiusReady','keySVG','lastT','mergeInstances','openEnchantAttempt','openInventoryItemDetail','openJewelPicker','pathPts','playClassUpAnimation','renderBoard','renderDeckScreen','renderGlyph','renderInventoryScreen','renderShopGrid','renderStageScreen','saveAccount','segLens','shopItemView','showBuyConfirm','showItemDetail','showScreen','showSellConfirm','showZombieSummary','startAdventure','startAdventureCampaign','startEndlessHorde','startGame','tapTile','tickTile','totalLen','towerPos','triggerAsclepiusHeal','tryMergeAtPoint','updatePlayerShots','updateSpawns'];
 for(const name of readOnly)must(game.includes(`__ttdExposeCore('${name}',()=>${name});`),`read-only compatibility binding missing: ${name}`);
 for(const name of writable)must(game.includes(`__ttdExposeCore('${name}',()=>${name},(value)=>{${name}=value;});`),`writable compatibility binding missing: ${name}`);
 must(!game.includes("__ttdExposeCore('renderCollection'"),'obsolete renderCollection must remain an intentionally absent optional legacy symbol.');
@@ -63,4 +69,4 @@ for(const marker of ['data-mode="loader-v9"','name="ttd-build" content="release-
   must(loaderHtml.includes(marker),`loader HTML freshness/asset contract missing: ${marker}`);
 }
 
-console.log('Loader v18 native bridge runtime verified: the game source exposes a bounded live compatibility facade, bridges execute as ordinary sequential scripts with failure isolation, battle hooks attach to a stable registry, and online/game-loader.js no longer reconstructs or injects runtime source.');
+console.log('Loader v18 native bridge runtime verified: the game source exposes the bounded compatibility required by all active runtime modules; item/world authorities execute in explicit order; bridges retain failure isolation; battle hooks attach to a stable registry; and online/game-loader.js does not reconstruct or inject runtime source.');
