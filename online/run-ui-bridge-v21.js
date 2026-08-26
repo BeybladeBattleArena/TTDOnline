@@ -309,5 +309,7 @@ ${renderMarker}`;
       try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
-  loadAdventurePlatformingV2();
+  // TTD_RUN_UI_EXTENSIONS_READY_V1
+  // Native startup waits for this promise so Test Map and global presentation cannot race the first mode launch.
+  window.__TTD_RUN_UI_EXTENSIONS_READY=loadAdventurePlatformingV2();
 })();
