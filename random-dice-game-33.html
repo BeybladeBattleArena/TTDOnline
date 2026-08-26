@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- TTD_NATIVE_LOADER_TRANSFORMS_V1: exact catalog-hook and mobile-deck transforms materialized from online/game-loader.js -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -197,6 +198,9 @@
   .pityNote{font-size:11px; color:var(--mist-dim); text-align:center; max-width:320px;}
 
   /* ---------- DECK ---------- */
+  /* TTD_MOBILE_DECK_RUNTIME_V14 */
+  #deckScreen.active{display:grid;grid-template-rows:auto auto auto auto minmax(0,1fr) auto;min-height:0;overflow:hidden;}
+  #deckScreen.active > *{min-width:0;}
   .deckTabs{display:flex; gap:6px; padding:10px 14px 0; flex-shrink:0; background:var(--ink-900);}
   .deckTab{flex:1; text-align:center; padding:8px 4px; border-radius:9px 9px 0 0; border:1px solid var(--ink-700); border-bottom:none;
     background:var(--ink-850); color:var(--mist-dim); font-family:'Cinzel',serif; font-size:11.5px; font-weight:700;}
@@ -209,9 +213,10 @@
   .deckSlot.filled{border-style:solid;}
   .deckSlot.dropHover{border-color:var(--gold-glow); box-shadow:0 0 10px rgba(217,178,106,.5);}
   .deckSlot .glyphWrap{width:30px; height:30px;}
-  #collectionGrid{flex:1; padding:12px; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-content:start;}
+  #collectionGrid{flex:1 1 0; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:12px; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-content:start;}
+  #collectionGrid.ttdDiePointerActive{overflow-y:hidden!important;touch-action:none!important;}
   .colCard{border-radius:10px; padding:8px 4px 6px; display:flex; flex-direction:column; align-items:center;
-    background:var(--ink-850); border:1px solid var(--ink-700); position:relative; touch-action:pan-y;}
+    background:var(--ink-850); border:1px solid var(--ink-700); position:relative; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;}
   .colCard.locked{opacity:0.28;}
   .colCard.dragging{opacity:0.25;}
   .colCard.mergeHover{box-shadow:0 0 0 2px var(--gold-glow), 0 0 12px rgba(217,178,106,.6);}
@@ -950,50 +955,12 @@
   }
 
   /* ============================ DICE DEFINITIONS ============================ */
-  const DICE = {
-    fire:     {name:'Fireball',   rarity:'common',    glyph:'flame',    color:'#e2584f', glow:'#ff9d70', target:'front',  dmg:12, atk:3.6,  hp:45, category:'special', affinities:{fire:1.0}, range:'map', special:{kind:'fireball', classCooldownSteps:[{atClass:5,mult:0.92}]}},
-    ice:      {name:'Icicle',     rarity:'common',    glyph:'snowflake',color:'#5fc7e0', glow:'#bdeeff', target:'front',  dmg:9,  atk:4.0,  hp:40, category:'physical', affinities:{ice:1.0}, range:'map', special:{kind:'icicle', classCooldownSteps:[{atClass:3,mult:0.94},{atClass:6,mult:0.94}]}},
-    wind:     {name:'Wind Blade', rarity:'common',    glyph:'spiral',   color:'#bfe6c9', glow:'#eafff0', target:'front',  dmg:10, atk:3.4,  hp:32, category:'special', affinities:{wind:1.0}, range:'map', special:{kind:'windblade', classCooldownSteps:[{atClass:2,mult:0.94}]}},
-    poison:   {name:'Envenom',    rarity:'common',    glyph:'droplet',  color:'#7ec26a', glow:'#b8f0a0', target:'strongest', dmg:16, atk:3.5, hp:38, category:'physical', affinities:{poison:1.0}, range:'mid', special:{kind:'envenom', classCooldownSteps:[{atClass:6,mult:0.94}]}},
-    broken:   {name:'Broken',     rarity:'common',    glyph:'crack',    color:'#c65b4a', glow:'#ff9d80', target:'random', dmg:26, atk:3.6,  hp:50, category:'physical', affinities:{}, range:'map', special:{kind:'broken', classCooldownSteps:[{atClass:3,mult:0.94}]}},
-    electric: {name:'Thunderbolt',rarity:'rare',      glyph:'bolt',     color:'#e0c848', glow:'#fff2a0', target:'front',  dmg:14, atk:3.8,  hp:48, category:'special', affinities:{lightning:1.0}, range:'map', special:{kind:'thunderbolt', classCooldownSteps:[{atClass:4,mult:0.94}]}},
-    iron:     {name:'Iron',     rarity:'rare',      glyph:'shield',   color:'#9aa3b8', glow:'#dfe6f5', target:'strongest', category:'physical', affinities:{metal:1.0}, dmg:20, atk:1.00, hp:70, special:{kind:'bossBonus', mult:2}},
-    arrow:    {name:'Arrow',    rarity:'rare',      glyph:'chevron',  color:'#d99a4e', glow:'#ffd699', target:'front',  category:'physical', affinities:{}, dmg:11, atk:0.75, hp:42, special:{kind:'critBurst', every:5, mult:4}},
-    light:    {name:'Light',    rarity:'rare',      glyph:'sunburst', color:'#f0dca0', glow:'#fff6d8', target:'none',   category:'status', affinities:{holy:1.0}, dmg:0,  atk:1.00, hp:36, special:{kind:'buffAS', amount:0.18, dur:1.6}},
-    crack:    {name:'Crack',    rarity:'rare',      glyph:'fracture', color:'#a08363', glow:'#e0c9a0', target:'front',  category:'status', affinities:{metal:1.0}, dmg:10, atk:1.10, hp:46, special:{kind:'armorBreak', amount:0.12, dur:2.5}},
-    laser:    {name:'Laser',    rarity:'unique',    glyph:'beamlines',color:'#e05fd0', glow:'#ffb3f0', target:'front',  category:'special', affinities:{}, dmg:9,  atk:0.60, hp:44, special:{kind:'laser', every:5, beamDmg:60}},
-    teleport: {name:'Teleport', rarity:'unique',    glyph:'rings',    color:'#8b7fe8', glow:'#d7c4ff', target:'random', category:'status', affinities:{arcane:1.0}, dmg:14, atk:1.00, hp:46, special:{kind:'teleportReset', chance:0.16}},
-    mine:     {name:'Mine',     rarity:'unique',    glyph:'gem',      color:'#d9b26a', glow:'#f3d491', target:'none',   category:'status', affinities:{metal:1.0}, dmg:0,  atk:1.40, hp:40, special:{kind:'spGen', amount:6}},
-    mimic:    {name:'Mimic',    rarity:'unique',    glyph:'venn',     color:'#7fd6c8', glow:'#c8fff2', target:'front',  category:'special', affinities:{arcane:1.0}, dmg:10, atk:1.00, hp:46, special:{kind:'mimicMerge', spRefund:5}},
-    absorb:   {name:'Absorb',   rarity:'unique',    glyph:'eye',      color:'#6a5a9e', glow:'#c4b3ff', target:'random', category:'status', affinities:{shadow:1.0}, dmg:9,  atk:1.20, hp:44, special:{kind:'drain', spDrain:4, slow:0.05, dur:1.5}},
-    growth:   {name:'Growth',   rarity:'legendary', glyph:'leaf',     color:'#7fb87a', glow:'#c9f0be', target:'front',  category:'special', affinities:{nature:1.0}, dmg:5,  atk:2.00, hp:60, special:{kind:'growth', duration:10}},
-    joker:    {name:'Joker',    rarity:'legendary', glyph:'mask',     color:'#c98bd6', glow:'#f0c2fa', target:'front',  category:'special', affinities:{arcane:1.0}, dmg:8,  atk:1.00, hp:55, special:{kind:'joker'}},
-    gun:      {name:'Gun',      rarity:'legendary', glyph:'crosshair',color:'#556070', glow:'#9fb0c9', target:'random', category:'physical', affinities:{}, dmg:24, atk:1.05, hp:58, special:{kind:'gun'}},
-    blizzard: {name:'Blizzard', rarity:'legendary', glyph:'crystal',  color:'#5ea8e8', glow:'#bfe0ff', target:'front',  category:'special', affinities:{ice:1.0}, dmg:11, atk:1.00, hp:62, special:{kind:'blizzard', every:5.5, slow:0.22, dur:2.6}},
-    nuclear:  {name:'Nuclear',  rarity:'legendary', glyph:'trefoil',  color:'#8f6fd1', glow:'#d7c4ff', target:'front',  category:'special', affinities:{fire:1.0}, dmg:11, atk:1.00, hp:60, special:{kind:'nuclear'}},
-    magnet:     {name:'Magnet',      rarity:'rare',      glyph:'magnet',   color:'#8899aa', glow:'#d0dae8', target:'none',  category:'status', affinities:{metal:1.0}, dmg:0, atk:1.00, hp:38, special:{kind:'magnetPull'}},
-    goldrush:   {name:'Gold Rush',   rarity:'unique',    glyph:'goldcoin', color:'#e0b84a', glow:'#ffe28a', target:'front', category:'physical', affinities:{}, dmg:8, atk:1.00, hp:44, special:{kind:'goldRush'}},
-    luckylucky: {name:'Lucky Lucky', rarity:'legendary', glyph:'clover',   color:'#7fd68f', glow:'#c8ffd0', target:'front', category:'status', affinities:{}, dmg:3, atk:1.10, hp:50, special:{kind:'luckyBonus'}},
-    shuriken:    {name:'Shuriken',          rarity:'rare',      glyph:'shuriken', color:'#c7cdd6', glow:'#f0f2f6', target:'front', category:'physical', affinities:{}, dmg:6,  atk:0.75, hp:42, special:{kind:'shurikenBarrage'}},
-    blackwind:   {name:'Blackwind Shuriken',rarity:'unique',    glyph:'shuriken', color:'#4a4560', glow:'#8f7fd6', target:'front', category:'special', affinities:{shadow:1.0}, dmg:9,  atk:1.9,  hp:44, special:{kind:'blackwindStick', radius:24, tickDmg:5, tickInterval:0.4, baseLife:1.65, lifePerDot:0.25}},
-    bubble:      {name:'Bubble',            rarity:'unique',    glyph:'bubble',   color:'#7fd0e8', glow:'#d4f5ff', target:'front', category:'special', affinities:{water:1.0}, dmg:5,  atk:3.4,  hp:44, special:{kind:'bubbleCapture', contactDmg:3, popDmg:14, splashDmg:7, landDmg:8, baseHold:2.0, durPerDot:0.35}},
-    haunt:       {name:'Haunt',             rarity:'unique',    glyph:'ghost',    color:'#a8a0d6', glow:'#e0daff', target:'random',category:'status', affinities:{shadow:1.0}, dmg:6,  atk:1.30, hp:42, special:{kind:'haunt', slowAmt:0.08, dps:9, dur:4}},
-    heavensfist: {name:"Heaven's Fist",     rarity:'legendary', glyph:'fist',     color:'#5f8fd6', glow:'#cfe4ff', target:'front', category:'physical', affinities:{holy:1.0}, dmg:26, atk:1.70, hp:60, special:{kind:'heavensFist', splashDmg:10, knockback:26}},
-    bubblebeam:  {name:'Bubble Beam',       rarity:'unique',    glyph:'bubble',   color:'#5eb8e0', glow:'#c8f0ff', target:'front', category:'physical', affinities:{water:1.0}, dmg:3,  atk:2.0,  hp:42, special:{kind:'bubbleBeamBarrage'}},
-    asclepius:   {name:'Asclepius',         rarity:'legendary', glyph:'beaker',   color:'#e08fb0', glow:'#ffe0ee', target:'random',category:'status', affinities:{holy:1.0}, dmg:5,  atk:1.25, hp:48, special:{kind:'asclepiusSyringe', confuseChance:0.4, confuseDur:2.0, gaugeFillTime:9, healRange:1, healAmount:22, healCooldown:14, chargeTime:1.3}},
-    comet:       {name:'Comet',             rarity:'legendary', glyph:'comet',    color:'#141a30', glow:'#bfe0ff', target:'front', category:'special', affinities:{arcane:0.25}, dmg:14, atk:3.92, hp:56, special:{kind:'cometRain', count:3, stagger:0.25, radius:20}},
-    hitman:      {name:'Hitman',            rarity:'legendary', glyph:'briefcase',color:'#3a3038', glow:'#c99a9a', target:'strongest', category:'physical', affinities:{}, dmg:20, atk:2.2, hp:54, special:{kind:'hitmanKit', sniperMult:1.6, handgunMult:1.0, meleeMult:1.2, meleeCrit:0.10}},
-    crossinggate:{name:'Crossing Gate',     rarity:'legendary', glyph:'gate',     color:'#c9463f', glow:'#ffd8d4', target:'front', category:'special', affinities:{metal:1.0}, dmg:0,  atk:3.0,  hp:50, special:{kind:'crossingGate', gateHp:121, dmgTakenMult:1.15, lowerDur:1.5, cooldown:3.12, bigBossDmg:14, monsterLenGap:60}},
-    bruteforceblizzard:{name:'Brute Force Blizzard', rarity:'legendary', chestExclusive:true, glyph:'fist', color:'#6fb8e0', glow:'#dcf2ff', target:'front', category:'physical', affinities:{ice:1.0}, dmg:34, atk:4.85, hp:70,
-      special:{kind:'dualSkill',
-        skill1:{cooldown:4.85, range:'mid', category:'physical', affinities:{ice:1.0}, dmgPunch:58, dmgRing:20, dmgTremor:5,
-          stunDur:1.0, tremorPauseDur:0.35, ringGap:0.45, ringLife:0.95, ringInner:24, ringOuter:48, shockwaveMax:84, bounceKnock:26},
-        skill2:{cooldown:4.75, range:'close', dmgIce:31, dmgArcane:3.4, dotTick:4, dotInterval:0.35, chargeTime:1.0,
-          holdStart:0.12, sweepDur:0.6, holdEnd:0.12, coneHalfAngle:0.20, freezeExtend:2.7, dmgCrystalExplosion:16, crystalRadius:14},
-      }},
-    devilshadow:{name:'Devil Shadow', rarity:'unique', glyph:'devilhead', color:'#5a1c26', glow:'#c9384a', target:'random', category:'special', affinities:{shadow:1.0}, dmg:16, atk:4.2, hp:46,
-      special:{kind:'devilShadow', range:'midfar', dmgSwarm:16, stunDur:1.5, dmgClaw:12, clawKnock:8, dotTick:4, dotInterval:0.3, coneHalfAngle:0.30, classCooldownSteps:[{atClass:2,mult:0.94}]}},
-  };
+  /* TTD_NATIVE_DICEFILE_V1: dicefile.json is preloaded as data by online/game-loader.js. */
+  const __TTD_DICEFILE = window.__TTD_DICEFILE;
+  if(!__TTD_DICEFILE || __TTD_DICEFILE.schemaVersion!==1 || !__TTD_DICEFILE.dice || typeof __TTD_DICEFILE.dice!=='object'){
+    throw new Error('Canonical dicefile.json was not preloaded before the game source executed.');
+  }
+  const DICE = __TTD_DICEFILE.dice;
   const DICE_KEYS = Object.keys(DICE);
 
   const DICE_LORE = {
@@ -2811,9 +2778,9 @@
   }
 
   let instDrag = null;
-  const LIFT_MS = 1000;   // still-hold required before the die "lifts" and becomes draggable
-  const INFO_MS = 1850;   // still-hold required for the spinner to fill and open the info page
-  const MOVE_THRESHOLD = 12; // px of movement outside the small threshold area that cancels the hold
+  const LIFT_MS = 360;    // mobile: reserve the pointer immediately, then lift quickly
+  const INFO_MS = 1100;   // stationary long-hold opens die info
+  const MOVE_THRESHOLD = 8; // motion is remembered while waiting for lift; it never becomes scroll
   const SPINNER_CIRC = 81.68; // 2*PI*13, matches the spinner SVG's circle radius
 
   function createHoldSpinner(){
@@ -2831,91 +2798,114 @@
   }
 
   function attachInstanceCardEvents(card, key, instId){
+    card.draggable = false;
+    card.addEventListener('dragstart', ev=>ev.preventDefault());
+    card.addEventListener('contextmenu', ev=>ev.preventDefault());
     card.addEventListener('pointerdown', (ev)=>{
-      const startX = ev.clientX, startY = ev.clientY;
-      instDrag = {
-        key, instId, active:false, moved:false, cancelled:false, detailFired:false, lifted:false,
-        startX, startY, ghostEl:null, srcCard:card, spinnerEl:null, rafId:null, startTime:performance.now(),
-      };
-      const spinner = createHoldSpinner();
-      card.appendChild(spinner);
-      instDrag.spinnerEl = spinner;
-      const fillEl = spinner.querySelector('.spinnerFill');
+      if(ev.isPrimary===false || ev.target.closest?.('.favBtn')) return;
+      ev.preventDefault();
 
-      const tick = ()=>{
-        if(!instDrag || instDrag.cancelled || instDrag.active || instDrag.detailFired) return;
-        const elapsed = performance.now() - instDrag.startTime;
-        const progress = Math.min(1, elapsed / INFO_MS);
-        fillEl.style.strokeDashoffset = (SPINNER_CIRC*(1-progress)).toFixed(2);
-        if(elapsed >= LIFT_MS && !instDrag.lifted){
-          instDrag.lifted = true;
+      const scrollHost=document.getElementById('collectionGrid');
+      const dragState={
+        key,instId,active:false,moved:false,cancelled:false,detailFired:false,lifted:false,
+        startX:ev.clientX,startY:ev.clientY,lastX:ev.clientX,lastY:ev.clientY,lastDist:0,
+        ghostEl:null,srcCard:card,spinnerEl:null,rafId:null,startTime:performance.now(),pointerId:ev.pointerId,
+      };
+      instDrag=dragState;
+
+      // A pointer that begins on a die belongs to that die for its entire lifetime. Chrome is
+      // never allowed to convert a slightly-early vertical drag into collection scrolling.
+      scrollHost?.classList.add('ttdDiePointerActive');
+      try{card.setPointerCapture(ev.pointerId);}catch(_){}
+
+      const spinner=createHoldSpinner();
+      card.appendChild(spinner);
+      dragState.spinnerEl=spinner;
+      const fillEl=spinner.querySelector('.spinnerFill');
+
+      const removeListeners=()=>{
+        card.removeEventListener('pointermove',onMove);
+        card.removeEventListener('pointerup',onUp);
+        card.removeEventListener('pointercancel',onCancel);
+        card.removeEventListener('lostpointercapture',onLost);
+        try{if(card.hasPointerCapture?.(dragState.pointerId))card.releasePointerCapture(dragState.pointerId);}catch(_){}
+      };
+      const unlock=()=>scrollHost?.classList.remove('ttdDiePointerActive');
+      const beginDrag=()=>{
+        if(instDrag!==dragState || dragState.active || dragState.cancelled || dragState.detailFired)return;
+        dragState.moved=true;
+        teardownHold(dragState);
+        beginInstDrag(card,key,dragState.lastX,dragState.lastY);
+      };
+      const finishCommon=()=>{
+        teardownHold(dragState);
+        removeListeners();
+        unlock();
+        window.__dragKey=null;
+        document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
+      };
+
+      const tick=()=>{
+        if(instDrag!==dragState || dragState.cancelled || dragState.active || dragState.detailFired)return;
+        const elapsed=performance.now()-dragState.startTime;
+        const progress=Math.min(1,elapsed/INFO_MS);
+        if(fillEl)fillEl.style.strokeDashoffset=(SPINNER_CIRC*(1-progress)).toFixed(2);
+        if(elapsed>=LIFT_MS && !dragState.lifted){
+          dragState.lifted=true;
           card.classList.add('lifting');
-          if(navigator.vibrate) navigator.vibrate(18);
+          if(navigator.vibrate)navigator.vibrate(12);
+          if(dragState.lastDist>MOVE_THRESHOLD){beginDrag();return;}
         }
-        if(progress >= 1){
-          instDrag.detailFired = true;
-          teardownHold(instDrag);
-          showDieDetail(key, {collectionInstId: instId});
+        if(progress>=1 && dragState.lastDist<=MOVE_THRESHOLD){
+          dragState.detailFired=true;
+          finishCommon();
+          if(instDrag===dragState)instDrag=null;
+          showDieDetail(key,{collectionInstId:instId});
           return;
         }
-        instDrag.rafId = requestAnimationFrame(tick);
+        dragState.rafId=requestAnimationFrame(tick);
       };
-      instDrag.rafId = requestAnimationFrame(tick);
 
-      const onMove = (mv)=>{
-        if(!instDrag || instDrag.cancelled || instDrag.detailFired) return;
-        const dist = Math.hypot(mv.clientX-instDrag.startX, mv.clientY-instDrag.startY);
-        if(dist > MOVE_THRESHOLD){
-          if(!instDrag.active){
-            if(instDrag.lifted){
-              mv.preventDefault();
-              instDrag.moved = true;
-              teardownHold(instDrag);
-              beginInstDrag(card, key, mv.clientX, mv.clientY);
-            } else {
-              // moved before the die ever lifted — treat as a scroll gesture, back off entirely
-              instDrag.cancelled = true;
-              teardownHold(instDrag);
-              return;
-            }
-          }
+      const onMove=(mv)=>{
+        if(instDrag!==dragState || dragState.cancelled || dragState.detailFired || mv.pointerId!==dragState.pointerId)return;
+        mv.preventDefault();
+        dragState.lastX=mv.clientX;
+        dragState.lastY=mv.clientY;
+        dragState.lastDist=Math.hypot(mv.clientX-dragState.startX,mv.clientY-dragState.startY);
+        if(dragState.active){moveInstGhost(mv.clientX,mv.clientY);return;}
+        if(dragState.lifted || performance.now()-dragState.startTime>=LIFT_MS){
+          beginDrag();
+          if(dragState.active)moveInstGhost(mv.clientX,mv.clientY);
         }
-        if(instDrag.active){ mv.preventDefault(); moveInstGhost(mv.clientX, mv.clientY); }
+        // Before lift we intentionally do nothing except remember position. Scrolling remains locked.
       };
-      const onUp = (up)=>{
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onCancel);
-        teardownHold(instDrag);
-        window.__dragKey = null;
-        document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
-        if(instDrag && instDrag.active){
-          endInstDrag(up.clientX, up.clientY);
-        } else if(instDrag && !instDrag.cancelled && !instDrag.moved && !instDrag.detailFired && !instDrag.lifted){
-          quickEquip(key, instId);
+      const onUp=(up)=>{
+        if(up.pointerId!==dragState.pointerId)return;
+        finishCommon();
+        if(instDrag===dragState && dragState.active){
+          endInstDrag(up.clientX,up.clientY);
+        }else if(instDrag===dragState && !dragState.cancelled && !dragState.detailFired && !dragState.lifted && dragState.lastDist<=MOVE_THRESHOLD){
+          quickEquip(key,instId);
         }
-        instDrag = null;
+        if(instDrag===dragState)instDrag=null;
       };
-      // The browser fires pointercancel (not another pointermove) the moment it hands this
-      // touch off to native scrolling — without handling it, the time-based spinner above has
-      // no way to know the finger ever left, and keeps ticking to completion regardless.
-      const onCancel = ()=>{
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onCancel);
-        teardownHold(instDrag);
-        if(instDrag && instDrag.active){
-          if(instDrag.srcCard) instDrag.srcCard.classList.remove('dragging');
-          if(instDrag.ghostEl) instDrag.ghostEl.remove();
+      const onCancel=()=>{
+        dragState.cancelled=true;
+        finishCommon();
+        if(dragState.active){
+          card.classList.remove('dragging');
+          dragState.ghostEl?.remove();
         }
-        window.__dragKey = null;
-        document.querySelectorAll('.dropHover,.mergeHover').forEach(el=>el.classList.remove('dropHover','mergeHover'));
-        instDrag = null;
+        if(instDrag===dragState)instDrag=null;
       };
-      window.addEventListener('pointermove', onMove, {passive:false});
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onCancel);
-    });
+      const onLost=()=>{if(instDrag===dragState)onCancel();};
+
+      card.addEventListener('pointermove',onMove,{passive:false});
+      card.addEventListener('pointerup',onUp);
+      card.addEventListener('pointercancel',onCancel);
+      card.addEventListener('lostpointercapture',onLost);
+      dragState.rafId=requestAnimationFrame(tick);
+    },{passive:false});
   }
   function beginInstDrag(card, key, x, y){
     if(!instDrag) return;
@@ -3081,7 +3071,7 @@
     const d = DICE[key]; const lore = DICE_LORE[key] || {flavor:'', desc:''};
     const cardEl = document.getElementById('dieDetailCard');
     const rarityColor = d.rarity==='legendary'?'var(--gold)':d.rarity==='unique'?'var(--c-unique)':d.rarity==='rare'?'var(--c-rare)':'var(--c-common)';
-    const targetLabel = {front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', none:'Does not attack'}[d.target]||d.target;
+    const targetLabel = d.special?.kind==='magmaForce' ? 'Random battlefield areas' : ({front:'Frontmost enemy', random:'Random enemy', strongest:'Strongest enemy', fastest:'Fastest enemy (ties: highest current HP)', none:'Does not attack'}[d.target]||d.target);
 
     const battleMode = !!opts.battle;
     const liveTiles = battleMode && state ? state.board.map((die,idx)=>({die,idx})).filter(o=>o.die && o.die.key===key) : [];
@@ -4754,6 +4744,20 @@
     if(!sp){ damageEnemy(target, dmg, null, dieAff); fx(die.key==='wind'?'whirlwind':'crack', pt); if(isCrit) fx('critFlash', pt); return; }
 
     switch(sp.kind){
+      case 'magmaForce': {
+        if(!__TTD_BATTLE_HOOKS.fireMagmaForce(idx, die, d, dmg, dieAff, potencyBonus, isCrit)){
+          die.sinceLastShot = Math.max(die.sinceLastShot, effAtk(die)*0.85);
+        }
+        break;
+      }
+      case 'soulScimitar': {
+        __TTD_BATTLE_HOOKS.fireSoulScimitar(idx, die, d, dmg, dieAff, potencyBonus, isCrit);
+        break;
+      }
+      case 'slitherVine': {
+        __TTD_BATTLE_HOOKS.fireSlitherVine(idx, die, d, dmg, dieAff, potencyBonus, isCrit);
+        break;
+      }
       case 'fireball': {
         const cls = slottedClassOf(die.key);
         const T = fireballTierStats(cls);
@@ -6491,6 +6495,8 @@
       }
     }
 
+    __TTD_BATTLE_HOOKS.drawMagmaForceGround();
+
     for(const e of state.enemies){
       if(!e.alive) continue;
       const groundP = enemyRenderPos(e);
@@ -7206,10 +7212,10 @@
         if(e.actionCdT>0) e.actionCdT -= dt;
         if(e.pausedT>0){ e.pausedT -= dt; continue; }
         updateZombieMovement(e, dt);
-        if(!silenced) tickZombieSkills(e);
+        if(!silenced && !e._slitherBlocked) tickZombieSkills(e);
         continue;
       }
-      if(state.adventure && !silenced) tickMonsterSkills(e, dt);
+      if(state.adventure && !silenced && !e._slitherBlocked) tickMonsterSkills(e, dt);
       let speedMult = e.slowMult;
       if(e.enrageFlag){
         const pct = e.hp/e.maxHp;
@@ -7272,6 +7278,9 @@
     if(!lastT) lastT = ts;
     let dt = (ts-lastT)/1000; lastT = ts; dt = Math.min(dt, 0.05);
     state.time += dt;
+    __TTD_BATTLE_HOOKS.updateMagmaForce(dt);
+    __TTD_BATTLE_HOOKS.updateSoulScimitars(dt);
+    __TTD_BATTLE_HOOKS.updateSlitherVines(dt);
     if(state.zombieMode) state.zPlayTime += dt;
 
     for(let i=0;i<15;i++) tickTile(i,dt);
@@ -7298,9 +7307,9 @@
     const passiveSpGen = boardJewelBonus('spGen');
     if(passiveSpGen>0) state.sp += passiveSpGen*dt;
     checkWipeout();
-    if(!state.running){ renderHUD(); renderBoard(); drawLane(dt); return; }
+    if(!state.running){ renderHUD(); renderBoard(); drawLane(dt); __TTD_BATTLE_HOOKS.drawSlitherVines(); __TTD_BATTLE_HOOKS.drawSoulScimitars(); __TTD_BATTLE_HOOKS.drawMagmaForceOverlay(); return; }
 
-    renderHUD(); renderBoard(); drawLane(dt);
+    renderHUD(); renderBoard(); drawLane(dt); __TTD_BATTLE_HOOKS.drawSlitherVines(); __TTD_BATTLE_HOOKS.drawSoulScimitars(); __TTD_BATTLE_HOOKS.drawMagmaForceOverlay();
     requestAnimationFrame(loop);
   }
 
@@ -7505,10 +7514,169 @@
 
   window.addEventListener('resize', ()=>{ if(screens.game.classList.contains('active')) resizeCanvas(); });
 
+
+  /* ============================ TTD_NATIVE_BRIDGE_API_V1 ============================
+     Stable compatibility surface for committed bridge scripts. These accessors preserve the
+     exact live core bindings that the legacy loader previously exposed by injecting bridge source
+     into this IIFE. Read-only dependencies remain getter-only; intentional overrides receive a
+     setter back to the original lexical binding. */
+  const __TTD_BATTLE_HOOKS = window.__TTD_BATTLE_HOOKS = {
+    fireMagmaForce(){return false;}, updateMagmaForce(){}, drawMagmaForceGround(){}, drawMagmaForceOverlay(){},
+    fireSoulScimitar(){}, updateSoulScimitars(){}, drawSoulScimitars(){},
+    fireSlitherVine(){}, updateSlitherVines(){}, drawSlitherVines(){}
+  };
+  const __ttdCoreApi={};
+  function __ttdExposeCore(name,get,set){
+    const globalDescriptor={configurable:true,enumerable:false,get};
+    if(set)globalDescriptor.set=set;
+    Object.defineProperty(window,name,globalDescriptor);
+    const apiDescriptor={configurable:false,enumerable:true,get};
+    if(set)apiDescriptor.set=set;
+    Object.defineProperty(__ttdCoreApi,name,apiDescriptor);
+  }
+  __ttdExposeCore('ADVENTURES',()=>ADVENTURES);
+  __ttdExposeCore('DICE',()=>DICE);
+  __ttdExposeCore('DICE_LORE',()=>DICE_LORE);
+  __ttdExposeCore('ENCHANT_CARDS',()=>ENCHANT_CARDS);
+  __ttdExposeCore('GLYPHS',()=>GLYPHS);
+  __ttdExposeCore('JEWEL_DEFS',()=>JEWEL_DEFS);
+  __ttdExposeCore('MAX_JEWEL_TIER',()=>MAX_JEWEL_TIER);
+  __ttdExposeCore('PU_COSTS',()=>PU_COSTS);
+  __ttdExposeCore('__TTD_DICEFILE',()=>__TTD_DICEFILE);
+  __ttdExposeCore('aliveEnemies',()=>aliveEnemies);
+  __ttdExposeCore('applySilence',()=>applySilence);
+  __ttdExposeCore('applySlow',()=>applySlow);
+  __ttdExposeCore('beginDrag',()=>beginDrag);
+  __ttdExposeCore('beginInstDrag',()=>beginInstDrag);
+  __ttdExposeCore('buildBoardDOM',()=>buildBoardDOM);
+  __ttdExposeCore('buildPath',()=>buildPath);
+  __ttdExposeCore('cardSVG',()=>cardSVG);
+  __ttdExposeCore('chestSVG',()=>chestSVG);
+  __ttdExposeCore('classMultFor',()=>classMultFor);
+  __ttdExposeCore('classMultFromLevel',()=>classMultFromLevel);
+  __ttdExposeCore('createHoldSpinner',()=>createHoldSpinner);
+  __ttdExposeCore('ctx',()=>ctx);
+  __ttdExposeCore('cw',()=>cw);
+  __ttdExposeCore('damageEnemy',()=>damageEnemy);
+  __ttdExposeCore('deckEntryKey',()=>deckEntryKey);
+  __ttdExposeCore('dieJewelBonus',()=>dieJewelBonus);
+  __ttdExposeCore('effAffinities',()=>effAffinities);
+  __ttdExposeCore('effAtk',()=>effAtk);
+  __ttdExposeCore('effDmg',()=>effDmg);
+  __ttdExposeCore('enchantTarget',()=>enchantTarget);
+  __ttdExposeCore('endDrag',()=>endDrag);
+  __ttdExposeCore('endInstDrag',()=>endInstDrag);
+  __ttdExposeCore('enemyElementalMult',()=>enemyElementalMult);
+  __ttdExposeCore('enemyRenderPos',()=>enemyRenderPos);
+  __ttdExposeCore('findInstance',()=>findInstance);
+  __ttdExposeCore('fx',()=>fx);
+  __ttdExposeCore('gemSVG',()=>gemSVG);
+  __ttdExposeCore('getActiveDeck',()=>getActiveDeck);
+  __ttdExposeCore('getBonusChestChance',()=>getBonusChestChance);
+  __ttdExposeCore('getKeyCount',()=>getKeyCount);
+  __ttdExposeCore('healDie',()=>healDie);
+  __ttdExposeCore('hideEnchantAttempt',()=>hideEnchantAttempt);
+  __ttdExposeCore('hideItemDetail',()=>hideItemDetail);
+  __ttdExposeCore('hideJewelPicker',()=>hideJewelPicker);
+  __ttdExposeCore('highlightDrop',()=>highlightDrop);
+  __ttdExposeCore('isFavoriteInstance',()=>isFavoriteInstance);
+  __ttdExposeCore('jewelDisplayName',()=>jewelDisplayName);
+  __ttdExposeCore('jewelEffectText',()=>jewelEffectText);
+  __ttdExposeCore('jewelTierValue',()=>jewelTierValue);
+  __ttdExposeCore('keySVG',()=>keySVG);
+  __ttdExposeCore('loop',()=>loop);
+  __ttdExposeCore('modeLabel',()=>modeLabel);
+  __ttdExposeCore('moveGhost',()=>moveGhost);
+  __ttdExposeCore('moveInstGhost',()=>moveInstGhost);
+  __ttdExposeCore('pathPts',()=>pathPts);
+  __ttdExposeCore('pickTarget',()=>pickTarget);
+  __ttdExposeCore('playEnchantAnimation',()=>playEnchantAnimation);
+  __ttdExposeCore('quickEquip',()=>quickEquip);
+  __ttdExposeCore('renderCollectionGrid',()=>renderCollectionGrid);
+  __ttdExposeCore('renderEnchantScreen',()=>renderEnchantScreen);
+  __ttdExposeCore('renderGachaTop',()=>renderGachaTop);
+  __ttdExposeCore('renderHome',()=>renderHome);
+  __ttdExposeCore('renderItemDetailView',()=>renderItemDetailView);
+  __ttdExposeCore('renderOptionsScreen',()=>renderOptionsScreen);
+  __ttdExposeCore('renderPullCard',()=>renderPullCard);
+  __ttdExposeCore('renderShopScreen',()=>renderShopScreen);
+  __ttdExposeCore('showDieDetail',()=>showDieDetail);
+  __ttdExposeCore('showNotice',()=>showNotice);
+  __ttdExposeCore('slottedClassOf',()=>slottedClassOf);
+  __ttdExposeCore('startLift',()=>startLift);
+  __ttdExposeCore('state',()=>state);
+  __ttdExposeCore('statusResistDuration',()=>statusResistDuration);
+  __ttdExposeCore('statusRoll',()=>statusRoll);
+  __ttdExposeCore('teardownHold',()=>teardownHold);
+  __ttdExposeCore('tileEls',()=>tileEls);
+  __ttdExposeCore('toast',()=>toast);
+  __ttdExposeCore('toastGlobal',()=>toastGlobal);
+  __ttdExposeCore('triggerTilePulse',()=>triggerTilePulse);
+  __ttdExposeCore('account',()=>account,(value)=>{account=value;});
+  __ttdExposeCore('attachInstanceCardEvents',()=>attachInstanceCardEvents,(value)=>{attachInstanceCardEvents=value;});
+  __ttdExposeCore('attachTileEvents',()=>attachTileEvents,(value)=>{attachTileEvents=value;});
+  __ttdExposeCore('campaignComplete',()=>campaignComplete,(value)=>{campaignComplete=value;});
+  __ttdExposeCore('currentAttackerDieKey',()=>currentAttackerDieKey,(value)=>{currentAttackerDieKey=value;});
+  __ttdExposeCore('dieDamage',()=>dieDamage,(value)=>{dieDamage=value;});
+  __ttdExposeCore('drag',()=>drag,(value)=>{drag=value;});
+  __ttdExposeCore('drawLane',()=>drawLane,(value)=>{drawLane=value;});
+  __ttdExposeCore('endEndlessHorde',()=>endEndlessHorde,(value)=>{endEndlessHorde=value;});
+  __ttdExposeCore('endMatch',()=>endMatch,(value)=>{endMatch=value;});
+  __ttdExposeCore('instDrag',()=>instDrag,(value)=>{instDrag=value;});
+  __ttdExposeCore('invActiveTab',()=>invActiveTab,(value)=>{invActiveTab=value;});
+  __ttdExposeCore('isAsclepiusReady',()=>isAsclepiusReady,(value)=>{isAsclepiusReady=value;});
+  __ttdExposeCore('lastT',()=>lastT,(value)=>{lastT=value;});
+  __ttdExposeCore('mergeInstances',()=>mergeInstances,(value)=>{mergeInstances=value;});
+  __ttdExposeCore('openEnchantAttempt',()=>openEnchantAttempt,(value)=>{openEnchantAttempt=value;});
+  __ttdExposeCore('openJewelPicker',()=>openJewelPicker,(value)=>{openJewelPicker=value;});
+  __ttdExposeCore('playClassUpAnimation',()=>playClassUpAnimation,(value)=>{playClassUpAnimation=value;});
+  __ttdExposeCore('renderBoard',()=>renderBoard,(value)=>{renderBoard=value;});
+  __ttdExposeCore('renderDeckScreen',()=>renderDeckScreen,(value)=>{renderDeckScreen=value;});
+  __ttdExposeCore('renderGlyph',()=>renderGlyph,(value)=>{renderGlyph=value;});
+  __ttdExposeCore('renderInventoryScreen',()=>renderInventoryScreen,(value)=>{renderInventoryScreen=value;});
+  __ttdExposeCore('saveAccount',()=>saveAccount,(value)=>{saveAccount=value;});
+  __ttdExposeCore('shopItemView',()=>shopItemView,(value)=>{shopItemView=value;});
+  __ttdExposeCore('showBuyConfirm',()=>showBuyConfirm,(value)=>{showBuyConfirm=value;});
+  __ttdExposeCore('showItemDetail',()=>showItemDetail,(value)=>{showItemDetail=value;});
+  __ttdExposeCore('showScreen',()=>showScreen,(value)=>{showScreen=value;});
+  __ttdExposeCore('showSellConfirm',()=>showSellConfirm,(value)=>{showSellConfirm=value;});
+  __ttdExposeCore('startAdventure',()=>startAdventure,(value)=>{startAdventure=value;});
+  __ttdExposeCore('startAdventureCampaign',()=>startAdventureCampaign,(value)=>{startAdventureCampaign=value;});
+  __ttdExposeCore('startEndlessHorde',()=>startEndlessHorde,(value)=>{startEndlessHorde=value;});
+  __ttdExposeCore('startGame',()=>startGame,(value)=>{startGame=value;});
+  __ttdExposeCore('tapTile',()=>tapTile,(value)=>{tapTile=value;});
+  __ttdExposeCore('tickTile',()=>tickTile,(value)=>{tickTile=value;});
+  __ttdExposeCore('triggerAsclepiusHeal',()=>triggerAsclepiusHeal,(value)=>{triggerAsclepiusHeal=value;});
+  __ttdExposeCore('tryMergeAtPoint',()=>tryMergeAtPoint,(value)=>{tryMergeAtPoint=value;});
+  __ttdExposeCore('updatePlayerShots',()=>updatePlayerShots,(value)=>{updatePlayerShots=value;});
+  window.__TTD_CORE_API_V1=Object.freeze(__ttdCoreApi);
+
+  let __ttdBridgeReadyResolve;
+  let __ttdBridgeReadyMarked=false;
+  window.__TTD_BRIDGES_READY=new Promise((resolve)=>{__ttdBridgeReadyResolve=resolve;});
+  window.__TTD_MARK_BRIDGES_READY=()=>{
+    if(__ttdBridgeReadyMarked)return;
+    __ttdBridgeReadyMarked=true;
+    __ttdBridgeReadyResolve();
+  };
+  const __ttdBridgeBootstrap=document.createElement('script');
+  __ttdBridgeBootstrap.src=typeof window.__TTD_ASSET_URL==='function'
+    ? window.__TTD_ASSET_URL('/online/runtime-bridge-loader-v1.js')
+    : '/online/runtime-bridge-loader-v1.js?v=1';
+  __ttdBridgeBootstrap.async=true;
+  __ttdBridgeBootstrap.onerror=()=>{
+    const error=new Error('Could not load the native runtime bridge loader.');
+    console.error(error);
+    try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-loader-error',bridge:'/online/runtime-bridge-loader-v1.js',message:error.message},location.origin);}catch(_){}
+    window.__TTD_MARK_BRIDGES_READY();
+  };
+  document.head.appendChild(__ttdBridgeBootstrap);
+
   /* ============================ BOOT ============================ */
   (async function boot(){
     account = await loadAccount();
     if(!Array.isArray(account.decks)) account = migrateAccount(account);
+    await window.__TTD_BRIDGES_READY;
     showScreen('home');
   })();
 

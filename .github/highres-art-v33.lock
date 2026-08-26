@@ -1,3 +1,0 @@
-TTD high-resolution designer art v33
-Native pixel dimensions verified before commit.
-Runtime presentation size is controlled by UI/CSS, never by destructive source downsampling.

@@ -5,8 +5,9 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, '..');
 const sourcePath = path.join(rootDir, 'dicefile.json');
-const outputPath = path.join(rootDir, 'functions', 'dicefile.generated.json');
-const catalog = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+const mirrorPath = path.join(rootDir, 'functions', 'dicefile.generated.json');
+const sourceBytes = fs.readFileSync(sourcePath);
+const catalog = JSON.parse(sourceBytes.toString('utf8'));
 
 const allowedRarities = new Set(['common','rare','unique','legendary']);
 const allowedCategories = new Set(['physical','special','status']);
@@ -53,7 +54,6 @@ else {
   if (soul.special?.pierceSlowChance !== 0.07) errors.push('Soul Scimitar C7 pierce Slow chance must be 7%.');
 }
 
-
 const magma = catalog.dice?.magmaforce;
 if (!magma) errors.push('Magma Force is missing.');
 else {
@@ -66,17 +66,16 @@ else {
   if (magma.special?.averageEnemyLength !== 15) errors.push('Magma Force spacing reference must remain one 15px average-enemy length unless map scale is intentionally revised.');
 }
 
+if (!fs.existsSync(mirrorPath)) errors.push('functions/dicefile.generated.json is missing. Run npm run update:catalog-mirror after an intentional dicefile.json change.');
+else {
+  const mirrorBytes = fs.readFileSync(mirrorPath);
+  if (!mirrorBytes.equals(sourceBytes)) errors.push('functions/dicefile.generated.json does not exactly mirror dicefile.json. Run npm run update:catalog-mirror after an intentional catalog change.');
+}
+
 if (errors.length) {
   console.error(`dicefile.json failed validation with ${errors.length} error(s):`);
   for (const error of errors) console.error(` - ${error}`);
   process.exit(1);
 }
 
-const generated = {
-  schemaVersion: catalog.schemaVersion,
-  catalogVersion: catalog.catalogVersion,
-  dice: catalog.dice,
-};
-fs.mkdirSync(path.dirname(outputPath), { recursive:true });
-fs.writeFileSync(outputPath, JSON.stringify(generated, null, 2) + '\n');
-console.log(`Validated ${Object.keys(catalog.dice).length} dice and generated functions/dicefile.generated.json.`);
+console.log(`Validated ${Object.keys(catalog.dice).length} dice. Backend catalog mirror is byte-identical; no files were changed.`);

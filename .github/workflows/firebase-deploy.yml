@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 concurrency:
@@ -27,97 +27,15 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Materialize canonical game source and release assets
-        id: canonical
+      - name: Pin exact source commit
         shell: bash
         run: |
           set -euo pipefail
-
-          # v35 is already the canonical result/outcome owner. Keep this idempotent so later
-          # releases validate the monolith instead of stacking another runtime replacement on it.
-          if grep -q 'TTD_NATIVE_RESULT_VERSION = 35' random-dice-game-33.html; then
-            echo 'Canonical result/outcome v35 is already materialized in the main game source.'
-          else
-            node scripts/materialize-canonical-results-v35.mjs
-          fi
-          sed -i "s#random-dice-game-33.html?v=34#random-dice-game-33.html?v=35#g" scripts/check-online-loader-v15.mjs
-
-          # The user-supplied MissionFail and CombatStart MP3s are the authoritative masters.
-          # Never reconstruct, transcode, trim, pad, or substitute them during deployment.
-          fail_sha="$(git hash-object assets/audio/announcer/MissionFail.mp3)"
-          combat_sha="$(git hash-object assets/audio/announcer/CombatStart.mp3)"
-          [[ "$fail_sha" == '84370d8bf50f4e95c60efae8f205f1fa68e24a50' ]] || { echo "Unexpected MissionFail original: $fail_sha"; exit 1; }
-          [[ "$combat_sha" == '2ce2410a1519cea618b6364acddb90ba693c8058' ]] || { echo "Unexpected CombatStart original: $combat_sha"; exit 1; }
-
-          # Register those exact originals in the canonical asset manifest before release checks.
-          node <<'NODE'
-          const fs=require('node:fs');
-          const path='assets/game-assets.json';
-          const manifest=JSON.parse(fs.readFileSync(path,'utf8'));
-          manifest.assets.announcerMissionFail={
-            path:'/assets/audio/announcer/MissionFail.mp3',
-            format:'audio/mpeg',
-            usage:{playback:{box:[1,1]}},
-            description:'FAIL announcer cue — authoritative original MP3'
-          };
-          manifest.assets.announcerCombatStart={
-            path:'/assets/audio/announcer/CombatStart.mp3',
-            format:'audio/mpeg',
-            usage:{playback:{box:[1,1]}},
-            description:'3 2 1 START announcer cue — authoritative original MP3'
-          };
-          fs.writeFileSync(path,JSON.stringify(manifest,null,2)+'\n');
-          NODE
-
-          # Item PNGs must contain real alpha. Materialize the approved black-background masters
-          # into RGBA PNGs while preserving dark linework/interior shading and native dimensions.
-          python3 -m pip install --disable-pip-version-check --quiet 'Pillow==11.3.0'
-          python3 scripts/materialize-transparent-item-art-v2.py
-
-          node --check online/audio-client-v27.js
-          node --check online/game-presentation-v1.js
-          node --check online/run-ui-bridge-v21.js
-          node --check online/adventure-continuous-world-v1.js
-          node --input-type=module --check < online/singleplayer-client-v6.js
-          grep -q 'TTD_NATIVE_RESULT_VERSION = 35' random-dice-game-33.html
-          grep -q 'id="overlayPipsValue"' random-dice-game-33.html
-          grep -q 'id="overlayExpValue"' random-dice-game-33.html
-          grep -q '__ttdOutcomeCommitted' random-dice-game-33.html
-          grep -q "fail:asset('/assets/audio/announcer/MissionFail.mp3')" online/audio-client-v27.js
-          grep -q "combatStart:asset('/assets/audio/announcer/CombatStart.mp3')" online/audio-client-v27.js
-          grep -q "nodes\[3\]?.classList.add('in');announce('combatStart')" online/game-presentation-v1.js
-          ! grep -q "result-summary-client-v26" online/singleplayer-client-v6.js
-          ! grep -q "result-reward-polish-v1" online/singleplayer-client-v6.js
-          ! grep -q "ensureRewardMetaV1();" online/adventure-continuous-world-v1.js
-          grep -q "random-dice-game-33.html?v=35" scripts/check-online-loader-v15.mjs
-
-          git config user.name 'ttd-release-bot'
-          git config user.email 'ttd-release-bot@users.noreply.github.com'
-          git add random-dice-game-33.html \
-            assets/game-assets.json \
-            assets/items/*.png \
-            online/audio-client-v27.js \
-            online/game-presentation-v1.js \
-            online/run-ui-bridge-v21.js \
-            online/singleplayer-client-v6.js \
-            online/adventure-continuous-world-v1.js \
-            online/game-loader.js online.html \
-            scripts/check-online-loader-v15.mjs
-          if ! git diff --cached --quiet; then
-            git commit -m '[canonical-materialization] Original announcer masters and transparent item art [skip ci]'
-            git push origin HEAD:main
-          fi
-          deploy_sha="$(git rev-parse HEAD)"
-          echo "DEPLOY_SHA=$deploy_sha" >> "$GITHUB_ENV"
-          echo "deploy_sha=$deploy_sha" >> "$GITHUB_OUTPUT"
-
-      - name: Authenticate to Google Cloud
-        id: gcp_auth
-        uses: google-github-actions/auth@v3
-        with:
-          project_id: ttd-online-b8c0f
-          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
-          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+          [[ "$GITHUB_REF_NAME" == "main" ]] || { echo "Production deploys must run from main, not $GITHUB_REF_NAME"; exit 1; }
+          checked_out="$(git rev-parse HEAD)"
+          [[ "$checked_out" == "$GITHUB_SHA" ]] || { echo "Checked out $checked_out but workflow requested $GITHUB_SHA"; exit 1; }
+          echo "DEPLOY_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "Pinned production candidate $GITHUB_SHA"
 
       - name: Install hosting toolchain
         id: install
@@ -126,6 +44,28 @@ jobs:
       - name: Validate deployable game client
         id: validate
         run: npm run check:hosting
+
+      - name: Verify source tree is unchanged
+        id: clean_source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- .
+          if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+            echo 'Validation changed tracked source. Deployment is forbidden.'
+            git status --short
+            exit 1
+          fi
+          [[ "$(git rev-parse HEAD)" == "$DEPLOY_SHA" ]] || { echo 'HEAD changed during validation.'; exit 1; }
+          echo "Validated source remains exactly $DEPLOY_SHA"
+
+      - name: Authenticate to Google Cloud
+        id: gcp_auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ttd-online-b8c0f
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
 
       - name: Stamp exact production build
         id: stamp
@@ -159,37 +99,14 @@ jobs:
           LIVE_URL: https://ttd-online-b8c0f.web.app
         run: bash scripts/smoke-hosting-png-v34.sh
 
-      - name: Record verified production commit
-        id: receipt
+      - name: Summarize verified production deployment
+        if: success()
         shell: bash
         run: |
-          printf '{"commit":"%s","verifiedAt":"%s"}\n' "$DEPLOY_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > production-verified.json
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add production-verified.json
-          git commit -m "[skip ci] [deployment-record] verified production $DEPLOY_SHA"
-          git push origin HEAD:main
-
-      - name: Record deployment diagnostic
-        if: always()
-        env:
-          AUTH_OUTCOME: ${{ steps.gcp_auth.outcome }}
-          INSTALL_OUTCOME: ${{ steps.install.outcome }}
-          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
-          STAMP_OUTCOME: ${{ steps.stamp.outcome }}
-          DEPLOY_OUTCOME: ${{ steps.hosting_deploy.outcome }}
-          LIVE_VERIFY_OUTCOME: ${{ steps.live_verify.outcome }}
-          SMOKE_OUTCOME: ${{ steps.smoke_verify.outcome }}
-          RECEIPT_OUTCOME: ${{ steps.receipt.outcome }}
-          CANONICAL_OUTCOME: ${{ steps.canonical.outcome }}
-        run: |
-          set +e
-          deploy_sha="${DEPLOY_SHA:-$GITHUB_SHA}"
-          mkdir -p .github
-          printf '{"releaseSha":"%s","runId":"%s","runUrl":"https://github.com/%s/actions/runs/%s","canonical":"%s","auth":"%s","install":"%s","validate":"%s","deploy":"%s","liveVerify":"%s","smokeVerify":"%s","receipt":"%s","recordedAt":"%s"}\n' \
-            "$deploy_sha" "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$CANONICAL_OUTCOME" "$AUTH_OUTCOME" "$INSTALL_OUTCOME" "$VALIDATE_OUTCOME" "$DEPLOY_OUTCOME" "$LIVE_VERIFY_OUTCOME" "$SMOKE_OUTCOME" "$RECEIPT_OUTCOME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .github/hosting-deploy-diagnostic.json
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/hosting-deploy-diagnostic.json
-          git commit -m "[skip ci] [deploy-diagnostic] hosting $deploy_sha" || exit 0
-          git push origin HEAD:main || true
+          {
+            echo '### TTD production deployment verified'
+            echo "- Commit: \`$DEPLOY_SHA\`"
+            echo '- Source mutation: none'
+            echo '- Live build identity: verified'
+            echo '- Critical asset smoke test: passed'
+          } >> "$GITHUB_STEP_SUMMARY"

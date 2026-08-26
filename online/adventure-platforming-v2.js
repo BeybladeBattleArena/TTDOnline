@@ -440,7 +440,7 @@
   }
 
   function updateDrops(dt){
-    for(const d of session.drops){d.t+=dt;if(d.bounceT>0){d.bounceT-=dt;d.y=d.baseY+Math.abs(Math.sin(d.t*8))*22*Math.max(0,d.bounceT);}else d.y=d.baseY;}
+    for(let i=session.drops.length-1;i>=0;i--){const d=session.drops[i];d.t+=dt;if(d.bounceT>0){d.bounceT-=dt;d.y=d.baseY+Math.abs(Math.sin(d.t*8))*22*Math.max(0,d.bounceT);}else d.y=d.baseY;if(d.source==='combat'&&d.t>=Math.max(.1,Number(d.ttl)||6))session.drops.splice(i,1);}
   }
   function collectNearbyDrops(){
     const n=session.nav;if(!n)return;
@@ -462,7 +462,7 @@
     o.opened=true;spawnChestLoot(o);
   }
   function spawnChestLoot(o){
-    const push=(kind,value,dx,dz,icon)=>session.drops.push({kind,value,x:o.x+dx,z:o.z+dz,baseY:o.y+10,y:o.y+10,t:0,bounceT:1.1,collected:false,icon});
+    const push=(kind,value,dx,dz,icon)=>session.drops.push({kind,value,x:o.x+dx,z:o.z+dz,baseY:o.y+10,y:o.y+10,t:0,bounceT:1.1,collected:false,icon,isGold:kind==='coin'?value>=5:null});
     if(o.type==='chest_food'){push('food',.24,-34,-8,'🍎');push('food',.18,10,28,'🥥');push('food',.30,38,-22,'🥤');}
     else if(o.type==='chest_coin'){const count=3+Math.floor(Math.random()*3);for(let i=0;i<count;i++)push('coin',3+Math.floor(Math.random()*8),(i-(count-1)/2)*24,(i%2?22:-20),'●');}
     else if(o.type==='chest_upgrade'){
@@ -515,7 +515,7 @@
   }
   function drawDrop(g,d){
     if(d.collected)return;const p=project(d.x,d.z,d.y);g.save();g.translate(p.x,p.y);g.scale(p.scale,p.scale);g.textAlign='center';g.textBaseline='middle';
-    if(d.kind==='coin'){g.fillStyle='#f3d491';g.beginPath();g.arc(0,0,10,0,Math.PI*2);g.fill();g.fillStyle='#6b5125';g.font='bold 12px sans-serif';g.fillText('P',0,1);}
+    if(d.kind==='coin'){g.fillStyle=d.isGold?'#f3d491':'#c7d0e0';g.beginPath();g.arc(0,0,7,0,Math.PI*2);g.fill();g.strokeStyle='rgba(0,0,0,0.4)';g.lineWidth=1;g.stroke();}
     else if(d.kind==='star'){g.fillStyle='#f3d491';g.font='bold 28px sans-serif';g.fillText('★',0,0);}
     else if(d.kind==='ore'){g.fillStyle='#c9b8f0';g.font='bold 23px sans-serif';g.fillText('◆',0,0);}
     else if(d.kind==='exp'){g.fillStyle='#8fc4e8';g.font='bold 24px sans-serif';g.fillText('✦',0,0);}
@@ -595,7 +595,7 @@
   const baseCampaignComplete=campaignComplete;
   campaignComplete=function campaignCompleteWithTraversalRewards(){
     const test=!!state?.__ttdTestMap,rewards=test?{...(state.__ttdPlatformRewards||{})}:null;baseCampaignComplete();
-    if(test&&rewards){const stats=document.getElementById('overlayStats');if(stats){const bonusXp=(rewards.bonusWaveCredits||0)*2;stats.textContent+=` · ${rewards.dieOre||0} Die Ore · ${rewards.expOrbs||0} EXP Orbs${bonusXp?` (~+${bonusXp} base EXP)`:''}`;}}
+    if(test&&rewards){const stats=document.getElementById('overlayStats');if(stats){const bonusXp=(rewards.bonusWaveCredits||0)*2;stats.textContent+=` · ${rewards.dieOre||0} Die Ore · ${rewards.expOrbs||0} EXP Orbs`;}}
   };
 
   if(document.getElementById('adventureScreen')?.classList.contains('active'))renderAdventureList();

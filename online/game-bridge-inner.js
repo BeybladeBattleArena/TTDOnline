@@ -15,44 +15,7 @@
     window.parent.postMessage({ type, ...payload }, ORIGIN);
   }
 
-  // The Test Map traversal source owns private draw/drop helpers inside its IIFE. Patch those
-  // helpers before run-ui evaluates that source so traversal coins use the exact same visual
-  // language as battle drops and combat carry-over can expire naturally in the shared world.
-  const nativeFetchForTraversal = window.fetch.bind(window);
-  function patchTraversalSourceV1(source) {
-    let out=String(source||'');
-    const requiredReplace=(needle,replacement,label)=>{
-      if(!out.includes(needle))throw new Error(`Traversal continuity patch missing ${label}.`);
-      out=out.replace(needle,replacement);
-    };
-    requiredReplace(
-      "  function updateDrops(dt){\n    for(const d of session.drops){d.t+=dt;if(d.bounceT>0){d.bounceT-=dt;d.y=d.baseY+Math.abs(Math.sin(d.t*8))*22*Math.max(0,d.bounceT);}else d.y=d.baseY;}\n  }",
-      "  function updateDrops(dt){\n    for(let i=session.drops.length-1;i>=0;i--){const d=session.drops[i];d.t+=dt;if(d.bounceT>0){d.bounceT-=dt;d.y=d.baseY+Math.abs(Math.sin(d.t*8))*22*Math.max(0,d.bounceT);}else d.y=d.baseY;if(d.source==='combat'&&d.t>=Math.max(.1,Number(d.ttl)||6))session.drops.splice(i,1);}\n  }",
-      'combat coin lifetime'
-    );
-    requiredReplace(
-      "    const push=(kind,value,dx,dz,icon)=>session.drops.push({kind,value,x:o.x+dx,z:o.z+dz,baseY:o.y+10,y:o.y+10,t:0,bounceT:1.1,collected:false,icon});",
-      "    const push=(kind,value,dx,dz,icon)=>session.drops.push({kind,value,x:o.x+dx,z:o.z+dz,baseY:o.y+10,y:o.y+10,t:0,bounceT:1.1,collected:false,icon,isGold:kind==='coin'?value>=5:null});",
-      'treasure coin identity'
-    );
-    requiredReplace(
-      "    if(d.kind==='coin'){g.fillStyle='#f3d491';g.beginPath();g.arc(0,0,10,0,Math.PI*2);g.fill();g.fillStyle='#6b5125';g.font='bold 12px sans-serif';g.fillText('P',0,1);}",
-      "    if(d.kind==='coin'){g.fillStyle=d.isGold?'#f3d491':'#c7d0e0';g.beginPath();g.arc(0,0,7,0,Math.PI*2);g.fill();g.strokeStyle='rgba(0,0,0,0.4)';g.lineWidth=1;g.stroke();}",
-      'battle-matching treasure coin art'
-    );
-    const approximation="${bonusXp?` (~+${bonusXp} base EXP)`:''}";
-    if(!out.includes(approximation))throw new Error('Traversal continuity patch missing old EXP approximation marker.');
-    out=out.replace(approximation,'');
-    return out;
-  }
-  window.fetch=async function ttdTraversalAwareFetch(input,init){
-    const response=await nativeFetchForTraversal(input,init);
-    let path='';try{path=new URL(typeof input==='string'||input instanceof URL?String(input):input?.url,location.href).pathname;}catch(_){}
-    if(path!=='/online/adventure-platforming-v2.js')return response;
-    const source=await response.text(),patched=patchTraversalSourceV1(source),headers=new Headers(response.headers);headers.delete('content-length');
-    return new Response(patched,{status:response.status,statusText:response.statusText,headers});
-  };
-  window.__TTD_TRAVERSAL_SOURCE_PATCH_V1=Object.freeze({patchTraversalSourceV1});
+  // Traversal continuity is committed directly in adventure-platforming-v2.js; no runtime source patching.
 
   function validGameState(gameState) {
     const pips = gameState?.economy?.pips;
