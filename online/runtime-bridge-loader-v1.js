@@ -102,6 +102,9 @@
         report(bridge,error);
       }
     }
+    // The run-ui bridge owns a nested async bootstrap for the Test Map and global mission/outcome
+    // presentation. Do not expose the home UI as "bridges ready" until that attempt has settled.
+    try{await window.__TTD_RUN_UI_EXTENSIONS_READY;}catch(error){report('/online/run-ui-bridge-v21.js',error);}
     window.__TTD_MARK_BRIDGES_READY?.();
   }
 
