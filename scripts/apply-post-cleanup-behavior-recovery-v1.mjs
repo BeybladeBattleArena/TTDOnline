@@ -36,8 +36,16 @@ function replaceExactly(source,from,to,label){
     const insertAt=closeIndex+'\n    }'.length;
     const block=`\n\n    // TTD_PRESENTATION_INDEPENDENT_LOAD_V1\n    // Preserve the old sequencing (world patches first, presentation wrappers second), but do\n    // not let a Test Map failure suppress mission/outcome presentation for every game mode.\n    try{\n      const presentationUrl=window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=6')||'/online/game-presentation-v1.js?v=6';\n      await new Promise((resolve,reject)=>{\n        if(window.__TTD_GAME_PRESENTATION_V6){resolve();return;}\n        const script=document.createElement('script');script.src=presentationUrl;script.async=false;\n        script.onload=resolve;script.onerror=()=>reject(new Error('Game presentation script could not load.'));\n        document.head.appendChild(script);\n      });\n      window.TTDGamePresentation?.rebind?.();\n    }catch(err){\n      console.error('Game presentation module could not load.',err);\n      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){}\n    }`;
     source=source.slice(0,insertAt)+block+source.slice(insertAt);
-    fs.writeFileSync(file,source);
   }
+  if(!source.includes('TTD_RUN_UI_EXTENSIONS_READY_V1')){
+    source=replaceExactly(
+      source,
+      '  loadAdventurePlatformingV2();\n})();',
+      "  // TTD_RUN_UI_EXTENSIONS_READY_V1\n  // Native startup waits for this promise so Test Map and global presentation cannot race the first mode launch.\n  window.__TTD_RUN_UI_EXTENSIONS_READY=loadAdventurePlatformingV2();\n})();",
+      'nested runtime readiness publication',
+    );
+  }
+  fs.writeFileSync(file,source);
 }
 
 // 2) Remove the last direct references to retired WebP item/loading placeholders. The item
@@ -62,4 +70,4 @@ function replaceExactly(source,from,to,label){
   fs.writeFileSync(file,source);
 }
 
-console.log('Materialized independent presentation loading and approved Inventory/loading/item-id art routing.');
+console.log('Materialized independent presentation loading, nested runtime readiness, and approved Inventory/loading/item-id art routing.');
