@@ -7411,8 +7411,13 @@
     showScreen('home');
   });
   document.getElementById('pauseBtn').addEventListener('click', ()=>{
+    // TTD_ADVENTURE_BACK_RECOVERY_V1
+    // Back leaves the current run without invoking End Run outcome handling, but must return
+    // to the landing for the mode the player actually came from.
+    const backTarget = state?.zombieMode ? 'zombieMode' :
+      state?.modeKey==='adventure' ? 'adventure' : 'mode';
     if(state) state.running = false;
-    showScreen(state && state.zombieMode ? 'zombieMode' : 'mode');
+    showScreen(backTarget);
   });
   document.getElementById('endRunBtn').addEventListener('click', ()=>{
     if(!state || !state.running) return;
@@ -7549,9 +7554,9 @@
   __ttdExposeCore('beginDrag',()=>beginDrag);
   __ttdExposeCore('beginInstDrag',()=>beginInstDrag);
   __ttdExposeCore('buildBoardDOM',()=>buildBoardDOM);
-  __ttdExposeCore('buildPath',()=>buildPath);
+  __ttdExposeCore('buildPath',()=>buildPath,(value)=>{buildPath=value;});
   __ttdExposeCore('cardSVG',()=>cardSVG);
-  __ttdExposeCore('chestSVG',()=>chestSVG);
+  __ttdExposeCore('chestSVG',()=>chestSVG,(value)=>{chestSVG=value;});
   __ttdExposeCore('classMultFor',()=>classMultFor);
   __ttdExposeCore('classMultFromLevel',()=>classMultFromLevel);
   __ttdExposeCore('createHoldSpinner',()=>createHoldSpinner);
@@ -7567,7 +7572,7 @@
   __ttdExposeCore('endDrag',()=>endDrag);
   __ttdExposeCore('endInstDrag',()=>endInstDrag);
   __ttdExposeCore('enemyElementalMult',()=>enemyElementalMult);
-  __ttdExposeCore('enemyRenderPos',()=>enemyRenderPos);
+  __ttdExposeCore('enemyRenderPos',()=>enemyRenderPos,(value)=>{enemyRenderPos=value;});
   __ttdExposeCore('findInstance',()=>findInstance);
   __ttdExposeCore('fx',()=>fx);
   __ttdExposeCore('gemSVG',()=>gemSVG);
@@ -7583,12 +7588,12 @@
   __ttdExposeCore('jewelDisplayName',()=>jewelDisplayName);
   __ttdExposeCore('jewelEffectText',()=>jewelEffectText);
   __ttdExposeCore('jewelTierValue',()=>jewelTierValue);
-  __ttdExposeCore('keySVG',()=>keySVG);
+  __ttdExposeCore('keySVG',()=>keySVG,(value)=>{keySVG=value;});
   __ttdExposeCore('loop',()=>loop);
   __ttdExposeCore('modeLabel',()=>modeLabel);
   __ttdExposeCore('moveGhost',()=>moveGhost);
   __ttdExposeCore('moveInstGhost',()=>moveInstGhost);
-  __ttdExposeCore('pathPts',()=>pathPts);
+  __ttdExposeCore('pathPts',()=>pathPts,(value)=>{pathPts=value;});
   __ttdExposeCore('pickTarget',()=>pickTarget);
   __ttdExposeCore('playEnchantAnimation',()=>playEnchantAnimation);
   __ttdExposeCore('quickEquip',()=>quickEquip);
@@ -7649,7 +7654,31 @@
   __ttdExposeCore('triggerAsclepiusHeal',()=>triggerAsclepiusHeal,(value)=>{triggerAsclepiusHeal=value;});
   __ttdExposeCore('tryMergeAtPoint',()=>tryMergeAtPoint,(value)=>{tryMergeAtPoint=value;});
   __ttdExposeCore('updatePlayerShots',()=>updatePlayerShots,(value)=>{updatePlayerShots=value;});
-  window.__TTD_CORE_API_V1=Object.freeze(__ttdCoreApi);
+  // TTD_POST_CLEANUP_RUNTIME_COMPAT_V1
+// These bindings are the exact additional lexical dependencies proven by the post-cleanup
+// runtime-module audit. Keep this surface bounded; do not expose unrelated monolith state.
+__ttdExposeCore('buildAdventureWave',()=>buildAdventureWave);
+__ttdExposeCore('ch',()=>ch);
+__ttdExposeCore('effHp',()=>effHp);
+__ttdExposeCore('posAtDistance',()=>posAtDistance);
+__ttdExposeCore('renderAdventureList',()=>renderAdventureList);
+__ttdExposeCore('renderDeckTray',()=>renderDeckTray);
+__ttdExposeCore('renderHUD',()=>renderHUD);
+__ttdExposeCore('resizeCanvas',()=>resizeCanvas);
+__ttdExposeCore('selectedAdventureId',()=>selectedAdventureId);
+__ttdExposeCore('selectedDifficulty',()=>selectedDifficulty);
+__ttdExposeCore('shopActiveSub',()=>shopActiveSub);
+__ttdExposeCore('shopActiveTab',()=>shopActiveTab);
+__ttdExposeCore('STAGE_THEMES',()=>STAGE_THEMES);
+__ttdExposeCore('openInventoryItemDetail',()=>openInventoryItemDetail,(value)=>{openInventoryItemDetail=value;});
+__ttdExposeCore('renderShopGrid',()=>renderShopGrid,(value)=>{renderShopGrid=value;});
+__ttdExposeCore('renderStageScreen',()=>renderStageScreen,(value)=>{renderStageScreen=value;});
+__ttdExposeCore('segLens',()=>segLens,(value)=>{segLens=value;});
+__ttdExposeCore('showZombieSummary',()=>showZombieSummary,(value)=>{showZombieSummary=value;});
+__ttdExposeCore('totalLen',()=>totalLen,(value)=>{totalLen=value;});
+__ttdExposeCore('towerPos',()=>towerPos,(value)=>{towerPos=value;});
+__ttdExposeCore('updateSpawns',()=>updateSpawns,(value)=>{updateSpawns=value;});
+window.__TTD_CORE_API_V1=Object.freeze(__ttdCoreApi);
 
   let __ttdBridgeReadyResolve;
   let __ttdBridgeReadyMarked=false;

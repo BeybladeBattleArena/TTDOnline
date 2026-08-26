@@ -286,11 +286,30 @@ ${renderMarker}`;
 
       installPlatformOnlineStartSyncV2();
 
-      const presentationResponse=await fetch('/online/game-presentation-v1.js?v=6',{cache:'no-store'});if(!presentationResponse.ok)throw new Error(`Game presentation HTTP ${presentationResponse.status}`);eval(`${await presentationResponse.text()}\n//# sourceURL=/online/game-presentation-v1.js`);window.TTDGamePresentation?.rebind?.();
+
     }catch(err){
       console.error('Adventure continuous-world module could not load.',err);
-      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'continuous-world-v2 + same-map-battle-v5 + presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){}
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'continuous-world-v2 + same-map-battle-v5',message:String(err?.message||err)},location.origin);}catch(_){}
+    }
+
+    // TTD_PRESENTATION_INDEPENDENT_LOAD_V1
+    // Preserve the old sequencing (world patches first, presentation wrappers second), but do
+    // not let a Test Map failure suppress mission/outcome presentation for every game mode.
+    try{
+      const presentationUrl=window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=6')||'/online/game-presentation-v1.js?v=6';
+      await new Promise((resolve,reject)=>{
+        if(window.__TTD_GAME_PRESENTATION_V6){resolve();return;}
+        const script=document.createElement('script');script.src=presentationUrl;script.async=false;
+        script.onload=resolve;script.onerror=()=>reject(new Error('Game presentation script could not load.'));
+        document.head.appendChild(script);
+      });
+      window.TTDGamePresentation?.rebind?.();
+    }catch(err){
+      console.error('Game presentation module could not load.',err);
+      try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'presentation-v6',message:String(err?.message||err)},location.origin);}catch(_){}
     }
   }
-  loadAdventurePlatformingV2();
+  // TTD_RUN_UI_EXTENSIONS_READY_V1
+  // Native startup waits for this promise so Test Map and global presentation cannot race the first mode launch.
+  window.__TTD_RUN_UI_EXTENSIONS_READY=loadAdventurePlatformingV2();
 })();

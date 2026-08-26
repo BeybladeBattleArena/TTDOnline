@@ -62,8 +62,19 @@ forbid(audio,['activeVoice.stop()'],'audio runtime');
 
 forbid(entry,['result-summary-client-v26.js','result-reward-polish-v1.js'],'single-player result ownership');
 forbid(continuous,['ensureRewardMetaV1();'],'continuous-world outcome wrappers');
-need(runUi,['window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)'],'run bridge canonical result forwarding');
-forbid(runUi,['Pips banked!','EXP earned!','zSummaryXpV21'],'run bridge stale result UI');
+need(runUi,[
+  'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)',
+  'TTD_PRESENTATION_INDEPENDENT_LOAD_V1',
+  "window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=6')",
+  "bridge:'continuous-world-v2 + same-map-battle-v5'",
+  "bridge:'presentation-v6'",
+  "script.onload=resolve;script.onerror=()=>reject(new Error('Game presentation script could not load.'))",
+],'run bridge canonical result/presentation forwarding');
+forbid(runUi,[
+  'Pips banked!','EXP earned!','zSummaryXpV21',
+  "const presentationResponse=await fetch('/online/game-presentation-v1.js?v=6'",
+  "bridge:'continuous-world-v2 + same-map-battle-v5 + presentation-v6'",
+],'run bridge stale/coupled presentation UI');
 
 need(battle,[
   'window.__TTD_TEST_MAINMAP_BATTLE_V6=true','WORLD_ROUTES','projectWorldPoint','drawProjectedLaneSurface',
@@ -81,4 +92,4 @@ for(const [label,centerX,points] of [
   }
 }
 
-console.log('Presentation verified: CombatStart fires exactly on visual START after 3-2-1; FAIL waits for the original MissionFail phrase natural ended acknowledgement before its post-voice delay; canonical result ownership and portrait-safe Test Map routes remain intact.');
+console.log('Presentation v7 verified: global MISSION/START/CLEAR/FAIL/FINISH presentation loads independently after the Test Map attempt; CombatStart remains visual-START-owned; FAIL waits for the authoritative MissionFail natural-ended acknowledgement; and portrait-safe Test Map routes remain intact.');

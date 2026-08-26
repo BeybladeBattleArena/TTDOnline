@@ -8,6 +8,7 @@ const funcs=read('functions/items-v1.js');
 const main=read('functions/main-v6.js');
 const client=read('online/item-inventory-client-v1.js');
 const merge=read('online/merge-bridge-v6.js');
+const runtime=read('online/runtime-bridge-loader-v1.js');
 const entry=read('online/singleplayer-client-v6.js');
 const artPolish=read('online/item-art-polish-v2.js');
 const manifest=JSON.parse(read('assets/game-assets.json'));
@@ -30,7 +31,13 @@ must(funcs.includes("purchaseMysteryChestV1")&&funcs.includes("costPips:3300"),'
 must(funcs.includes("useExpTomeV1")&&funcs.includes("useXp:60"),'EXP Tome 60 EXP use missing');
 must(main.includes("./items-v1")&&main.includes("...items"),'item functions not exported');
 must(client.includes("ttd:item-purchase-request")&&client.includes("ttd:item-use-request"),'item client bridge missing');
-must(merge.includes("item-assets-v1.js?v=2")&&merge.includes("world-items-v1.js"),'world item runtime not loaded');
+
+const itemAssetUrl="/online/item-assets-v1.js?v=4",avatarUrl="/online/avatar-inventory-v22.js?v=22",worldUrl="/online/world-items-v1.js?v=1";
+for(const url of [itemAssetUrl,avatarUrl,worldUrl])must(runtime.includes(url),`native runtime does not load ${url}`);
+must(runtime.indexOf(itemAssetUrl)<runtime.indexOf(avatarUrl),'approved item asset authority must load before avatar Inventory');
+must(runtime.indexOf(avatarUrl)<runtime.indexOf(worldUrl),'world item wrappers must load after the final avatar Inventory renderer');
+must(!merge.includes("eval(`${await response.text()}"),'merge bridge still evaluates item/world source text');
+must(!merge.includes("/online/item-assets-v1.js?v=2")&&!merge.includes("/online/world-items-v1.js?v=1"),'merge bridge still owns nested item/world loading');
 
 for(const marker of [
   "window.__TTD_ITEM_ASSETS_V4=Object.freeze",
@@ -92,4 +99,4 @@ for(const marker of [
 must(artPolish.includes('source art remains native-resolution')||artPolish.includes('Source art remains native-resolution'),'item presentation no longer documents the native-resolution source rule');
 must(entry.includes("import './item-art-polish-v2.js?v=4';"),'single-player entry does not load item art polish v4 behavior');
 
-console.log('Items/world v5 verified: semantic item routing, registered PNG contracts, aligned item-card presentation, world interactions, purchases, and item use remain wired end to end. Asset byte identity is owned by check:immutable-assets and announcer behavior by check:audio.');
+console.log('Items/world v6 verified: item/world runtime loads as ordinary scripts in explicit order; approved PNG routing, Mystery Chest Shop integration, world interactions, purchases, and item use remain wired end to end.');

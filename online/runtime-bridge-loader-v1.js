@@ -16,7 +16,12 @@
     '/online/interaction-effects-v10.js?v=10',
     '/online/collection-portrait-fit-v16.js?v=16',
     '/online/deck-editor-v18.js?v=18',
+    // Item art is data-only and must exist before either inventory authority renders.
+    '/online/item-assets-v1.js?v=4',
     '/online/avatar-inventory-v22.js?v=22',
+    // World items deliberately loads last so its wrappers extend the final Shop/Inventory
+    // renderers instead of being overwritten by the avatar inventory authority.
+    '/online/world-items-v1.js?v=1',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
@@ -97,6 +102,9 @@
         report(bridge,error);
       }
     }
+    // The run-ui bridge owns a nested async bootstrap for the Test Map and global mission/outcome
+    // presentation. Do not expose the home UI as "bridges ready" until that attempt has settled.
+    try{await window.__TTD_RUN_UI_EXTENSIONS_READY;}catch(error){report('/online/run-ui-bridge-v21.js',error);}
     window.__TTD_MARK_BRIDGES_READY?.();
   }
 

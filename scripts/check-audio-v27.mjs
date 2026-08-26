@@ -14,11 +14,16 @@ const requiredAudio=[
   '/assets/audio/announcer/RedTeam.mp3','/assets/audio/announcer/BlueTeam.mp3','/assets/audio/announcer/Wins.mp3',
   'ANNOUNCER','playVoiceCue','playVoiceNow','voiceQueue=Promise.resolve()','voiceQueue.then(run,run)','ttd:voice-cue','...Object.values(ANNOUNCER).map(load)',
   "source.addEventListener('ended',()=>finish(true),{once:true})", "type:'ttd:voice-cue-complete'",'requestId','Promise.resolve(playVoiceCue(cue)).then',
-  'shopScreen','deckScreen','gachaScreen','gameModesScreen','gameScreen','source.loopStart','source.loopEnd','Math.random()','enterMainMenu','source.start(0,0)'
+  'shopScreen','deckScreen','gachaScreen','gameModesScreen','gameScreen','source.loopStart','source.loopEnd','Math.random()','enterMainMenu','source.start(0,0)',
+  // Page music must be cancellable across async decode/load and each outgoing source owns its
+  // own fade gain so starting the next page cannot turn the previous source back up.
+  'routeGeneration=0','generation!==routeGeneration','routeFor(activeScreenId())!==key','const source=ctx.createBufferSource(),gain=ctx.createGain()','source.connect(gain);gain.connect(musicGain)',
+  'const route=routeFor(screen),generation=++routeGeneration','stopCurrent(.14)','routeGeneration+=1;stopCurrent(.15)'
 ];
-for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v34 missing: ${marker}`);
+for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v35 missing: ${marker}`);
 if(audio.includes('activeVoice.stop()'))throw new Error('Announcer cues must not pre-empt a phrase already playing.');
 if(audio.includes('positions.set(')||audio.includes('positions.get('))throw new Error('Music must not resume saved positions after leaving a page.');
+if(audio.includes('source.connect(musicGain);'))throw new Error('Page tracks must use independent source gains; a shared fade gain can revive an outgoing track.');
 for(const marker of ["font-family:'CCDangerGirlOpen'",'randomRay(c)','links.push','b.links.forEach','audio?.playWelcome?.()','await sleep(95)','audio?.enterMainMenu?.()','ttdBlackV28'])if(!splash.includes(marker))throw new Error(`Splash polish v28 missing: ${marker}`);
 if(!entry.includes("import './audio-client-v27.js?v=34';"))throw new Error('Single-player client does not load restored-original audio v34.');
 if(entry.indexOf('audio-client-v27')>entry.indexOf('startup-splash-v26'))throw new Error('Audio manager must load before splash.');
@@ -31,4 +36,4 @@ const combatSha=gitBlobSha('assets/audio/announcer/CombatStart.mp3');
 if(failSha!=='84370d8bf50f4e95c60efae8f205f1fa68e24a50')throw new Error(`MissionFail.mp3 is not the user-supplied authoritative original (${failSha}).`);
 if(combatSha!=='2ce2410a1519cea618b6364acddb90ba693c8058')throw new Error(`CombatStart.mp3 is not the user-supplied authoritative original (${combatSha}).`);
 
-console.log('Audio v34 verified: authoritative original MissionFail and CombatStart MP3 masters are byte-exact, announcer phrases serialize without pre-emption, and completion acknowledgements fire only from the natural ended event.');
+console.log('Audio v35 verified: authoritative announcer masters are byte-exact, phrases serialize to natural ended events, and page music uses cancellable route generations plus source-local fades so stale tracks cannot overlap after navigation.');
