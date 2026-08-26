@@ -1,1 +1,1 @@
-Materialize canonical Zombie EXP timing and Shop/Inventory resale rules with split v3 scripts.
+Materialize final currency-aware Shop purchase and resale provenance behavior.
