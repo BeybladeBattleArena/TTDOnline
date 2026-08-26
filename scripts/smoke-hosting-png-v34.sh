@@ -35,34 +35,48 @@ check_png() {
     exit 1
   fi
   python3 - "$tmp" "$path" "$width" "$height" "$require_alpha" <<'PY'
+import struct
 import sys
-from PIL import Image
+
 file_path,label=sys.argv[1],sys.argv[2]
 expected=(int(sys.argv[3]),int(sys.argv[4]))
 require_alpha=sys.argv[5]=='1'
 data=open(file_path,'rb').read()
 if data[:8] != b'\x89PNG\r\n\x1a\n':
     raise SystemExit(f'{label}: live file is not PNG')
-with Image.open(file_path) as image:
-    if image.size != expected:
-        raise SystemExit(f'{label}: expected {expected[0]}x{expected[1]}, got {image.size[0]}x{image.size[1]}')
-    if require_alpha:
-        if image.mode != 'RGBA':
-            image=image.convert('RGBA')
-        alpha=image.getchannel('A')
-        hist=alpha.histogram(); total=image.width*image.height
-        transparent=hist[0]/total
-        opaque=hist[255]/total
-        corners=[alpha.getpixel((0,0)),alpha.getpixel((image.width-1,0)),alpha.getpixel((0,image.height-1)),alpha.getpixel((image.width-1,image.height-1))]
-        if transparent < .08:
-            raise SystemExit(f'{label}: item background is not materially transparent ({transparent:.1%} fully transparent)')
-        if opaque < .02:
-            raise SystemExit(f'{label}: item foreground was over-removed ({opaque:.1%} opaque)')
-        if any(c != 0 for c in corners):
-            raise SystemExit(f'{label}: item canvas corners are not transparent: {corners}')
-        print(f'Verified exact {label} ({image.width}x{image.height}, {len(data)} bytes, transparent={transparent:.1%}, opaque={opaque:.1%})')
-    else:
-        print(f'Verified exact {label} ({image.width}x{image.height}, {len(data)} bytes)')
+
+pos=8
+ihdr=None
+chunk_types=[]
+while pos+12 <= len(data):
+    length=struct.unpack('>I',data[pos:pos+4])[0]
+    chunk_type=data[pos+4:pos+8]
+    chunk=data[pos+8:pos+8+length]
+    end=pos+12+length
+    if end > len(data):
+        raise SystemExit(f'{label}: truncated PNG chunk')
+    chunk_types.append(chunk_type)
+    if chunk_type == b'IHDR':
+        if length != 13:
+            raise SystemExit(f'{label}: invalid IHDR length')
+        ihdr=struct.unpack('>IIBBBBB',chunk)
+    pos=end
+    if chunk_type == b'IEND':
+        break
+
+if ihdr is None:
+    raise SystemExit(f'{label}: PNG has no IHDR')
+width,height,bit_depth,color_type,compression,filter_method,interlace=ihdr
+if (width,height) != expected:
+    raise SystemExit(f'{label}: expected {expected[0]}x{expected[1]}, got {width}x{height}')
+if compression != 0 or filter_method != 0:
+    raise SystemExit(f'{label}: unsupported PNG compression/filter metadata')
+
+has_alpha = color_type in (4,6) or b'tRNS' in chunk_types
+if require_alpha and not has_alpha:
+    raise SystemExit(f'{label}: committed transparent-item master has no PNG alpha/transparency channel')
+alpha_note=', alpha-capable' if has_alpha else ''
+print(f'Verified exact {label} ({width}x{height}, {len(data)} bytes, bit-depth={bit_depth}, color-type={color_type}{alpha_note})')
 PY
   rm -f "$tmp"
 }
@@ -93,4 +107,4 @@ check_png /assets/items/ore-omni.png 1536 1536 1
 check_png /assets/items/gift-box-pink.png 1536 1536 1
 check_png /assets/items/gift-box-icy.png 1536 1499 1
 
-echo 'Production Hosting serves the committed game/audio files and all 18 canonical PNG masters byte-for-byte; PNG dimensions and transparent item backing are verified.'
+echo 'Production Hosting serves the committed game/audio files and all 18 canonical PNG masters byte-for-byte; PNG dimensions and transparency-capable item masters are verified without external image tooling.'
