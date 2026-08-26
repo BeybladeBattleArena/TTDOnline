@@ -5,6 +5,7 @@ const game=fs.readFileSync('random-dice-game-33.html','utf8');
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const runtime=fs.readFileSync('online/runtime-bridge-loader-v1.js','utf8');
+const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 const loaderHtml=fs.readFileSync('online/game-loader.html','utf8');
 new vm.Script(loader,{filename:'online/game-loader.js'});
 new vm.Script(runtime,{filename:'online/runtime-bridge-loader-v1.js'});
@@ -40,8 +41,14 @@ for(const url of expectedUrls){
 for(const marker of [
   "link.rel='preload'","link.as='script'",'script.async=false',"window.addEventListener('error',onRuntimeError,true)",
   "event.preventDefault?.()",'failed without blocking later bridges.','bridge-load-error','bridge-runtime-error',
-  "if(i===0)installCatalogBattleHooks()","else if(i===2)installSlitherBattleHooks()",'window.__TTD_MARK_BRIDGES_READY?.()',
-])must(runtime.includes(marker),`native bridge isolation/order contract missing: ${marker}`);
+  "if(i===0)installCatalogBattleHooks()","else if(i===2)installSlitherBattleHooks()",
+  'await window.__TTD_RUN_UI_EXTENSIONS_READY;',
+  'window.__TTD_MARK_BRIDGES_READY?.()',
+])must(runtime.includes(marker),`native bridge isolation/order/readiness contract missing: ${marker}`);
+for(const marker of [
+  'TTD_RUN_UI_EXTENSIONS_READY_V1',
+  'window.__TTD_RUN_UI_EXTENSIONS_READY=loadAdventurePlatformingV2();',
+])must(runUi.includes(marker),`run-ui nested readiness contract missing: ${marker}`);
 for(const name of ['fireMagmaForce','updateMagmaForce','drawMagmaForceGround','drawMagmaForceOverlay','fireSoulScimitar','updateSoulScimitars','drawSoulScimitars','fireSlitherVine','updateSlitherVines','drawSlitherVines']){
   must(runtime.includes(`'${name}'`),`battle hook publication missing: ${name}`);
 }
@@ -69,4 +76,4 @@ for(const marker of ['data-mode="loader-v9"','name="ttd-build" content="release-
   must(loaderHtml.includes(marker),`loader HTML freshness/asset contract missing: ${marker}`);
 }
 
-console.log('Loader v18 native bridge runtime verified: the game source exposes the bounded compatibility required by all active runtime modules; item/world authorities execute in explicit order; bridges retain failure isolation; battle hooks attach to a stable registry; and online/game-loader.js does not reconstruct or inject runtime source.');
+console.log('Loader v19 recovery contract verified: the native loader waits for the audited nested Test Map/presentation bootstrap before declaring bridges ready; item/world authorities execute in explicit order; battle hooks retain stable publication; and game-loader.js still performs no runtime source reconstruction.');
