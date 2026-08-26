@@ -32,5 +32,9 @@
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy": "npm run check && firebase deploy"
   },
-  "devDependencies": {"firebase-tools":"^14.0.0"}
+  "devDependencies": {
+    "eslint-scope": "^8.4.0",
+    "espree": "^10.4.0",
+    "firebase-tools": "^14.0.0"
+  }
 }
