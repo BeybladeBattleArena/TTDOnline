@@ -63,9 +63,22 @@ ${exposureLines}
 
 `;
 
-const startup=`  (async()=>{\n    account = await loadAccount();\n    if(!Array.isArray(account.decks)) account = migrateAccount(account);\n    showScreen('home');\n  })();`;
-if(!game.includes(startup))throw new Error('Could not locate the canonical account/home startup boundary.');
-game=game.replace(startup,`${facade}  (async()=>{\n    account = await loadAccount();\n    if(!Array.isArray(account.decks)) account = migrateAccount(account);\n    await window.__TTD_BRIDGES_READY;\n    showScreen('home');\n  })();`);
+const loadMarker='account = await loadAccount();';
+const loadIndex=game.lastIndexOf(loadMarker);
+const bootstrapStart=loadIndex>=0?game.lastIndexOf('(async()=>{',loadIndex):-1;
+const showHomeMarker="showScreen('home');";
+const showHomeIndex=loadIndex>=0?game.indexOf(showHomeMarker,loadIndex):-1;
+const bootstrapEnd=showHomeIndex>=0?game.indexOf('})();',showHomeIndex):-1;
+if(loadIndex<0 || bootstrapStart<0 || showHomeIndex<0 || bootstrapEnd<0 || bootstrapStart>loadIndex || showHomeIndex-bootstrapStart>1600 || bootstrapEnd-showHomeIndex>600){
+  throw new Error('Could not locate the canonical account/home startup boundary structurally.');
+}
+const bootstrapPrefix=game.slice(bootstrapStart,showHomeIndex);
+if(bootstrapPrefix.includes('await window.__TTD_BRIDGES_READY'))throw new Error('Native bridge startup gate is already present.');
+game=game.slice(0,bootstrapStart)
+  +facade
+  +game.slice(bootstrapStart,showHomeIndex)
+  +'await window.__TTD_BRIDGES_READY;\n    '
+  +game.slice(showHomeIndex);
 
 const simpleLoader=`(() => {
   'use strict';
