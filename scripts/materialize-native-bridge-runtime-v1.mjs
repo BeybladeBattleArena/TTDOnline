@@ -63,22 +63,19 @@ ${exposureLines}
 
 `;
 
-const loadMarker='account = await loadAccount();';
-const loadIndex=game.lastIndexOf(loadMarker);
-const bootstrapStart=loadIndex>=0?game.lastIndexOf('(async()=>{',loadIndex):-1;
-const showHomeMarker="showScreen('home');";
-const showHomeIndex=loadIndex>=0?game.indexOf(showHomeMarker,loadIndex):-1;
-const bootstrapEnd=showHomeIndex>=0?game.indexOf('})();',showHomeIndex):-1;
-if(loadIndex<0 || bootstrapStart<0 || showHomeIndex<0 || bootstrapEnd<0 || bootstrapStart>loadIndex || showHomeIndex-bootstrapStart>1600 || bootstrapEnd-showHomeIndex>600){
-  throw new Error('Could not locate the canonical account/home startup boundary structurally.');
-}
-const bootstrapPrefix=game.slice(bootstrapStart,showHomeIndex);
-if(bootstrapPrefix.includes('await window.__TTD_BRIDGES_READY'))throw new Error('Native bridge startup gate is already present.');
-game=game.slice(0,bootstrapStart)
-  +facade
-  +game.slice(bootstrapStart,showHomeIndex)
-  +'await window.__TTD_BRIDGES_READY;\n    '
-  +game.slice(showHomeIndex);
+const bootSection='  /* ============================ BOOT ============================ */\n  (async function boot(){';
+if(!game.includes(bootSection))throw new Error('Could not locate the named canonical BOOT section.');
+const bootIndex=game.indexOf(bootSection);
+const showHomeMarker="    showScreen('home');";
+const showHomeIndex=game.indexOf(showHomeMarker,bootIndex);
+if(showHomeIndex<0)throw new Error('Could not locate home activation inside the canonical boot function.');
+const bootEnd=game.indexOf('  })();',showHomeIndex);
+if(bootEnd<0 || bootEnd-showHomeIndex>400)throw new Error('Canonical boot function boundary is malformed or unexpectedly changed.');
+if(game.slice(bootIndex,showHomeIndex).includes('await window.__TTD_BRIDGES_READY'))throw new Error('Native bridge startup gate is already present.');
+game=game.replace(bootSection,facade+bootSection);
+game=game.slice(0,showHomeIndex+facade.length)
+  +'    await window.__TTD_BRIDGES_READY;\n'
+  +game.slice(showHomeIndex+facade.length);
 
 const simpleLoader=`(() => {
   'use strict';
