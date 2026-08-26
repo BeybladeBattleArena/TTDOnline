@@ -1555,12 +1555,12 @@
       <path d="M8 8 L16 8 M8 12 L16 12 M8 16 L13 16" stroke="${color}" stroke-width="1.4" stroke-linecap="round"/>
     </svg>`;
   }
-  function grantRewardKey(diffKey){
+  function grantRewardKey(diffKey,purchase=null){
     const label = ADV_DIFFICULTIES[diffKey] ? ADV_DIFFICULTIES[diffKey].label : diffKey;
     const existing = account.inventory.rewards.find(r=>r.type==='key' && r.difficultyKey===diffKey);
-    if(existing){ existing.count = (existing.count||1)+1; existing.ts = Date.now(); }
+    if(existing){ existing.count = (existing.count||1)+1; existing.ts = Date.now(); if(purchase)existing.shopPurchase=purchase; }
     else { account.inventory.rewards.push({id:genId(), type:'key', difficultyKey:diffKey, difficultyLabel:label, name:'Chest Key ['+label+']',
-      desc:'Unlocks one Frozen Island Chest earned on '+label+' difficulty. Consumed when used.', count:1, ts:Date.now()}); }
+      desc:'Unlocks one Frozen Island Chest earned on '+label+' difficulty. Consumed when used.', count:1, shopPurchase:purchase||null, ts:Date.now()}); }
     saveAccount();
   }
   function showRewardPopup(diffKey){
@@ -1658,7 +1658,8 @@
         name: item.name+' ['+item.difficultyLabel+']',
         desc: item.desc || 'A sealed treasure chest.',
         icon: chestSVG(item.difficultyKey),
-        sellable: false, sellValue: 0,
+        sellable: true, sellValue: chestSellValue(item.difficultyKey),
+        onSell: ()=>{const sv=chestSellValue(item.difficultyKey);account.inventory.rewards=account.inventory.rewards.filter(i=>i!==item);account.gold+=sv;saveAccount();renderInventoryScreen();renderHome();toastGlobal('Sold for '+sv+' Pips');},
         extraBtn: {
           label: 'Open (Key ×'+Math.max(0,keyCount-1)+' leftover)',
           disabled: !canOpen,
@@ -1666,7 +1667,7 @@
         },
       });
     } else if(item.type==='key'){
-      const sv = keySellValue(item.difficultyKey);
+      const sv = keySellValue(item.difficultyKey,item);
       showItemDetail({
         name: item.name, desc: item.desc || '', icon: keySVG(item.difficultyKey),
         sellable: true, sellValue: sv,
@@ -1678,7 +1679,7 @@
         },
       });
     } else if(item.kind==='card'){
-      const sv = cardSellValue(item.cardId);
+      const sv = cardSellValue(item.cardId,item);
       const def = ENCHANT_CARDS[item.cardId];
       showItemDetail({
         name: def.name, desc: def.desc, icon: cardSVG(item.cardId),
@@ -2256,41 +2257,42 @@
     document.getElementById('sellCancelBtn').addEventListener('click', ()=> renderItemDetailView(cardEl, view));
   }
   function showBuyConfirm(cardEl, view){
-    let qty = 1;
+    let qty=1;
+    const currency=view.currency==='astras'?'astras':'pips';
+    const currencyLabel=currency==='astras'?'Astras':'Pips';
+    const balance=()=>currency==='astras'?Math.max(0,Math.floor(Number(account.astras)||0)):Math.max(0,Math.floor(Number(account.gold)||0));
     function render(){
-      const total = view.cost*qty;
-      cardEl.innerHTML = `
+      const total=view.cost*qty;
+      cardEl.innerHTML=`
         <h2 style="margin-top:6px;">Confirm Purchase</h2>
-        ${view.multiBuy ? `
+        ${view.multiBuy?`
           <div class="qtyRow">
             <button class="qtyBtn" id="qtyMinus" ${qty<=1?'disabled':''}>−</button>
             <span class="qtyVal">${qty}</span>
-            <button class="qtyBtn" id="qtyPlus" ${(qty+1)*view.cost>account.gold?'disabled':''}>+</button>
-          </div>` : ''}
-        <p style="color:var(--mist); font-size:13px; margin:12px 0 18px;">Buy this item for ${total} Pips?</p>
+            <button class="qtyBtn" id="qtyPlus" ${(qty+1)*view.cost>balance()?'disabled':''}>+</button>
+          </div>`:''}
+        <p style="color:var(--mist); font-size:13px; margin:12px 0 18px;">Buy this item for ${total} ${currencyLabel}?</p>
         <button class="closeBtn" id="buyYesBtn">Yes</button>
         <button class="closeBtn" id="buyCancelBtn" style="margin-top:8px; background:var(--ink-700);">Cancel</button>
       `;
-      document.getElementById('buyYesBtn').addEventListener('click', ()=>{
-        if(account.gold < total){ toastGlobal('Not enough gold'); return; }
-        account.gold -= total;
-        for(let i=0;i<qty;i++) view.onBuy();
-        saveAccount();
-        renderShopGold();
-        hideItemDetail();
-        toastGlobal('Purchased '+qty+'× '+view.name);
-        if(typeof shopActiveTab!=='undefined') renderShopGrid();
+      document.getElementById('buyYesBtn').addEventListener('click',()=>{
+        if(balance()<total){toastGlobal('Not enough '+currencyLabel);return;}
+        if(currency==='astras')account.astras=Math.max(0,Math.floor(Number(account.astras)||0)-total);else account.gold=Math.max(0,Math.floor(Number(account.gold)||0)-total);
+        for(let i=0;i<qty;i++)view.onBuy();
+        saveAccount();renderShopGold();hideItemDetail();toastGlobal('Purchased '+qty+'× '+view.name);if(typeof shopActiveTab!=='undefined')renderShopGrid();
       });
-      document.getElementById('buyCancelBtn').addEventListener('click', ()=> renderItemDetailView(cardEl, view));
+      document.getElementById('buyCancelBtn').addEventListener('click',()=>renderItemDetailView(cardEl,view));
       if(view.multiBuy){
-        document.getElementById('qtyMinus').addEventListener('click', ()=>{ if(qty>1){ qty--; render(); } });
-        document.getElementById('qtyPlus').addEventListener('click', ()=>{ if((qty+1)*view.cost<=account.gold){ qty++; render(); } });
+        document.getElementById('qtyMinus').addEventListener('click',()=>{if(qty>1){qty--;render();}});
+        document.getElementById('qtyPlus').addEventListener('click',()=>{if((qty+1)*view.cost<=balance()){qty++;render();}});
       }
     }
     render();
   }
-  function keySellValue(diffKey){ return {normal:100,hard:200,hell:300}[diffKey]||0; }
-  function cardSellValue(cardId){ return {lesser:75,master:250}[cardId]||0; }
+  function shopSellValuePips(cost,currency='pips'){const amount=Math.max(0,Math.floor(Number(cost)||0));return currency==='astras'?amount*30:Math.floor(amount/3);}
+  function chestSellValue(diffKey){return {normal:250,hard:500,hell:750}[diffKey]||0;}
+  function keySellValue(diffKey,item=null){if(Number.isFinite(Number(item?.shopPurchase?.sellValuePips)))return Math.max(0,Math.floor(Number(item.shopPurchase.sellValuePips)));return shopSellValuePips(({normal:200,hard:400,hell:600}[diffKey]||0),'pips');}
+  function cardSellValue(cardId,item=null){if(Number.isFinite(Number(item?.shopPurchase?.sellValuePips)))return Math.max(0,Math.floor(Number(item.shopPurchase.sellValuePips)));return shopSellValuePips(ENCHANT_CARDS[cardId]?.cost||0,'pips');}
 
   function playEnchantAnimation(jewelId, result){
     return new Promise(resolve=>{
@@ -2479,34 +2481,31 @@
   let shopActiveTab = 'general';
   let shopActiveSub = {general:'NEW', items:'Dice', customize:'Gameplay'};
 
-  function grantEnchantCard(cardId){
+  function grantEnchantCard(cardId,purchase=null){
     const existing = account.inventory.enchant.find(i=>i.kind==='card' && i.cardId===cardId);
-    if(existing){ existing.count = (existing.count||1)+1; existing.ts = Date.now(); }
-    else { account.inventory.enchant.push({id:genId(), kind:'card', cardId, count:1, ts:Date.now()}); }
+    if(existing){ existing.count = (existing.count||1)+1; existing.ts = Date.now(); if(purchase)existing.shopPurchase=purchase; }
+    else { account.inventory.enchant.push({id:genId(), kind:'card', cardId, count:1, shopPurchase:purchase||null, ts:Date.now()}); }
     saveAccount();
   }
   const SHOP_LISTINGS = {
     materials: [
-      {id:'key_normal', name:'Chest Key [Normal]', cost:200, sellValue:100, multiBuy:true,
-        desc:'Unlocks one Frozen Island Chest earned on Normal difficulty.', icon:()=>keySVG('normal'), grant:()=>grantRewardKey('normal')},
-      {id:'key_hard',   name:'Chest Key [Hard]',   cost:400, sellValue:200, multiBuy:true,
-        desc:'Unlocks one Frozen Island Chest earned on Hard difficulty.', icon:()=>keySVG('hard'),   grant:()=>grantRewardKey('hard')},
-      {id:'key_hell',   name:'Chest Key [Hell]',   cost:600, sellValue:300, multiBuy:true,
-        desc:'Unlocks one Frozen Island Chest earned on Hell difficulty.', icon:()=>keySVG('hell'),   grant:()=>grantRewardKey('hell')},
+      {id:'key_normal', name:'Chest Key [Normal]', cost:200, currency:'pips', sellValue:shopSellValuePips(200,'pips'), multiBuy:true,
+        desc:'Unlocks one Frozen Island Chest earned on Normal difficulty.', icon:()=>keySVG('normal'), grant:(purchase)=>grantRewardKey('normal',purchase)},
+      {id:'key_hard',   name:'Chest Key [Hard]',   cost:400, currency:'pips', sellValue:shopSellValuePips(400,'pips'), multiBuy:true,
+        desc:'Unlocks one Frozen Island Chest earned on Hard difficulty.', icon:()=>keySVG('hard'),   grant:(purchase)=>grantRewardKey('hard',purchase)},
+      {id:'key_hell',   name:'Chest Key [Hell]',   cost:600, currency:'pips', sellValue:shopSellValuePips(600,'pips'), multiBuy:true,
+        desc:'Unlocks one Frozen Island Chest earned on Hell difficulty.', icon:()=>keySVG('hell'),   grant:(purchase)=>grantRewardKey('hell',purchase)},
     ],
     enchant: [
-      {id:'card_lesser', name:'Lesser Enchant Card', cost:ENCHANT_CARDS.lesser.cost, sellValue:75, multiBuy:true,
-        desc:ENCHANT_CARDS.lesser.desc, icon:()=>cardSVG('lesser'), grant:()=>grantEnchantCard('lesser')},
-      {id:'card_master', name:'Master Enchant Card', cost:ENCHANT_CARDS.master.cost, sellValue:250, multiBuy:true,
-        desc:ENCHANT_CARDS.master.desc, icon:()=>cardSVG('master'), grant:()=>grantEnchantCard('master')},
+      {id:'card_lesser', name:'Lesser Enchant Card', cost:ENCHANT_CARDS.lesser.cost, currency:'pips', sellValue:shopSellValuePips(ENCHANT_CARDS.lesser.cost,'pips'), multiBuy:true,
+        desc:ENCHANT_CARDS.lesser.desc, icon:()=>cardSVG('lesser'), grant:(purchase)=>grantEnchantCard('lesser',purchase)},
+      {id:'card_master', name:'Master Enchant Card', cost:ENCHANT_CARDS.master.cost, currency:'pips', sellValue:shopSellValuePips(ENCHANT_CARDS.master.cost,'pips'), multiBuy:true,
+        desc:ENCHANT_CARDS.master.desc, icon:()=>cardSVG('master'), grant:(purchase)=>grantEnchantCard('master',purchase)},
     ],
   };
   function shopItemView(item, purchased){
-    return {
-      name: item.name, desc: item.desc || '', icon: item.icon(),
-      buyable: true, purchased, cost: item.cost, multiBuy: !!item.multiBuy,
-      onBuy: ()=>{ if(item.grant) item.grant(); },
-    };
+    const currency=item.currency==='astras'?'astras':'pips',sellValuePips=shopSellValuePips(item.cost,currency);
+    return {name:item.name,desc:item.desc||'',icon:item.icon(),buyable:true,purchased,cost:item.cost,multiBuy:!!item.multiBuy,onBuy:()=>{if(item.grant)item.grant({purchaseCurrency:currency,purchaseCost:item.cost,sellValuePips});}};
   }
   function renderShopItemCard(item, purchased){
     const card = document.createElement('div');
@@ -7340,7 +7339,7 @@
     if(!zombie){const levelNode=document.getElementById('overlayLevelUp');if(levelNode)levelNode.textContent=Array.isArray(levelsGained)&&levelsGained.length&&level?.level?'LEVEL UP! Lv.'+nativeRewardNum(level.level):'';}
   }
   function applyVerifiedRunResultV35(result){
-    if(!result||typeof result!=='object')return;const zombie=String(result.modeFamily||'')==='zombie';renderNativeTallies({pips:result.pipsEarned,xp:result.xpAwarded,meta:state?.__ttdEndRewardMeta||captureNativeRewardMeta(),zombie,level:result.level,levelsGained:result.levelsGained});
+    if(!result||typeof result!=='object')return;if(state)state.__ttdVerifiedRunResultV35=result;const zombie=String(result.modeFamily||'')==='zombie';renderNativeTallies({pips:result.pipsEarned,xp:result.xpAwarded,meta:state?.__ttdEndRewardMeta||captureNativeRewardMeta(),zombie,level:result.level,levelsGained:result.levelsGained});
     if(Number(result.chestCount||0)>0){const text=document.getElementById('overlayText');if(text)text.textContent='Al Hata is cleared! '+(Number(result.chestCount)===1?'A Frozen Island Chest has':Number(result.chestCount)+' Frozen Island Chests have')+' been added to your inventory.';}
   }
   window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35=applyVerifiedRunResultV35;
@@ -7482,7 +7481,7 @@
       </div>
       <button class="closeBtn" id="zSummaryOkBtn" style="margin-top:8px;">Return Home</button>
     `;
-    renderNativeTallies({pips:pipsEarned,xp:null,meta:state.__ttdEndRewardMeta,zombie:true});
+    const verified=state?.__ttdVerifiedRunResultV35;renderNativeTallies({pips:verified?.pipsEarned??pipsEarned,xp:verified?.xpAwarded??null,meta:state.__ttdEndRewardMeta,zombie:true,level:verified?.level,levelsGained:verified?.levelsGained});
     document.getElementById('zSummaryOkBtn').addEventListener('click', ()=>{
       document.getElementById('zSummaryOverlay').classList.remove('show');
       showScreen('home'); renderHome();

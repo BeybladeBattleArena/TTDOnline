@@ -26,13 +26,19 @@ const requiredGame=[
   'function renderNativeTallies',
   "expValue.textContent=xp==null?'…':nativeRewardNum(xp).toLocaleString()",
   'function applyVerifiedRunResultV35(result)',
+  'if(state)state.__ttdVerifiedRunResultV35=result',
+  'const verified=state?.__ttdVerifiedRunResultV35',
+  'pips:verified?.pipsEarned??pipsEarned',
+  'xp:verified?.xpAwarded??null',
+  'level:verified?.level',
+  'levelsGained:verified?.levelsGained',
   'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35=applyVerifiedRunResultV35',
   '.resultTallyLabel{',
   'linear-gradient(180deg,#f6d77f 0%,#e5b64d 31%,#e27827 50%,#e5b64d 69%,#f6d77f 100%)',
   '.resultTallyValue{font-size:18px',
   'color:#fff',
 ];
-for(const marker of requiredGame)if(!game.includes(marker))throw new Error(`Canonical result summary v35 missing: ${marker}`);
+for(const marker of requiredGame)if(!game.includes(marker))throw new Error(`Canonical result summary v36 missing: ${marker}`);
 for(const marker of ["m.type!=='ttd:v6-run-finish-result'",'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)'])if(!runUi.includes(marker))throw new Error(`Verified run result bridge missing: ${marker}`);
 
-console.log('Canonical result summary v35 verified: legacy Pips banked / EXP earned ownership is unloaded, native PIPS and EXP rows live in the monolith, EXP-orb and percent notes are conditional, and verified server EXP feeds the canonical tally.');
+console.log('Canonical result summary v36 verified: the server result is cached on run state so Zombie EXP/Pips survive either event ordering, while legacy v26 result ownership remains unloaded.');

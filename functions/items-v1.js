@@ -25,6 +25,13 @@ function requireAuth(request){
   return request.auth;
 }
 function safeCount(value){return Math.max(0,Math.min(999999,Math.floor(Number(value)||0)));}
+function shopSellValuePips(def){
+  if(!def||def.nonSellable===true)return null;
+  const pips=Number(def.costPips),astras=Number(def.costAstras);
+  if(Number.isSafeInteger(pips)&&pips>=0)return Math.floor(pips/3);
+  if(Number.isSafeInteger(astras)&&astras>=0)return astras*30;
+  return null;
+}
 function publicGameState(data){
   if(!data||typeof data!=='object')throw new HttpsError('failed-precondition','The online game profile is not initialized.');
   const pips=Number(data.economy?.pips),astras=Number(data.economy?.astras);
@@ -42,7 +49,8 @@ function publicGameState(data){
 }
 function publicItem(id,data={}){
   const def=ITEM_DEFS[id];if(!def)return null;
-  return {id,name:def.name,category:def.category,count:safeCount(data.count),schemaVersion:ITEM_SCHEMA,updatedAtMs:Number(data.updatedAtMs||0)};
+  const sellValuePips=shopSellValuePips(def);
+  return {id,name:def.name,category:def.category,count:safeCount(data.count),schemaVersion:ITEM_SCHEMA,updatedAtMs:Number(data.updatedAtMs||0),shopPurchased:!!def.shopCategory,sellable:sellValuePips!=null,sellValuePips:sellValuePips??0};
 }
 async function readItems(uid){
   const snap=await db.collection(`users/${uid}/items`).get();
@@ -73,6 +81,26 @@ exports.purchaseMysteryChestV1=onCall({region:REGION,timeoutSeconds:30},async(re
   return {ok:true,receiptId:receiptRef.id,costPips:cost,gameState:nextState,item:publicItem('mystery_chest',{count:nextCount,updatedAtMs:Date.now()})};
 });
 
+exports.sellShopItemV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
+  const auth=requireAuth(request),itemId=String(request.data?.itemId||''),def=ITEM_DEFS[itemId];
+  const sellValuePips=shopSellValuePips(def);
+  if(!def||!def.shopCategory||sellValuePips==null)throw new HttpsError('invalid-argument','That item is not sellable through the Shop resale system.');
+  const gameRef=db.doc(`users/${auth.uid}/game/state`),itemRef=db.doc(`users/${auth.uid}/items/${itemId}`),receiptRef=db.collection(`users/${auth.uid}/transactions`).doc();
+  let nextState=null,nextCount=0;
+  await db.runTransaction(async tx=>{
+    const [gameSnap,itemSnap]=await Promise.all([tx.get(gameRef),tx.get(itemRef)]);
+    if(!gameSnap.exists)throw new HttpsError('failed-precondition','The online game profile is not initialized.');
+    const current=publicGameState(gameSnap.data()),currentCount=safeCount(itemSnap.exists?itemSnap.data()?.count:0);
+    if(currentCount<1)throw new HttpsError('failed-precondition',`You do not have a ${def.name} to sell.`);
+    nextCount=currentCount-1;
+    nextState={...current,revision:current.revision+1,inventoryVersion:current.inventoryVersion+1,economy:{pips:current.economy.pips+sellValuePips,astras:current.economy.astras}};
+    tx.update(gameRef,{economy:nextState.economy,revision:nextState.revision,inventoryVersion:nextState.inventoryVersion,updatedAt:FieldValue.serverTimestamp()});
+    tx.set(itemRef,{schemaVersion:ITEM_SCHEMA,itemId,name:def.name,category:def.category,count:nextCount,updatedAt:FieldValue.serverTimestamp(),updatedAtMs:Date.now()},{merge:true});
+    tx.set(receiptRef,{operation:'sell_shop_item',itemId,quantity:1,sellValuePips,balanceBefore:current.economy.pips,balanceAfter:nextState.economy.pips,stateRevisionBefore:current.revision,stateRevisionAfter:nextState.revision,createdAt:FieldValue.serverTimestamp()});
+  });
+  return {ok:true,receiptId:receiptRef.id,itemId,sellValuePips,remaining:nextCount,gameState:nextState,item:publicItem(itemId,{count:nextCount,updatedAtMs:Date.now()})};
+});
+
 exports.useExpTomeV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
   const auth=requireAuth(request),uid=auth.uid,def=ITEM_DEFS.exp_tome;
   const itemRef=db.doc(`users/${uid}/items/exp_tome`),levelRef=db.doc(`users/${uid}/game/accountLevel`),gameRef=db.doc(`users/${uid}/game/state`),receiptRef=db.collection(`users/${uid}/transactions`).doc();
@@ -98,3 +126,4 @@ exports.useExpTomeV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
 });
 
 exports._ITEM_DEFS=ITEM_DEFS;
+exports._shopSellValuePips=shopSellValuePips;

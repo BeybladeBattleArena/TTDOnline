@@ -11,6 +11,7 @@ const merge=read('online/merge-bridge-v6.js');
 const runtime=read('online/runtime-bridge-loader-v1.js');
 const entry=read('online/singleplayer-client-v6.js');
 const artPolish=read('online/item-art-polish-v2.js');
+const game=read('random-dice-game-33.html');
 const manifest=JSON.parse(read('assets/game-assets.json'));
 
 must(world.includes("epic_summon_ticket")&&world.includes("exp_tome"),'reward items missing');
@@ -31,6 +32,24 @@ must(funcs.includes("purchaseMysteryChestV1")&&funcs.includes("costPips:3300"),'
 must(funcs.includes("useExpTomeV1")&&funcs.includes("useXp:60"),'EXP Tome 60 EXP use missing');
 must(main.includes("./items-v1")&&main.includes("...items"),'item functions not exported');
 must(client.includes("ttd:item-purchase-request")&&client.includes("ttd:item-use-request"),'item client bridge missing');
+
+// Resale authority: Shop pages never show a sell-status message, while Inventory owns the
+// decision. Local Adventure chests have fixed values; Shop purchases derive resale from the
+// purchase currency, and server-authoritative Shop items are sold transactionally.
+must(funcs.includes('exports.sellShopItemV1'),'server Shop-item resale callable missing');
+must(funcs.includes('return Math.floor(pips/3)'),'server Pips resale is not one-third, floored to whole Pips');
+must(funcs.includes('return astras*30'),'server Astra resale is not Astra cost × 30 Pips');
+must(funcs.includes("operation:'sell_shop_item'"),'server resale transaction receipt missing');
+must(client.includes("httpsCallable(functions,'sellShopItemV1')")&&client.includes("ttd:item-sell-request")&&client.includes("ttd:item-sell-result"),'server resale client bridge missing');
+must(world.includes('sellPending=false')&&world.includes('requestServerItemSell(item)'),'Inventory server-item sell path missing');
+must(world.includes('item.sellable=server.sellable===true')&&world.includes('item.sellValuePips='),'server sell metadata is not copied into Inventory');
+must(!world.includes("icon:iconMarkup('mystery_chest',92),sellable:false"),'Mystery Chest Shop detail still exposes Inventory-only sell status');
+must(game.includes("function chestSellValue(diffKey){return {normal:250,hard:500,hell:750}[diffKey]||0;}"),'Adventure chest resale values are not 250/500/750 Pips');
+must(game.includes("function shopSellValuePips(cost,currency='pips')")&&game.includes("currency==='astras'?amount*30:Math.floor(amount/3)"),'local Shop resale formulas missing');
+must(game.includes("sellable: true, sellValue: chestSellValue(item.difficultyKey)")&&game.includes("toastGlobal('Sold for '+sv+' Pips')"),'Adventure chests are not sellable from Inventory');
+must(game.includes("const currency=view.currency==='astras'?'astras':'pips'")&&game.includes("if(currency==='astras')account.astras="),'Shop purchase flow does not debit the listed currency');
+must(game.includes("grant:(purchase)=>grantRewardKey('normal',purchase)")&&game.includes("grant:(purchase)=>grantEnchantCard('master',purchase)"),'local Shop purchase provenance is not retained');
+must(game.includes('purchaseCurrency:currency,purchaseCost:item.cost,sellValuePips'),'Shop purchase metadata does not retain derived resale value');
 
 const itemAssetUrl="/online/item-assets-v1.js?v=4",avatarUrl="/online/avatar-inventory-v22.js?v=22",worldUrl="/online/world-items-v1.js?v=1";
 for(const url of [itemAssetUrl,avatarUrl,worldUrl])must(runtime.includes(url),`native runtime does not load ${url}`);
@@ -99,4 +118,4 @@ for(const marker of [
 must(artPolish.includes('source art remains native-resolution')||artPolish.includes('Source art remains native-resolution'),'item presentation no longer documents the native-resolution source rule');
 must(entry.includes("import './item-art-polish-v2.js?v=4';"),'single-player entry does not load item art polish v4 behavior');
 
-console.log('Items/world v6 verified: item/world runtime loads as ordinary scripts in explicit order; approved PNG routing, Mystery Chest Shop integration, world interactions, purchases, and item use remain wired end to end.');
+console.log('Items/world v7 verified: approved PNG routing and world interactions remain intact; Shop sell-status is hidden, Inventory owns resale, Adventure chests use 250/500/750 Pips, and Pips/Astra Shop purchases use authoritative resale formulas end to end.');

@@ -29,6 +29,13 @@ async function purchaseMystery(requestId){
     await syncItems();
   }catch(err){postToGame({type:'ttd:item-purchase-result',requestId,ok:false,message:friendlyError(err)});}
 }
+async function sellShopItem(requestId,itemId){
+  try{
+    const result=await httpsCallable(functions,'sellShopItemV1')({itemId});const data=result.data||{};setCurrencyUi(data.gameState);
+    postToGame({type:'ttd:item-sell-result',requestId,ok:true,itemId,sellValuePips:data.sellValuePips,remaining:data.remaining,item:data.item,gameState:data.gameState});
+    await syncItems();
+  }catch(err){postToGame({type:'ttd:item-sell-result',requestId,ok:false,itemId,message:friendlyError(err)});}
+}
 async function useExpTome(requestId){
   try{
     const result=await httpsCallable(functions,'useExpTomeV1')({});const data=result.data||{};setCurrencyUi(data.gameState);
@@ -41,6 +48,7 @@ window.addEventListener('message',(event)=>{
   if(m.type==='ttd:item-inventory-ready'){syncItems();return;}
   if(!currentUser||!functions)return;
   if(m.type==='ttd:item-purchase-request'&&m.itemId==='mystery_chest')purchaseMystery(String(m.requestId||''));
+  if(m.type==='ttd:item-sell-request')sellShopItem(String(m.requestId||''),String(m.itemId||''));
   if(m.type==='ttd:item-use-request'&&m.itemId==='exp_tome')useExpTome(String(m.requestId||''));
 });
 

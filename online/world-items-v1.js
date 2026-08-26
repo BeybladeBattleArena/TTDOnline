@@ -16,7 +16,7 @@
   });
   const CHEST_ASSET={normal:'frozen_island_chest_normal',hard:'frozen_island_chest_hard',hell:'frozen_island_chest_hell'};
   const KEY_ASSET={normal:'chest_key_normal',hard:'chest_key_hard',hell:'chest_key_hell'};
-  let requestSeq=0,purchasePending=false,usePending=false,physicsInstalled=false;
+  let requestSeq=0,purchasePending=false,sellPending=false,usePending=false,physicsInstalled=false;
 
   function send(type,payload={}){window.parent.postMessage({type,...payload},ORIGIN);}
   function iconUrl(id){return ASSETS[id]||'';}
@@ -48,7 +48,7 @@
   function applyServerItems(items){
     ensureInventory();const remote=new Map((Array.isArray(items)?items:[]).filter(item=>ITEMS[item?.id]).map(item=>[item.id,item]));
     for(const category of ['rewards','materials'])account.inventory[category]=account.inventory[category].filter(item=>item?.type!=='ttd_item'||remote.has(item.itemId));
-    for(const [id,server] of remote){const def=ITEMS[id],category=def.category;let item=account.inventory[category].find(entry=>entry?.type==='ttd_item'&&entry.itemId===id);if(!item){item={id:`server_${id}`,type:'ttd_item',itemId:id,name:def.name,desc:def.desc,count:0,ts:Date.now()};account.inventory[category].push(item);}item.count=Math.max(0,Math.floor(Number(server.count)||0));item.name=def.name;item.desc=def.desc;item.ts=Date.now();}
+    for(const [id,server] of remote){const def=ITEMS[id],category=def.category;let item=account.inventory[category].find(entry=>entry?.type==='ttd_item'&&entry.itemId===id);if(!item){item={id:`server_${id}`,type:'ttd_item',itemId:id,name:def.name,desc:def.desc,count:0,ts:Date.now()};account.inventory[category].push(item);}item.count=Math.max(0,Math.floor(Number(server.count)||0));item.name=def.name;item.desc=def.desc;item.sellable=server.sellable===true;item.sellValuePips=Math.max(0,Math.floor(Number(server.sellValuePips)||0));item.shopPurchased=server.shopPurchased===true;item.ts=Date.now();}
     saveAccount();if(document.getElementById('inventoryScreen')?.classList.contains('active'))renderInventoryScreen();if(document.getElementById('shopScreen')?.classList.contains('active'))renderShopGrid();
   }
 
@@ -59,7 +59,8 @@
     let extraBtn=null;
     if(item.itemId==='exp_tome')extraBtn={label:'Use · +60 EXP',disabled:usePending||item.count<1,onClick:()=>{if(usePending||item.count<1)return;usePending=true;const requestId=`item-use-${Date.now().toString(36)}-${++requestSeq}`;send('ttd:item-use-request',{requestId,itemId:'exp_tome'});toastGlobal('Using EXP Tome…');}};
     else if(item.itemId==='mystery_chest')extraBtn={label:'Requires Mystery Key',disabled:true,onClick:()=>{}};
-    showItemDetail({name:`${def.name}${item.count>1?` ×${item.count}`:''}`,desc:def.desc,icon:iconMarkup(item.itemId,88),sellable:false,sellValue:0,extraBtn});
+    const canSell=item.sellable===true&&item.sellValuePips>0;
+    showItemDetail({name:`${def.name}${item.count>1?` ×${item.count}`:''}`,desc:def.desc,icon:iconMarkup(item.itemId,88),sellable:canSell,sellValue:canSell?item.sellValuePips:0,onSell:canSell?()=>requestServerItemSell(item):undefined,extraBtn});
   };
 
   const baseRenderInventoryScreen=typeof renderInventoryScreen==='function'?renderInventoryScreen:null;
@@ -71,10 +72,11 @@
   };
 
   function requestMysteryPurchase(){if(purchasePending)return;purchasePending=true;const requestId=`item-buy-${Date.now().toString(36)}-${++requestSeq}`;send('ttd:item-purchase-request',{requestId,itemId:'mystery_chest'});toastGlobal('Purchasing Mystery Chest…');}
+  function requestServerItemSell(item){if(sellPending||!item?.itemId)return;sellPending=true;const requestId=`item-sell-${Date.now().toString(36)}-${++requestSeq}`;send('ttd:item-sell-request',{requestId,itemId:item.itemId});toastGlobal('Selling '+(item.name||'item')+'…');}
   function appendMysteryShopCard(){
     if(shopActiveTab!=='items'||shopActiveSub?.items!=='Materials')return;const grid=document.getElementById('shopGrid');if(!grid||grid.querySelector('[data-ttd-mystery-shop="1"]'))return;
     const def=ITEMS.mystery_chest,card=document.createElement('div');card.className='shopItemCard';card.dataset.ttdMysteryShop='1';card.innerHTML=`<div class="siIcon" style="display:grid;place-items:center;">${iconMarkup('mystery_chest',48)}</div><div class="siName">Mystery Chest</div><div class="siCost"><span class="siGoldDot"></span>3,300</div><button class="siBuyBtn">Buy</button>`;
-    const open=(event)=>{event?.preventDefault?.();event?.stopPropagation?.();showItemDetail({name:def.name,desc:'Sold in Materials; purchases are delivered to the Rewards section of Inventory. '+def.desc,icon:iconMarkup('mystery_chest',92),sellable:false,sellValue:0,extraBtn:{label:'Buy · 3,300 Pips',disabled:purchasePending,onClick:requestMysteryPurchase}});};card.addEventListener('click',open);card.querySelector('.siBuyBtn')?.addEventListener('click',open);grid.appendChild(card);
+    const open=(event)=>{event?.preventDefault?.();event?.stopPropagation?.();showItemDetail({name:def.name,desc:'Sold in Materials; purchases are delivered to the Rewards section of Inventory. '+def.desc,icon:iconMarkup('mystery_chest',92),extraBtn:{label:'Buy · 3,300 Pips',disabled:purchasePending,onClick:requestMysteryPurchase}});};card.addEventListener('click',open);card.querySelector('.siBuyBtn')?.addEventListener('click',open);grid.appendChild(card);
   }
   const baseRenderShopGrid=typeof renderShopGrid==='function'?renderShopGrid:null;
   if(baseRenderShopGrid)renderShopGrid=function renderShopGridItemsV1(){const result=baseRenderShopGrid();appendMysteryShopCard();return result;};
@@ -87,6 +89,11 @@
       if(Number.isSafeInteger(m.gameState?.economy?.pips))account.gold=m.gameState.economy.pips;
       if(m.item)applyServerItems([...(Object.values(ITEMS).map(()=>null).filter(Boolean)),m.item]);
       if(typeof hideItemDetail==='function')hideItemDetail();renderHome();renderShopGrid();showNotice('Mystery Chest','Mystery Chest added to Rewards.');send('ttd:item-inventory-ready');return;
+    }
+    if(m.type==='ttd:item-sell-result'){
+      sellPending=false;if(!m.ok){showNotice('Item Sale',m.message||'The item could not be sold.');return;}
+      if(Number.isSafeInteger(m.gameState?.economy?.pips))account.gold=m.gameState.economy.pips;
+      if(typeof hideItemDetail==='function')hideItemDetail();renderHome();renderInventoryScreen();showNotice('Item Sold','Sold for '+Math.max(0,Math.floor(Number(m.sellValuePips)||0)).toLocaleString()+' Pips.');send('ttd:item-inventory-ready');return;
     }
     if(m.type==='ttd:item-use-result'&&m.itemId==='exp_tome'){
       usePending=false;if(!m.ok){showNotice('EXP Tome',m.message||'The tome could not be used.');return;}

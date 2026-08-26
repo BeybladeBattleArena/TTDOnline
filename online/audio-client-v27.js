@@ -24,6 +24,7 @@
     blueTeam:asset('/assets/audio/announcer/BlueTeam.mp3'),
     wins:asset('/assets/audio/announcer/Wins.mp3')
   });
+  const MEDIA_ELEMENT_CUES=new Set(['combatStart','fail']);
   const SILENT_SCREENS=new Set(['gameModesScreen','modeScreen','zombieModeScreen','adventureScreen','stageScreen','missionScreen','gameScreen']);
   const buffers=new Map();
   let context=null,master=null,musicGain=null,voiceGain=null,current=null,entered=false,lastScreen='',routeGeneration=0;
@@ -59,7 +60,6 @@
     const ctx=await unlock();if(!ctx||generation!==routeGeneration)return;
     const track=TRACKS[key];let buffer;
     try{buffer=await load(track.url);}catch(error){console.error('TTD music load failed',error);return;}
-    // Loading/decoding is asynchronous. Never let an old page request begin after navigation.
     if(!entered||generation!==routeGeneration||routeFor(activeScreenId())!==key)return;
     if(current?.key===key)return;
     const source=ctx.createBufferSource(),gain=ctx.createGain();
@@ -72,13 +72,12 @@
   function syncRoute(force=false){
     if(!entered)return;const screen=activeScreenId();if(!force&&screen===lastScreen)return;
     lastScreen=screen;const route=routeFor(screen),generation=++routeGeneration;
-    // Fade the page we are leaving immediately; do not wait for the next track to load.
     stopCurrent(.14);
     if(!route)return;
     playTrack(route,generation).catch(error=>console.error('TTD music route failed',error));
   }
   async function playWelcome(){const ctx=await unlock();if(!ctx)return;const url=WELCOME[Math.floor(Math.random()*WELCOME.length)];let buffer;try{buffer=await load(url);}catch(error){console.error('TTD welcome voice load failed',error);return;}return new Promise(resolve=>{const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);source.addEventListener('ended',resolve,{once:true});source.start();});}
-  async function playVoiceNow(key){
+  async function playVoiceBuffer(key){
     const url=ANNOUNCER[key];if(!url)return false;
     const ctx=await unlock();if(!ctx)return false;let buffer;
     try{buffer=await load(url);}catch(error){console.error('TTD announcer voice load failed',key,error);return false;}
@@ -90,11 +89,28 @@
       try{source.start();}catch(error){console.error('TTD announcer voice start failed',key,error);finish(false);}
     });
   }
+  async function playVoiceMediaElement(key){
+    const url=ANNOUNCER[key];if(!url)return false;
+    await unlock();
+    return new Promise(resolve=>{
+      const audio=new Audio();audio.preload='auto';audio.src=url;audio.volume=.92;audio.playsInline=true;activeVoice=audio;
+      let finished=false;
+      const finish=(ok=true)=>{if(finished)return;finished=true;if(activeVoice===audio)activeVoice=null;audio.removeAttribute('src');try{audio.load();}catch(_){}resolve(ok);};
+      audio.addEventListener('ended',()=>finish(true),{once:true});
+      audio.addEventListener('error',()=>finish(false),{once:true});
+      Promise.resolve(audio.play()).catch(error=>{console.warn('TTD media announcer playback fell back to WebAudio',key,error);finish(false);});
+    });
+  }
+  async function playVoiceNow(key){
+    if(MEDIA_ELEMENT_CUES.has(key)){
+      const mediaOk=await playVoiceMediaElement(key);
+      if(mediaOk)return true;
+    }
+    return playVoiceBuffer(key);
+  }
   function playVoiceCue(key){
     if(!ANNOUNCER[key])return Promise.resolve(false);
     const now=performance.now();if(key===lastVoiceKey&&now-lastVoiceAt<300)return Promise.resolve(true);lastVoiceKey=key;lastVoiceAt=now;
-    // Never pre-empt an announcer phrase. MissionFail in particular must reach its natural
-    // ended event before the fail-result lifecycle is allowed to continue.
     const run=()=>playVoiceNow(key);const queued=voiceQueue.then(run,run);voiceQueue=queued.catch(()=>false);return queued;
   }
   async function enterMainMenu(){entered=true;lastScreen='';syncRoute(true);}
@@ -113,7 +129,7 @@
   });
   frame?.addEventListener('load',()=>setTimeout(()=>syncRoute(true),80));window.setInterval(syncRoute,180);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){context?.suspend?.().catch?.(()=>{});}else if(entered){context?.resume?.().catch?.(()=>{});syncRoute(true);}});
-  window.__TTD_AUDIO_V32=Object.freeze({TRACKS,WELCOME,ANNOUNCER,SILENT_SCREENS,preloadPromise,unlock,playWelcome,playVoiceCue,enterMainMenu,syncRoute,silence});
+  window.__TTD_AUDIO_V32=Object.freeze({TRACKS,WELCOME,ANNOUNCER,MEDIA_ELEMENT_CUES,SILENT_SCREENS,preloadPromise,unlock,playWelcome,playVoiceCue,enterMainMenu,syncRoute,silence});
   window.__TTD_AUDIO_V31=window.__TTD_AUDIO_V32;
   window.__TTD_AUDIO_V27=window.__TTD_AUDIO_V32;
 })();
