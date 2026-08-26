@@ -2,8 +2,8 @@
   "name": "ttd-online",
   "private": true,
   "scripts": {
-    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items",
-    "check:hosting": "npm run check:release && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items",
+    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items",
+    "check:hosting": "npm run check:release && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items",
     "check:backend": "npm run check:catalog && npm run check:functions",
     "check:release": "node scripts/check-release-integrity-v15.mjs && npm run check:immutable-assets",
     "check:immutable-assets": "node scripts/check-immutable-assets.mjs",
@@ -16,6 +16,7 @@
     "check:loader": "node scripts/check-online-loader-v18.mjs",
     "check:deck-social": "node scripts/check-deck-social-v18.mjs",
     "check:run-start": "node scripts/check-run-start-v19.mjs",
+    "check:navigation": "node scripts/check-navigation-v1.mjs",
     "check:battle-loop": "node scripts/check-battle-loop-v20.mjs",
     "check:account-progression": "node scripts/check-account-progression-v21.mjs",
     "check:typography": "node scripts/check-typography-v24.mjs",
