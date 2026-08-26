@@ -2,13 +2,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
-const marker='TTD_NATIVE_BRIDGE_API_V1';
-if(!game.includes(marker)){
-  await import('./check-online-loader-v17.mjs');
-  console.log('Loader v18 transition check: lexical bridge injection remains under the validated v17 contract until the native compatibility facade is materialized.');
-  process.exit(0);
-}
-
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
 const loader=fs.readFileSync('online/game-loader.js','utf8');
 const runtime=fs.readFileSync('online/runtime-bridge-loader-v1.js','utf8');
