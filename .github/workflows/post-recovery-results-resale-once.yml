@@ -8,12 +8,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: post-recovery-results-resale-v3
+  group: post-recovery-results-resale-v4
   cancel-in-progress: false
 
 jobs:
   materialize:
-    if: startsWith(github.event.head_commit.message, '[results-resale-v3]')
+    if: startsWith(github.event.head_commit.message, '[results-resale-v4]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -25,20 +25,15 @@ jobs:
         with:
           node-version: '22'
       - name: Verify materializer syntax
-        run: |
-          node --check scripts/apply-post-recovery-game-v3.mjs
-          node --check scripts/apply-post-recovery-world-v3.mjs
-      - name: Materialize canonical runtime changes
-        run: |
-          node scripts/apply-post-recovery-game-v3.mjs
-          node scripts/apply-post-recovery-world-v3.mjs
+        run: node --check scripts/apply-post-recovery-shop-currency-v1.mjs
+      - name: Materialize canonical runtime change
+        run: node scripts/apply-post-recovery-shop-currency-v1.mjs
       - name: Enforce materialization scope
         shell: bash
         run: |
           set -euo pipefail
           changed="$(git diff --name-only | sort)"
-          expected="$(printf '%s\n' online/world-items-v1.js random-dice-game-33.html | sort)"
-          [[ "$changed" == "$expected" ]] || { echo "Unexpected materialized scope:"; printf '%s\n' "$changed"; exit 1; }
+          [[ "$changed" == "random-dice-game-33.html" ]] || { echo "Unexpected materialized scope:"; printf '%s\n' "$changed"; exit 1; }
       - name: Install validation toolchain
         run: npm install
       - name: Install Functions dependencies
@@ -53,6 +48,6 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add online/world-items-v1.js random-dice-game-33.html
-          git commit -m "feat: restore verified Zombie EXP and resale rules [skip results-resale-v3]"
+          git add random-dice-game-33.html
+          git commit -m "feat: make Shop purchase currency and resale provenance authoritative [skip results-resale-v4]"
           git push origin HEAD:fix/post-recovery-results-audio-resale
