@@ -10,7 +10,7 @@ const main=fs.readFileSync('functions/main-v6.js','utf8');
 const runClient=fs.readFileSync('online/run-client-v21.js','utf8');
 const runUi=fs.readFileSync('online/run-ui-bridge-v21.js','utf8');
 const clientEntry=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
-const loader=fs.readFileSync('online/game-loader.js','utf8');
+const runtimeBridges=fs.readFileSync('online/runtime-bridge-loader-v1.js','utf8');
 const friendClient=fs.readFileSync('online/deck-social-client-v18.js','utf8');
 const game=fs.readFileSync('random-dice-game-33.html','utf8');
 
@@ -67,7 +67,7 @@ markers(game,[
 ],'canonical run result EXP UI');
 if(clientEntry.includes("result-summary-client-v26")||clientEntry.includes("result-reward-polish-v1"))throw new Error('Legacy downstream result owners must not be loaded after canonical v35 materialization.');
 if(!clientEntry.includes("import './run-client-v21.js?v=21';"))throw new Error('Single-player client does not load run-client-v21.');
-if(!loader.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Game loader does not load the authoritative run-result forwarding bridge v21.');
+if(!runtimeBridges.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Native runtime bridge authority does not load the run-result forwarding bridge v21.');
 if(!main.includes('getAccountProgressionV21:accountProgression.getAccountProgressionV21'))throw new Error('Account progression v21 callable is not exported.');
 
-console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, zero EXP before the first Zombie kill, extensible empty per-level rewards, canonical v35 PIPS/EXP result rows, verified server EXP forwarding, and friend-list levels are wired end to end.');
+console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, zero EXP before the first Zombie kill, extensible empty per-level rewards, canonical v35 PIPS/EXP result rows, verified server EXP forwarding through the native runtime bridge authority, and friend-list levels are wired end to end.');
