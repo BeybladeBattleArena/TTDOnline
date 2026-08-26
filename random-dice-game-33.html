@@ -7411,8 +7411,13 @@
     showScreen('home');
   });
   document.getElementById('pauseBtn').addEventListener('click', ()=>{
+    // TTD_ADVENTURE_BACK_RECOVERY_V1
+    // Back leaves the current run without invoking End Run outcome handling, but must return
+    // to the landing for the mode the player actually came from.
+    const backTarget = state?.zombieMode ? 'zombieMode' :
+      state?.modeKey==='adventure' ? 'adventure' : 'mode';
     if(state) state.running = false;
-    showScreen(state && state.zombieMode ? 'zombieMode' : 'mode');
+    showScreen(backTarget);
   });
   document.getElementById('endRunBtn').addEventListener('click', ()=>{
     if(!state || !state.running) return;
