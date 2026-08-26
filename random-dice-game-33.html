@@ -7514,10 +7514,169 @@
 
   window.addEventListener('resize', ()=>{ if(screens.game.classList.contains('active')) resizeCanvas(); });
 
+
+  /* ============================ TTD_NATIVE_BRIDGE_API_V1 ============================
+     Stable compatibility surface for committed bridge scripts. These accessors preserve the
+     exact live core bindings that the legacy loader previously exposed by injecting bridge source
+     into this IIFE. Read-only dependencies remain getter-only; intentional overrides receive a
+     setter back to the original lexical binding. */
+  const __TTD_BATTLE_HOOKS = window.__TTD_BATTLE_HOOKS = {
+    fireMagmaForce(){return false;}, updateMagmaForce(){}, drawMagmaForceGround(){}, drawMagmaForceOverlay(){},
+    fireSoulScimitar(){}, updateSoulScimitars(){}, drawSoulScimitars(){},
+    fireSlitherVine(){}, updateSlitherVines(){}, drawSlitherVines(){}
+  };
+  const __ttdCoreApi={};
+  function __ttdExposeCore(name,get,set){
+    const globalDescriptor={configurable:true,enumerable:false,get};
+    if(set)globalDescriptor.set=set;
+    Object.defineProperty(window,name,globalDescriptor);
+    const apiDescriptor={configurable:false,enumerable:true,get};
+    if(set)apiDescriptor.set=set;
+    Object.defineProperty(__ttdCoreApi,name,apiDescriptor);
+  }
+  __ttdExposeCore('ADVENTURES',()=>ADVENTURES);
+  __ttdExposeCore('DICE',()=>DICE);
+  __ttdExposeCore('DICE_LORE',()=>DICE_LORE);
+  __ttdExposeCore('ENCHANT_CARDS',()=>ENCHANT_CARDS);
+  __ttdExposeCore('GLYPHS',()=>GLYPHS);
+  __ttdExposeCore('JEWEL_DEFS',()=>JEWEL_DEFS);
+  __ttdExposeCore('MAX_JEWEL_TIER',()=>MAX_JEWEL_TIER);
+  __ttdExposeCore('PU_COSTS',()=>PU_COSTS);
+  __ttdExposeCore('__TTD_DICEFILE',()=>__TTD_DICEFILE);
+  __ttdExposeCore('aliveEnemies',()=>aliveEnemies);
+  __ttdExposeCore('applySilence',()=>applySilence);
+  __ttdExposeCore('applySlow',()=>applySlow);
+  __ttdExposeCore('beginDrag',()=>beginDrag);
+  __ttdExposeCore('beginInstDrag',()=>beginInstDrag);
+  __ttdExposeCore('buildBoardDOM',()=>buildBoardDOM);
+  __ttdExposeCore('buildPath',()=>buildPath);
+  __ttdExposeCore('cardSVG',()=>cardSVG);
+  __ttdExposeCore('chestSVG',()=>chestSVG);
+  __ttdExposeCore('classMultFor',()=>classMultFor);
+  __ttdExposeCore('classMultFromLevel',()=>classMultFromLevel);
+  __ttdExposeCore('createHoldSpinner',()=>createHoldSpinner);
+  __ttdExposeCore('ctx',()=>ctx);
+  __ttdExposeCore('cw',()=>cw);
+  __ttdExposeCore('damageEnemy',()=>damageEnemy);
+  __ttdExposeCore('deckEntryKey',()=>deckEntryKey);
+  __ttdExposeCore('dieJewelBonus',()=>dieJewelBonus);
+  __ttdExposeCore('effAffinities',()=>effAffinities);
+  __ttdExposeCore('effAtk',()=>effAtk);
+  __ttdExposeCore('effDmg',()=>effDmg);
+  __ttdExposeCore('enchantTarget',()=>enchantTarget);
+  __ttdExposeCore('endDrag',()=>endDrag);
+  __ttdExposeCore('endInstDrag',()=>endInstDrag);
+  __ttdExposeCore('enemyElementalMult',()=>enemyElementalMult);
+  __ttdExposeCore('enemyRenderPos',()=>enemyRenderPos);
+  __ttdExposeCore('findInstance',()=>findInstance);
+  __ttdExposeCore('fx',()=>fx);
+  __ttdExposeCore('gemSVG',()=>gemSVG);
+  __ttdExposeCore('getActiveDeck',()=>getActiveDeck);
+  __ttdExposeCore('getBonusChestChance',()=>getBonusChestChance);
+  __ttdExposeCore('getKeyCount',()=>getKeyCount);
+  __ttdExposeCore('healDie',()=>healDie);
+  __ttdExposeCore('hideEnchantAttempt',()=>hideEnchantAttempt);
+  __ttdExposeCore('hideItemDetail',()=>hideItemDetail);
+  __ttdExposeCore('hideJewelPicker',()=>hideJewelPicker);
+  __ttdExposeCore('highlightDrop',()=>highlightDrop);
+  __ttdExposeCore('isFavoriteInstance',()=>isFavoriteInstance);
+  __ttdExposeCore('jewelDisplayName',()=>jewelDisplayName);
+  __ttdExposeCore('jewelEffectText',()=>jewelEffectText);
+  __ttdExposeCore('jewelTierValue',()=>jewelTierValue);
+  __ttdExposeCore('keySVG',()=>keySVG);
+  __ttdExposeCore('loop',()=>loop);
+  __ttdExposeCore('modeLabel',()=>modeLabel);
+  __ttdExposeCore('moveGhost',()=>moveGhost);
+  __ttdExposeCore('moveInstGhost',()=>moveInstGhost);
+  __ttdExposeCore('pathPts',()=>pathPts);
+  __ttdExposeCore('pickTarget',()=>pickTarget);
+  __ttdExposeCore('playEnchantAnimation',()=>playEnchantAnimation);
+  __ttdExposeCore('quickEquip',()=>quickEquip);
+  __ttdExposeCore('renderCollectionGrid',()=>renderCollectionGrid);
+  __ttdExposeCore('renderEnchantScreen',()=>renderEnchantScreen);
+  __ttdExposeCore('renderGachaTop',()=>renderGachaTop);
+  __ttdExposeCore('renderHome',()=>renderHome);
+  __ttdExposeCore('renderItemDetailView',()=>renderItemDetailView);
+  __ttdExposeCore('renderOptionsScreen',()=>renderOptionsScreen);
+  __ttdExposeCore('renderPullCard',()=>renderPullCard);
+  __ttdExposeCore('renderShopScreen',()=>renderShopScreen);
+  __ttdExposeCore('showDieDetail',()=>showDieDetail);
+  __ttdExposeCore('showNotice',()=>showNotice);
+  __ttdExposeCore('slottedClassOf',()=>slottedClassOf);
+  __ttdExposeCore('startLift',()=>startLift);
+  __ttdExposeCore('state',()=>state);
+  __ttdExposeCore('statusResistDuration',()=>statusResistDuration);
+  __ttdExposeCore('statusRoll',()=>statusRoll);
+  __ttdExposeCore('teardownHold',()=>teardownHold);
+  __ttdExposeCore('tileEls',()=>tileEls);
+  __ttdExposeCore('toast',()=>toast);
+  __ttdExposeCore('toastGlobal',()=>toastGlobal);
+  __ttdExposeCore('triggerTilePulse',()=>triggerTilePulse);
+  __ttdExposeCore('account',()=>account,(value)=>{account=value;});
+  __ttdExposeCore('attachInstanceCardEvents',()=>attachInstanceCardEvents,(value)=>{attachInstanceCardEvents=value;});
+  __ttdExposeCore('attachTileEvents',()=>attachTileEvents,(value)=>{attachTileEvents=value;});
+  __ttdExposeCore('campaignComplete',()=>campaignComplete,(value)=>{campaignComplete=value;});
+  __ttdExposeCore('currentAttackerDieKey',()=>currentAttackerDieKey,(value)=>{currentAttackerDieKey=value;});
+  __ttdExposeCore('dieDamage',()=>dieDamage,(value)=>{dieDamage=value;});
+  __ttdExposeCore('drag',()=>drag,(value)=>{drag=value;});
+  __ttdExposeCore('drawLane',()=>drawLane,(value)=>{drawLane=value;});
+  __ttdExposeCore('endEndlessHorde',()=>endEndlessHorde,(value)=>{endEndlessHorde=value;});
+  __ttdExposeCore('endMatch',()=>endMatch,(value)=>{endMatch=value;});
+  __ttdExposeCore('instDrag',()=>instDrag,(value)=>{instDrag=value;});
+  __ttdExposeCore('invActiveTab',()=>invActiveTab,(value)=>{invActiveTab=value;});
+  __ttdExposeCore('isAsclepiusReady',()=>isAsclepiusReady,(value)=>{isAsclepiusReady=value;});
+  __ttdExposeCore('lastT',()=>lastT,(value)=>{lastT=value;});
+  __ttdExposeCore('mergeInstances',()=>mergeInstances,(value)=>{mergeInstances=value;});
+  __ttdExposeCore('openEnchantAttempt',()=>openEnchantAttempt,(value)=>{openEnchantAttempt=value;});
+  __ttdExposeCore('openJewelPicker',()=>openJewelPicker,(value)=>{openJewelPicker=value;});
+  __ttdExposeCore('playClassUpAnimation',()=>playClassUpAnimation,(value)=>{playClassUpAnimation=value;});
+  __ttdExposeCore('renderBoard',()=>renderBoard,(value)=>{renderBoard=value;});
+  __ttdExposeCore('renderDeckScreen',()=>renderDeckScreen,(value)=>{renderDeckScreen=value;});
+  __ttdExposeCore('renderGlyph',()=>renderGlyph,(value)=>{renderGlyph=value;});
+  __ttdExposeCore('renderInventoryScreen',()=>renderInventoryScreen,(value)=>{renderInventoryScreen=value;});
+  __ttdExposeCore('saveAccount',()=>saveAccount,(value)=>{saveAccount=value;});
+  __ttdExposeCore('shopItemView',()=>shopItemView,(value)=>{shopItemView=value;});
+  __ttdExposeCore('showBuyConfirm',()=>showBuyConfirm,(value)=>{showBuyConfirm=value;});
+  __ttdExposeCore('showItemDetail',()=>showItemDetail,(value)=>{showItemDetail=value;});
+  __ttdExposeCore('showScreen',()=>showScreen,(value)=>{showScreen=value;});
+  __ttdExposeCore('showSellConfirm',()=>showSellConfirm,(value)=>{showSellConfirm=value;});
+  __ttdExposeCore('startAdventure',()=>startAdventure,(value)=>{startAdventure=value;});
+  __ttdExposeCore('startAdventureCampaign',()=>startAdventureCampaign,(value)=>{startAdventureCampaign=value;});
+  __ttdExposeCore('startEndlessHorde',()=>startEndlessHorde,(value)=>{startEndlessHorde=value;});
+  __ttdExposeCore('startGame',()=>startGame,(value)=>{startGame=value;});
+  __ttdExposeCore('tapTile',()=>tapTile,(value)=>{tapTile=value;});
+  __ttdExposeCore('tickTile',()=>tickTile,(value)=>{tickTile=value;});
+  __ttdExposeCore('triggerAsclepiusHeal',()=>triggerAsclepiusHeal,(value)=>{triggerAsclepiusHeal=value;});
+  __ttdExposeCore('tryMergeAtPoint',()=>tryMergeAtPoint,(value)=>{tryMergeAtPoint=value;});
+  __ttdExposeCore('updatePlayerShots',()=>updatePlayerShots,(value)=>{updatePlayerShots=value;});
+  window.__TTD_CORE_API_V1=Object.freeze(__ttdCoreApi);
+
+  let __ttdBridgeReadyResolve;
+  let __ttdBridgeReadyMarked=false;
+  window.__TTD_BRIDGES_READY=new Promise((resolve)=>{__ttdBridgeReadyResolve=resolve;});
+  window.__TTD_MARK_BRIDGES_READY=()=>{
+    if(__ttdBridgeReadyMarked)return;
+    __ttdBridgeReadyMarked=true;
+    __ttdBridgeReadyResolve();
+  };
+  const __ttdBridgeBootstrap=document.createElement('script');
+  __ttdBridgeBootstrap.src=typeof window.__TTD_ASSET_URL==='function'
+    ? window.__TTD_ASSET_URL('/online/runtime-bridge-loader-v1.js')
+    : '/online/runtime-bridge-loader-v1.js?v=1';
+  __ttdBridgeBootstrap.async=true;
+  __ttdBridgeBootstrap.onerror=()=>{
+    const error=new Error('Could not load the native runtime bridge loader.');
+    console.error(error);
+    try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-loader-error',bridge:'/online/runtime-bridge-loader-v1.js',message:error.message},location.origin);}catch(_){}
+    window.__TTD_MARK_BRIDGES_READY();
+  };
+  document.head.appendChild(__ttdBridgeBootstrap);
+
   /* ============================ BOOT ============================ */
   (async function boot(){
     account = await loadAccount();
     if(!Array.isArray(account.decks)) account = migrateAccount(account);
+    await window.__TTD_BRIDGES_READY;
     showScreen('home');
   })();
 
