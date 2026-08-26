@@ -1,1 +1,1 @@
-Restore independent mission/outcome presentation loading and approved PNG item/loading art routing without changing authoritative asset bytes.
+Resolve every final Inventory itemId through the approved PNG item-asset authority without changing authoritative asset bytes.
