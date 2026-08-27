@@ -56,9 +56,9 @@ need(audio,[
   "fail:asset('/assets/audio/announcer/MissionFail.mp3')",
   "combatStart:asset('/assets/audio/announcer/CombatStart.mp3')",
   "clear:asset('/assets/audio/announcer/MissionClear.mp3')",
-  'voiceQueue=Promise.resolve()','async function playVoiceNow(key)',"source.addEventListener('ended',()=>finish(true),{once:true})", "type:'ttd:voice-cue-complete'",
+  'voiceQueue=Promise.resolve()','async function playVoiceNow(key,generation)',"source.addEventListener('ended',()=>finish(true),{once:true})", "type:'ttd:voice-cue-complete'",
+  "if(key==='fail')",'const generation=++voiceGeneration;cancelActiveVoice()','MEDIA_START_TIMEOUT_MS=1400','MEDIA_END_TIMEOUT_MS=12000',
 ],'audio runtime');
-forbid(audio,['activeVoice.stop()'],'audio runtime');
 
 forbid(entry,['result-summary-client-v26.js','result-reward-polish-v1.js'],'single-player result ownership');
 forbid(continuous,['ensureRewardMetaV1();'],'continuous-world outcome wrappers');
@@ -92,4 +92,4 @@ for(const [label,centerX,points] of [
   }
 }
 
-console.log('Presentation v7 verified: global MISSION/START/CLEAR/FAIL/FINISH presentation loads independently after the Test Map attempt; CombatStart remains visual-START-owned; FAIL waits for the authoritative MissionFail natural-ended acknowledgement; and portrait-safe Test Map routes remain intact.');
+console.log('Presentation v8 verified: MISSION/START/CLEAR/FAIL/FINISH ownership remains canonical; CombatStart stays visual-START-owned; terminal FAIL cannot be blocked by stale announcer work; and portrait-safe Test Map routes remain intact.');
