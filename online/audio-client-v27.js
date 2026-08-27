@@ -25,10 +25,12 @@
     wins:asset('/assets/audio/announcer/Wins.mp3')
   });
   const MEDIA_ELEMENT_CUES=new Set(['combatStart','fail']);
+  const MEDIA_START_TIMEOUT_MS=1400;
+  const MEDIA_END_TIMEOUT_MS=12000;
   const SILENT_SCREENS=new Set(['gameModesScreen','modeScreen','zombieModeScreen','adventureScreen','stageScreen','missionScreen','gameScreen']);
   const buffers=new Map();
   let context=null,master=null,musicGain=null,voiceGain=null,current=null,entered=false,lastScreen='',routeGeneration=0;
-  let activeVoice=null,lastVoiceKey='',lastVoiceAt=-Infinity,voiceQueue=Promise.resolve();
+  let activeVoice=null,lastVoiceKey='',lastVoiceAt=-Infinity,voiceQueue=Promise.resolve(),voiceGeneration=0;
 
   function ensureContext(){
     if(context&&context.state!=='closed')return context;
@@ -55,6 +57,12 @@
     setTimeout(()=>{try{src.stop();}catch(_){}},Math.ceil((fade+.035)*1000));
     current=null;
   }
+  function cancelActiveVoice(){
+    const voice=activeVoice;activeVoice=null;if(!voice)return;
+    try{voice.pause?.();}catch(_){}
+    try{if('currentTime' in voice)voice.currentTime=0;}catch(_){}
+    try{voice.stop?.();}catch(_){}
+  }
   async function playTrack(key,generation){
     if(!entered||!TRACKS[key]||generation!==routeGeneration)return;
     const ctx=await unlock();if(!ctx||generation!==routeGeneration)return;
@@ -77,10 +85,12 @@
     playTrack(route,generation).catch(error=>console.error('TTD music route failed',error));
   }
   async function playWelcome(){const ctx=await unlock();if(!ctx)return;const url=WELCOME[Math.floor(Math.random()*WELCOME.length)];let buffer;try{buffer=await load(url);}catch(error){console.error('TTD welcome voice load failed',error);return;}return new Promise(resolve=>{const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);source.addEventListener('ended',resolve,{once:true});source.start();});}
-  async function playVoiceBuffer(key){
+  async function playVoiceBuffer(key,generation){
+    if(generation!==voiceGeneration)return false;
     const url=ANNOUNCER[key];if(!url)return false;
-    const ctx=await unlock();if(!ctx)return false;let buffer;
+    const ctx=await unlock();if(!ctx||generation!==voiceGeneration)return false;let buffer;
     try{buffer=await load(url);}catch(error){console.error('TTD announcer voice load failed',key,error);return false;}
+    if(generation!==voiceGeneration)return false;
     return new Promise(resolve=>{
       const source=ctx.createBufferSource();source.buffer=buffer;source.connect(voiceGain);activeVoice=source;
       let finished=false;
@@ -89,29 +99,38 @@
       try{source.start();}catch(error){console.error('TTD announcer voice start failed',key,error);finish(false);}
     });
   }
-  async function playVoiceMediaElement(key){
+  async function playVoiceMediaElement(key,generation){
+    if(generation!==voiceGeneration)return false;
     const url=ANNOUNCER[key];if(!url)return false;
-    await unlock();
+    await unlock();if(generation!==voiceGeneration)return false;
     return new Promise(resolve=>{
       const audio=new Audio();audio.preload='auto';audio.src=url;audio.volume=.92;audio.playsInline=true;activeVoice=audio;
-      let finished=false;
-      const finish=(ok=true)=>{if(finished)return;finished=true;if(activeVoice===audio)activeVoice=null;audio.removeAttribute('src');try{audio.load();}catch(_){}resolve(ok);};
+      let finished=false,started=false,endTimer=0;
+      const startTimer=setTimeout(()=>{if(!started){console.warn('TTD media announcer did not begin; falling back to WebAudio',key);finish(false);}},MEDIA_START_TIMEOUT_MS);
+      const finish=(ok=true)=>{if(finished)return;finished=true;clearTimeout(startTimer);if(endTimer)clearTimeout(endTimer);if(activeVoice===audio)activeVoice=null;try{audio.pause();}catch(_){}audio.removeAttribute('src');try{audio.load();}catch(_){}resolve(ok);};
+      audio.addEventListener('playing',()=>{if(finished)return;started=true;clearTimeout(startTimer);endTimer=setTimeout(()=>{console.warn('TTD media announcer did not finish; releasing queue',key);finish(false);},MEDIA_END_TIMEOUT_MS);},{once:true});
       audio.addEventListener('ended',()=>finish(true),{once:true});
       audio.addEventListener('error',()=>finish(false),{once:true});
       Promise.resolve(audio.play()).catch(error=>{console.warn('TTD media announcer playback fell back to WebAudio',key,error);finish(false);});
     });
   }
-  async function playVoiceNow(key){
+  async function playVoiceNow(key,generation){
+    if(generation!==voiceGeneration)return false;
     if(MEDIA_ELEMENT_CUES.has(key)){
-      const mediaOk=await playVoiceMediaElement(key);
+      const mediaOk=await playVoiceMediaElement(key,generation);
       if(mediaOk)return true;
+      if(generation!==voiceGeneration)return false;
     }
-    return playVoiceBuffer(key);
+    return playVoiceBuffer(key,generation);
   }
   function playVoiceCue(key){
     if(!ANNOUNCER[key])return Promise.resolve(false);
     const now=performance.now();if(key===lastVoiceKey&&now-lastVoiceAt<300)return Promise.resolve(true);lastVoiceKey=key;lastVoiceAt=now;
-    const run=()=>playVoiceNow(key);const queued=voiceQueue.then(run,run);voiceQueue=queued.catch(()=>false);return queued;
+    if(key==='fail'){
+      const generation=++voiceGeneration;cancelActiveVoice();
+      const priority=Promise.resolve().then(()=>playVoiceNow(key,generation));voiceQueue=priority.catch(()=>false);return priority;
+    }
+    const generation=voiceGeneration,run=()=>playVoiceNow(key,generation);const queued=voiceQueue.then(run,run);voiceQueue=queued.catch(()=>false);return queued;
   }
   async function enterMainMenu(){entered=true;lastScreen='';syncRoute(true);}
   function silence(){routeGeneration+=1;stopCurrent(.15);}
