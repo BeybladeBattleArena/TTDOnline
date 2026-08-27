@@ -15,18 +15,18 @@ const requiredAudio=[
   'ANNOUNCER','playVoiceCue','playVoiceNow','voiceQueue=Promise.resolve()','voiceQueue.then(run,run)','ttd:voice-cue','...Object.values(ANNOUNCER).map(load)',
   "source.addEventListener('ended',()=>finish(true),{once:true})", "type:'ttd:voice-cue-complete'",'requestId','Promise.resolve(playVoiceCue(cue)).then',
   'shopScreen','deckScreen','gachaScreen','gameModesScreen','gameScreen','source.loopStart','source.loopEnd','Math.random()','enterMainMenu','source.start(0,0)',
-  // Page music must be cancellable across async decode/load and each outgoing source owns its
-  // own fade gain so starting the next page cannot turn the previous source back up.
   'routeGeneration=0','generation!==routeGeneration','routeFor(activeScreenId())!==key','const source=ctx.createBufferSource(),gain=ctx.createGain()','source.connect(gain);gain.connect(musicGain)',
   'const route=routeFor(screen),generation=++routeGeneration','stopCurrent(.14)','routeGeneration+=1;stopCurrent(.15)',
-  // These two authoritative short MP3s have shown a browser/Android decode/playback failure in
-  // the WebAudio-only route. They must first use a normal HTMLMediaElement, resolve on its natural
-  // ended event, and retain decoded WebAudio as a fallback without changing the source files.
-  "const MEDIA_ELEMENT_CUES=new Set(['combatStart','fail'])",'function playVoiceMediaElement(key)','const audio=new Audio()','audio.playsInline=true',
-  "audio.addEventListener('ended',()=>finish(true),{once:true})",'Promise.resolve(audio.play())','const mediaOk=await playVoiceMediaElement(key)','return playVoiceBuffer(key)'
+  "const MEDIA_ELEMENT_CUES=new Set(['combatStart','fail'])",'function playVoiceMediaElement(key,generation)','const audio=new Audio()','audio.playsInline=true',
+  "audio.addEventListener('playing'", "audio.addEventListener('ended',()=>finish(true),{once:true})",'Promise.resolve(audio.play())','return playVoiceBuffer(key,generation)',
+  // A terminal FAIL may not be trapped behind a stalled CombatStart/media cue. Playback must
+  // prove that it began promptly, release itself if it never ends, and invalidate stale queued
+  // voice work before MissionFail starts.
+  'const MEDIA_START_TIMEOUT_MS=1400','const MEDIA_END_TIMEOUT_MS=12000','voiceGeneration=0','function cancelActiveVoice()',
+  "if(key==='fail')",'const generation=++voiceGeneration;cancelActiveVoice()','const priority=Promise.resolve().then(()=>playVoiceNow(key,generation))',
+  'if(generation!==voiceGeneration)return false',"TTD media announcer did not begin; falling back to WebAudio","TTD media announcer did not finish; releasing queue"
 ];
-for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v36 missing: ${marker}`);
-if(audio.includes('activeVoice.stop()'))throw new Error('Announcer cues must not pre-empt a phrase already playing.');
+for(const marker of requiredAudio)if(!audio.includes(marker))throw new Error(`Audio v37 missing: ${marker}`);
 if(audio.includes('positions.set(')||audio.includes('positions.get('))throw new Error('Music must not resume saved positions after leaving a page.');
 if(audio.includes('source.connect(musicGain);'))throw new Error('Page tracks must use independent source gains; a shared fade gain can revive an outgoing track.');
 for(const marker of ["font-family:'CCDangerGirlOpen'",'randomRay(c)','links.push','b.links.forEach','audio?.playWelcome?.()','await sleep(95)','audio?.enterMainMenu?.()','ttdBlackV28'])if(!splash.includes(marker))throw new Error(`Splash polish v28 missing: ${marker}`);
@@ -41,4 +41,4 @@ const combatSha=gitBlobSha('assets/audio/announcer/CombatStart.mp3');
 if(failSha!=='84370d8bf50f4e95c60efae8f205f1fa68e24a50')throw new Error(`MissionFail.mp3 is not the user-supplied authoritative original (${failSha}).`);
 if(combatSha!=='2ce2410a1519cea618b6364acddb90ba693c8058')throw new Error(`CombatStart.mp3 is not the user-supplied authoritative original (${combatSha}).`);
 
-console.log('Audio v36 verified: authoritative CombatStart/MissionFail masters remain byte-exact, their media-element playback resolves naturally with WebAudio fallback, phrases serialize, and page music remains route-cancellable.');
+console.log('Audio v37 verified: authoritative announcer masters remain byte-exact; media cues have start/end watchdogs; terminal MissionFail invalidates stale voice work and bypasses the ordinary serialized queue; page music remains route-cancellable.');
