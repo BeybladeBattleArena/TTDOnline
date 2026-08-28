@@ -53,8 +53,17 @@ jobs:
         run: |
           sed -i "/    'pvpLockdownDeferred'/d" scripts/finalize-dice-modernization-v2.mjs
           node scripts/finalize-dice-modernization-v2.mjs --verify
-      - name: Show transformed parse-error window
-        run: nl -ba random-dice-game-33.html | sed -n '4836,4850p'
+      - name: Show extracted core parse-error window
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html=fs.readFileSync('random-dice-game-33.html','utf8');
+          const bodies=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(Boolean);
+          const core=bodies.sort((a,b)=>b.length-a.length)[0];
+          const lines=core.split('\n');
+          for(let n=4835;n<=4852;n++) console.log(String(n).padStart(5), lines[n-1]);
+          NODE
       - name: Release and catalog checks
         run: npm run check:release && npm run check:catalog
       - name: Function client bridge checks
