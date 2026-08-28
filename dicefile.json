@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "2026-08-28-dice-modernization-master",
+  "catalogVersion": "2026-08-28-dice-modernization-master-final-v2",
   "runtime": {
     "description": "Canonical die definitions loaded by the online game. The die key is permanent; display names may change.",
     "source": "dicefile.json"
@@ -1195,7 +1195,10 @@
         "metal": 1
       },
       "special": {
-        "kind": "canonPadlock"
+        "kind": "canonPadlock",
+        "pvpLockdownDeferred": true,
+        "pvpReturnWhen": "PvP tray authority is implemented",
+        "pvpCanonRetained": true
       }
     },
     "relentlessmace": {
