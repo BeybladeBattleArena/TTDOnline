@@ -8,9 +8,6 @@ on:
 permissions:
   contents: write
 
-# Development branches are assembled before a PR is opened. Pull-request verification remains
-# the authoritative full gate. The temporary finalization job below exists only on the dice
-# modernization branch and restores this workflow from main before committing product source.
 concurrency:
   group: verify-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -32,12 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           git diff --exit-code -- .
-          if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-            echo 'Validation changed tracked source.'
-            git status --short
-            exit 1
-          fi
-          echo 'Validation completed without changing tracked source.'
+          test -z "$(git status --porcelain --untracked-files=no)"
 
   dice-finalize-v2:
     if: github.event_name == 'pull_request' && github.head_ref == 'dice-modernization-master-20260828'
@@ -61,26 +53,26 @@ jobs:
         run: |
           sed -i "/    'pvpLockdownDeferred'/d" scripts/finalize-dice-modernization-v2.mjs
           node scripts/finalize-dice-modernization-v2.mjs --verify
-      - name: Validate complete repository after audit corrections
-        run: npm run check
-      - name: Verify clean patch semantics
-        run: git diff --check
-      - name: Commit authoritative product source only
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/verify.yml
-          rm -f scripts/finalize-dice-modernization-v2.mjs .github/workflows/dice-finalize-v2.yml
-          git add random-dice-game-33.html dicefile.json functions/dicefile.generated.json .github/workflows/verify.yml scripts/finalize-dice-modernization-v2.mjs .github/workflows/dice-finalize-v2.yml
-          changed="$(git diff --cached --name-only)"
-          printf '%s\n' "$changed"
-          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(random-dice-game-33\.html|dicefile\.json|functions/dicefile\.generated\.json|\.github/workflows/verify\.yml|scripts/finalize-dice-modernization-v2\.mjs|\.github/workflows/dice-finalize-v2\.yml)$' || true)"
-          if [[ -n "$unexpected" ]]; then echo "Unexpected files: $unexpected"; exit 1; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "fix: complete final dice canon gameplay audit"
-          git push origin HEAD:${{ github.head_ref }}
+      - name: Release and catalog checks
+        continue-on-error: true
+        run: npm run check:release && npm run check:catalog
+      - name: Function client bridge checks
+        continue-on-error: true
+        run: npm run check:functions && npm run check:client && npm run check:bridge
+      - name: Runtime loader navigation checks
+        continue-on-error: true
+        run: npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:test-map
+      - name: Battle and progression checks
+        continue-on-error: true
+        run: npm run check:battle-loop && npm run check:account-progression
+      - name: Presentation and audio checks
+        continue-on-error: true
+        run: npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio
+      - name: UI and item checks
+        continue-on-error: true
+        run: npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items && npm run check:item-art
+      - name: Diagnostic stop
+        run: exit 1
 
   bridge-audit:
     if: github.event_name == 'push' && startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
