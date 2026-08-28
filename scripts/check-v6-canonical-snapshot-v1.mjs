@@ -14,6 +14,7 @@ assert(server.includes('const key = canonicalDieKey(data.key);'),'v6 public dice
 assert(server.includes('const key = canonicalDieKey(slot.key);'),'v6 deck snapshots must canonicalize stored keys.');
 assert(server.includes('canonicalDieKey(die.key) !== slot.key'),'v6 deck ownership must compare canonical identities.');
 assert(server.includes('canonicalDieKey(cleanString(spec?.key, 40))'),'gift rewards must canonicalize legacy die keys.');
+assert(server.includes('reward.dice.slice(0,100)'),'gift codes must support complete-catalog reward bundles without truncation.');
 assert(bridge.includes('function canonicalSnapshotKey(rawKey, context)'),'v6 browser snapshot bridge must validate canonical keys before rendering.');
 assert(bridge.includes("const key = canonicalSnapshotKey(grant.key, 'Inventory');"),'inventory ingress must canonicalize.');
 assert(bridge.includes("const key = canonicalSnapshotKey(slot.key, 'Deck');"),'deck ingress must canonicalize.');
