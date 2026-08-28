@@ -2,6 +2,11 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
 const progressionV21 = require('./account-progression-core-v21');
+const catalog = require('./dicefile.generated.json');
+
+const LEGACY_DIE_KEYS = Object.freeze({ arrow:'skyhorn' });
+function canonicalDieKey(key) { return LEGACY_DIE_KEYS[key] || key; }
+function isCanonicalDieKey(key) { return !!catalog.dice?.[key]; }
 
 const db = getFirestore();
 const REGION = 'us-central1';
@@ -49,17 +54,19 @@ function normalizeSlots(value) {
     if (!slot || typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string' || !slot.key || !slot.instId) {
       throw new HttpsError('failed-precondition', 'A full deck of five dice is required.');
     }
-    if (seenKeys.has(slot.key)) throw new HttpsError('failed-precondition', 'A deck cannot contain the same die type twice.');
+    const key = canonicalDieKey(slot.key);
+    if (!isCanonicalDieKey(key)) throw new HttpsError('failed-precondition', 'A deck references an unknown die type.');
+    if (seenKeys.has(key)) throw new HttpsError('failed-precondition', 'A deck cannot contain the same die type twice.');
     if (seenIds.has(slot.instId)) throw new HttpsError('failed-precondition', 'A deck cannot use the same die instance twice.');
-    seenKeys.add(slot.key); seenIds.add(slot.instId);
-    return { key: slot.key, instId: slot.instId };
+    seenKeys.add(key); seenIds.add(slot.instId);
+    return { key, instId: slot.instId };
   });
 }
 function publicSlots(value) {
   const slots = Array.isArray(value) ? value.slice(0, 5) : [];
   while (slots.length < 5) slots.push(null);
   return slots.map((slot) => slot && typeof slot === 'object' && typeof slot.key === 'string' && typeof slot.instId === 'string'
-    ? { key: slot.key, instId: slot.instId } : null);
+    ? { key: canonicalDieKey(slot.key), instId: slot.instId } : null);
 }
 function xpThresholdForLevel(level) { return progressionV21.xpThresholdForLevel(level); }
 function levelFromXp(xp) { return progressionV21.levelFromXp(xp); }
@@ -84,7 +91,7 @@ async function validateOwnedSlots(tx, uid, slots) {
   const reads = slots.map((slot) => tx.get(db.doc(`users/${uid}/dice/${slot.instId}`)));
   const snaps = await Promise.all(reads);
   snaps.forEach((snap, i) => {
-    if (!snap.exists || snap.data()?.key !== slots[i].key) {
+    if (!snap.exists || canonicalDieKey(snap.data()?.key) !== slots[i].key) {
       throw new HttpsError('failed-precondition', 'Every die in the deck must be owned by this account.');
     }
   });
@@ -123,7 +130,7 @@ async function readSharedDie(uid, socialData = null) {
   if (!snap.exists) return null;
   const data = snap.data();
   return {
-    key: data.key,
+    key: canonicalDieKey(data.key),
     rarity: data.rarity || null,
     instance: {
       id: snap.id,
@@ -241,7 +248,7 @@ exports.getFriendActiveDeckV18 = onCall({ region: REGION }, async (request) => {
     const snap = await db.doc(`users/${friendUid}/dice/${slot.instId}`).get();
     if (!snap.exists) { dice.push(null); continue; }
     const d = snap.data();
-    dice.push({ key: d.key, rarity: d.rarity || null, instance: { id: snap.id, cls: Number(d.cls || 1), enchants: Array.isArray(d.enchants) ? d.enchants.slice(0, 4) : [null, null, null, null] } });
+    dice.push({ key: canonicalDieKey(d.key), rarity: d.rarity || null, instance: { id: snap.id, cls: Number(d.cls || 1), enchants: Array.isArray(d.enchants) ? d.enchants.slice(0, 4) : [null, null, null, null] } });
   }
   return {
     ok: true,

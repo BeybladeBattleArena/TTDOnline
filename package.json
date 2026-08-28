@@ -2,9 +2,9 @@
   "name": "ttd-online",
   "private": true,
   "scripts": {
-    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:test-map && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items && npm run check:item-art",
+    "check": "npm run check:release && npm run check:catalog && npm run check:functions && npm run check:backend-dice && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:test-map && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items && npm run check:item-art",
     "check:hosting": "npm run check:release && npm run check:client && npm run check:bridge && npm run check:runtime-compat && npm run check:loader && npm run check:deck-social && npm run check:run-start && npm run check:navigation && npm run check:test-map && npm run check:battle-loop && npm run check:account-progression && npm run check:typography && npm run check:result-summary && npm run check:startup-splash && npm run check:audio && npm run check:ui-fusion && npm run check:gacha-atmosphere && npm run check:page-polish && npm run check:platforming && npm run check:items && npm run check:item-art",
-    "check:backend": "npm run check:catalog && npm run check:functions",
+    "check:backend": "npm run check:catalog && npm run check:functions && npm run check:backend-dice",
     "check:release": "node scripts/check-release-integrity-v15.mjs && npm run check:immutable-assets",
     "check:immutable-assets": "node scripts/check-immutable-assets.mjs",
     "check:catalog": "node scripts/check-dice-catalog.mjs",
@@ -33,7 +33,8 @@
     "emulators": "firebase emulators:start",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
-    "deploy": "npm run check && firebase deploy"
+    "deploy": "npm run check && firebase deploy",
+    "check:backend-dice": "node scripts/check-backend-canonical-dice-v1.mjs"
   },
   "devDependencies": {
     "eslint-scope": "^8.4.0",

@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { createHash, randomInt, randomUUID } = require('node:crypto');
+const catalog = require('./dicefile.generated.json');
 
 initializeApp();
 const db = getFirestore();
@@ -25,23 +26,26 @@ const RARITY_THRESHOLDS = Object.freeze([
   ['legendary', 10000],
 ]);
 
-// Exact v33 gacha pools. Brute Force Blizzard is intentionally absent because
-// v33 marks it chestExclusive and keysByRarity() excludes chest-exclusive dice.
-const GACHA_POOLS = Object.freeze({
-  common: Object.freeze(['fire', 'ice', 'wind', 'poison', 'broken']),
-  rare: Object.freeze(['electric', 'iron', 'arrow', 'light', 'crack', 'magnet', 'shuriken']),
-  unique: Object.freeze([
-    'laser', 'teleport', 'mine', 'mimic', 'absorb', 'goldrush',
-    'blackwind', 'bubble', 'haunt', 'bubblebeam', 'devilshadow',
-  ]),
-  legendary: Object.freeze([
-    'growth', 'joker', 'gun', 'blizzard', 'nuclear', 'luckylucky',
-    'heavensfist', 'asclepius', 'comet', 'hitman', 'crossinggate',
-  ]),
-});
-
+// Canonical dice authority. Gacha excludes chest-exclusive dice, while validation
+// accepts every die in dicefile.generated.json. Legacy persisted keys are normalized
+// at the server boundary so clients only ever receive current canonical keys.
+const LEGACY_DIE_KEYS = Object.freeze({ arrow:'skyhorn' });
+function canonicalDieKey(key) { return LEGACY_DIE_KEYS[key] || key; }
+function buildCanonicalGachaPools() {
+  const pools = Object.fromEntries(RARITY_ORDER.map((rarity) => [rarity, []]));
+  for (const [key, die] of Object.entries(catalog.dice || {})) {
+    if (!die || die.chestExclusive || !pools[die.rarity]) continue;
+    pools[die.rarity].push(key);
+  }
+  for (const rarity of RARITY_ORDER) {
+    if (!pools[rarity].length) throw new Error(`dicefile generated an empty ${rarity} gacha pool.`);
+    Object.freeze(pools[rarity]);
+  }
+  return Object.freeze(pools);
+}
+const GACHA_POOLS = buildCanonicalGachaPools();
 const DICE_RARITY = Object.freeze(Object.fromEntries(
-  Object.entries(GACHA_POOLS).flatMap(([rarity, keys]) => keys.map((key) => [key, rarity])),
+  Object.entries(catalog.dice || {}).map(([key, die]) => [key, die?.rarity]),
 ));
 
 function requireAuth(request) {
@@ -178,13 +182,14 @@ function buildGachaResults(count) {
 
 function publicDie(data) {
   const id = data?.id;
-  const key = data?.key;
+  const storedKey = data?.key;
+  const key = canonicalDieKey(storedKey);
   const rarity = data?.rarity;
   const cls = data?.cls;
   const enchants = data?.enchants;
   if (
     typeof id !== 'string' || !id ||
-    typeof key !== 'string' || DICE_RARITY[key] !== rarity ||
+    typeof storedKey !== 'string' || DICE_RARITY[key] !== rarity ||
     !Number.isSafeInteger(cls) || cls < 1 || cls > 10 ||
     !Array.isArray(enchants) || enchants.length !== 4
   ) {
@@ -209,7 +214,9 @@ function publicDeck(data, fallbackIndex) {
     if (typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string') {
       throw new HttpsError('internal', 'A stored deck slot is invalid.');
     }
-    return { key: slot.key, instId: slot.instId };
+    const key = canonicalDieKey(slot.key);
+    if (!DICE_RARITY[key]) throw new HttpsError('internal', 'A stored deck references an unknown die.');
+    return { key, instId: slot.instId };
   });
   return { index, slots: safeSlots };
 }
@@ -315,11 +322,42 @@ async function ensureOnlineAccount(auth) {
   };
 }
 
+async function persistLegacyDiceKeyMigration(diceSnap, decksSnap) {
+  const writes = [];
+  for (const doc of diceSnap.docs) {
+    const data = doc.data() || {};
+    const key = canonicalDieKey(data.key);
+    if (key !== data.key) {
+      writes.push({ ref:doc.ref, data:{ key, keyMigratedFrom:data.key, keyMigratedAt:FieldValue.serverTimestamp() } });
+    }
+  }
+  for (const doc of decksSnap.docs) {
+    const data = doc.data() || {};
+    if (!Array.isArray(data.slots)) continue;
+    let changed = false;
+    const slots = data.slots.map((slot) => {
+      if (!slot || typeof slot !== 'object') return slot;
+      const key = canonicalDieKey(slot.key);
+      if (key !== slot.key) changed = true;
+      return key === slot.key ? slot : { ...slot, key };
+    });
+    if (changed) writes.push({ ref:doc.ref, data:{ slots, keyMigrationVersion:1, updatedAt:FieldValue.serverTimestamp() } });
+  }
+  for (let offset=0; offset<writes.length; offset+=400) {
+    const batch = db.batch();
+    for (const write of writes.slice(offset, offset+400)) batch.set(write.ref, write.data, { merge:true });
+    await batch.commit();
+  }
+  return writes.length;
+}
+
 async function readInventoryAndDecks(uid) {
   const [diceSnap, decksSnap] = await Promise.all([
     db.collection(`users/${uid}/dice`).get(),
     db.collection(`users/${uid}/decks`).get(),
   ]);
+
+  await persistLegacyDiceKeyMigration(diceSnap, decksSnap);
 
   const dice = diceSnap.docs.map((doc) => publicDie(doc.data()))
     .sort((a, b) => a.instance.id.localeCompare(b.instance.id));
@@ -340,7 +378,6 @@ function normalizeDeckStateInput(rawDecks, rawActiveDeckIdx) {
   if (!Array.isArray(rawDecks) || rawDecks.length !== 3) {
     throw new HttpsError('invalid-argument', 'Exactly three decks are required.');
   }
-
   const decks = rawDecks.map((rawDeck, deckIndex) => {
     if (!Array.isArray(rawDeck) || rawDeck.length !== 5) {
       throw new HttpsError('invalid-argument', `Deck ${deckIndex + 1} must have exactly five slots.`);
@@ -351,18 +388,14 @@ function normalizeDeckStateInput(rawDecks, rawActiveDeckIdx) {
       if (typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string' || !slot.instId) {
         throw new HttpsError('invalid-argument', 'A deck slot is malformed.');
       }
-      if (!DICE_RARITY[slot.key]) {
-        throw new HttpsError('invalid-argument', 'A deck references an unknown die.');
-      }
-      if (seenKeys.has(slot.key)) {
-        throw new HttpsError('invalid-argument', 'A deck cannot contain the same die type twice.');
-      }
-      seenKeys.add(slot.key);
-      return { key: slot.key, instId: slot.instId };
+      const key = canonicalDieKey(slot.key);
+      if (!DICE_RARITY[key]) throw new HttpsError('invalid-argument', 'A deck references an unknown die.');
+      if (seenKeys.has(key)) throw new HttpsError('invalid-argument', 'A deck cannot contain the same die type twice.');
+      seenKeys.add(key);
+      return { key, instId: slot.instId };
     });
     return { index: deckIndex, slots };
   });
-
   return { activeDeckIdx, decks };
 }
 
@@ -462,7 +495,7 @@ exports.setDeckState = onCall({ region: REGION, timeoutSeconds: 30 }, async (req
 
     for (const [instId, expectedKey] of referenced) {
       const dieSnap = await tx.get(db.doc(`users/${auth.uid}/dice/${instId}`));
-      if (!dieSnap.exists || dieSnap.data()?.key !== expectedKey) {
+      if (!dieSnap.exists || canonicalDieKey(dieSnap.data()?.key) !== expectedKey) {
         throw new HttpsError('failed-precondition', 'A deck references a die instance this account does not own.');
       }
     }
