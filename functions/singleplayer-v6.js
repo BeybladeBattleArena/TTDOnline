@@ -740,7 +740,7 @@ function validateGiftReward(reward) {
   return {
     pips:Math.max(0, Math.min(1000000, Number.isSafeInteger(reward.pips) ? reward.pips : 0)),
     astras:Math.max(0, Math.min(100000, Number.isSafeInteger(reward.astras) ? reward.astras : 0)),
-    dice:Array.isArray(reward.dice) ? reward.dice.slice(0,20) : [],
+    dice:Array.isArray(reward.dice) ? reward.dice.slice(0,100) : [],
     jewels:Array.isArray(reward.jewels) ? reward.jewels.slice(0,50) : [],
     keys:reward.keys && typeof reward.keys === 'object' ? reward.keys : {},
     cards:reward.cards && typeof reward.cards === 'object' ? reward.cards : {},
