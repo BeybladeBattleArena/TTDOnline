@@ -744,6 +744,7 @@ function validateGiftReward(reward) {
     jewels:Array.isArray(reward.jewels) ? reward.jewels.slice(0,50) : [],
     keys:reward.keys && typeof reward.keys === 'object' ? reward.keys : {},
     cards:reward.cards && typeof reward.cards === 'object' ? reward.cards : {},
+    ensureCatalogClass:Number.isSafeInteger(reward.ensureCatalogClass) ? Math.max(1, Math.min(10, reward.ensureCatalogClass)) : null,
   };
 }
 exports.redeemOnlineGiftCode = onCall({ region:REGION, timeoutSeconds:30 }, async (request) => {
@@ -760,12 +761,27 @@ exports.redeemOnlineGiftCode = onCall({ region:REGION, timeoutSeconds:30 }, asyn
     const maxRedemptions = Number(codeData.maxRedemptions || 0); const redeemedCount = Number(codeData.redeemedCount || 0);
     if (maxRedemptions > 0 && redeemedCount >= maxRedemptions) throw new HttpsError('resource-exhausted', 'That gift code has reached its redemption limit.');
     const reward = validateGiftReward(codeData.reward); const game = gameSnap.data();
+    const ensuredClassSnap = reward.ensureCatalogClass
+      ? await tx.get(db.collection(`users/${auth.uid}/dice`).where('cls','==',reward.ensureCatalogClass))
+      : null;
+    const existingCatalogKeys = new Set(ensuredClassSnap
+      ? ensuredClassSnap.docs.map((doc) => canonicalDieKey(doc.data()?.key)).filter((key) => !!DICE_RARITY[key])
+      : []);
     const grantedDice = []; const grantedJewels = [];
     for (const spec of reward.dice) {
       const key = canonicalDieKey(cleanString(spec?.key, 40)); if (!DICE_RARITY[key]) continue;
       const cls = Math.max(1, Math.min(10, Number.isSafeInteger(spec.cls) ? spec.cls : 1)); const id = serverId('d'); const rarity = DICE_RARITY[key];
       const grant = { key, rarity, instance:{ id, cls, enchants:[null,null,null,null] } }; grantedDice.push(grant);
       tx.set(db.doc(`users/${auth.uid}/dice/${id}`), { id, key, rarity, source:'gift_code', cls, enchants:[null,null,null,null], createdAt:FieldValue.serverTimestamp(), updatedAt:FieldValue.serverTimestamp() });
+      if (reward.ensureCatalogClass === cls) existingCatalogKeys.add(key);
+    }
+    if (reward.ensureCatalogClass) {
+      for (const key of Object.keys(catalog.dice || {})) {
+        if (existingCatalogKeys.has(key)) continue;
+        const cls = reward.ensureCatalogClass; const id = serverId('d'); const rarity = DICE_RARITY[key];
+        const grant = { key, rarity, instance:{ id, cls, enchants:[null,null,null,null] } }; grantedDice.push(grant); existingCatalogKeys.add(key);
+        tx.set(db.doc(`users/${auth.uid}/dice/${id}`), { id, key, rarity, source:'gift_code_catalog_complete', cls, enchants:[null,null,null,null], createdAt:FieldValue.serverTimestamp(), updatedAt:FieldValue.serverTimestamp() });
+      }
     }
     for (const spec of reward.jewels) {
       const jewelId = cleanString(spec?.jewelId, 40); if (!JEWEL_ID_SET.has(jewelId)) continue;
@@ -786,7 +802,7 @@ exports.redeemOnlineGiftCode = onCall({ region:REGION, timeoutSeconds:30 }, asyn
     tx.update(gameRef, { economy:{ pips:safePips(game)+reward.pips, astras:safeAstras(game)+reward.astras }, revision, updatedAt:FieldValue.serverTimestamp() });
     tx.set(redemptionRef, { codeHash:hash, label:cleanString(codeData.label || 'Gift Code', 80), redeemedAt:FieldValue.serverTimestamp() });
     if (maxRedemptions > 0) tx.update(codeRef, { redeemedCount:redeemedCount+1, updatedAt:FieldValue.serverTimestamp() });
-    tx.set(receiptRef, { operation:'gift_code', codeHash:hash, label:cleanString(codeData.label || '',80), pips:reward.pips, astras:reward.astras, dieIds:grantedDice.map(d=>d.instance.id), jewelIds:grantedJewels.map(j=>j.id), createdAt:FieldValue.serverTimestamp() });
+    tx.set(receiptRef, { operation:'gift_code', codeHash:hash, label:cleanString(codeData.label || '',80), pips:reward.pips, astras:reward.astras, ensureCatalogClass:reward.ensureCatalogClass, dieIds:grantedDice.map(d=>d.instance.id), jewelIds:grantedJewels.map(j=>j.id), createdAt:FieldValue.serverTimestamp() });
     summary = { label:cleanString(codeData.label || 'Gift Code',80), pips:reward.pips, astras:reward.astras, dice:grantedDice, jewels:grantedJewels };
   });
   return { ok:true, reward:summary, snapshot:await readFullSnapshot(auth.uid) };

@@ -15,6 +15,10 @@ assert(server.includes('const key = canonicalDieKey(slot.key);'),'v6 deck snapsh
 assert(server.includes('canonicalDieKey(die.key) !== slot.key'),'v6 deck ownership must compare canonical identities.');
 assert(server.includes('canonicalDieKey(cleanString(spec?.key, 40))'),'gift rewards must canonicalize legacy die keys.');
 assert(server.includes('reward.dice.slice(0,100)'),'gift codes must support complete-catalog reward bundles without truncation.');
+assert(server.includes('ensureCatalogClass:Number.isSafeInteger(reward.ensureCatalogClass)'),'gift rewards must support a bounded complete-catalog Class guarantee.');
+assert(server.includes("where('cls','==',reward.ensureCatalogClass)"),'complete-catalog gift redemption must inspect existing dice at the requested Class.');
+assert(server.includes('for (const key of Object.keys(catalog.dice || {}))'),'complete-catalog gift redemption must derive coverage from the canonical catalog.');
+assert(server.includes('if (existingCatalogKeys.has(key)) continue;'),'complete-catalog gift redemption must skip already-owned dice at the requested Class.');
 assert(bridge.includes('function canonicalSnapshotKey(rawKey, context)'),'v6 browser snapshot bridge must validate canonical keys before rendering.');
 assert(bridge.includes("const key = canonicalSnapshotKey(grant.key, 'Inventory');"),'inventory ingress must canonicalize.');
 assert(bridge.includes("const key = canonicalSnapshotKey(slot.key, 'Deck');"),'deck ingress must canonicalize.');
