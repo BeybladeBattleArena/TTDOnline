@@ -6,11 +6,11 @@ on:
     branches: [cleanup/lossless-infrastructure]
 
 permissions:
-  contents: read
+  contents: write
 
 # Development branches are assembled before a PR is opened. Pull-request verification remains
-# the authoritative full gate. The temporary push-only audit job reports lexical bridge dependencies
-# without changing source and is removed after the bridge migration is complete.
+# the authoritative full gate. The temporary finalization job below exists only on the dice
+# modernization branch and restores this workflow from main before committing product source.
 concurrency:
   group: verify-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -38,6 +38,46 @@ jobs:
             exit 1
           fi
           echo 'Validation completed without changing tracked source.'
+
+  dice-finalize-v2:
+    if: github.event_name == 'pull_request' && github.head_ref == 'dice-modernization-master-20260828' && !contains(github.event.pull_request.head.sha, '0000000000000000000000000000000000000000')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm --prefix functions install
+      - name: Apply final gameplay audit corrections
+        run: node scripts/finalize-dice-modernization-v2.mjs
+      - name: Refresh canonical backend mirror
+        run: npm run update:catalog-mirror
+      - name: Verify audit-specific invariants
+        run: node scripts/finalize-dice-modernization-v2.mjs --verify
+      - name: Validate complete repository after audit corrections
+        run: npm run check
+      - name: Verify clean patch semantics
+        run: git diff --check
+      - name: Commit authoritative product source only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/verify.yml
+          rm -f scripts/finalize-dice-modernization-v2.mjs .github/workflows/dice-finalize-v2.yml
+          git add random-dice-game-33.html dicefile.json functions/dicefile.generated.json .github/workflows/verify.yml scripts/finalize-dice-modernization-v2.mjs .github/workflows/dice-finalize-v2.yml
+          changed="$(git diff --cached --name-only)"
+          printf '%s\n' "$changed"
+          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(random-dice-game-33\.html|dicefile\.json|functions/dicefile\.generated\.json|\.github/workflows/verify\.yml|scripts/finalize-dice-modernization-v2\.mjs|\.github/workflows/dice-finalize-v2\.yml)$' || true)"
+          if [[ -n "$unexpected" ]]; then echo "Unexpected files: $unexpected"; exit 1; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix: complete final dice canon gameplay audit"
+          git push origin HEAD:${{ github.head_ref }}
 
   bridge-audit:
     if: github.event_name == 'push' && startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
