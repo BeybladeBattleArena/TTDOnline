@@ -1,7 +1,7 @@
 import './bridge-diagnostic-guard-v1.js?v=1';
 import './audio-client-v27.js?v=34';
 import './startup-splash-v26.js?v=31';
-import './startup-gate-v33.js?v=33';
+import './startup-gate-v33.js?v=34';
 import './startup-polish-v28.js?v=31';
 import './typography-client-v24.js?v=25';
 import './ui-fusion-v29.js?v=29';
