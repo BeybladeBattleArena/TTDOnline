@@ -1,0 +1,43 @@
+name: Apply Dice Modernization 2026-08-28
+
+on:
+  push:
+    branches:
+      - dice-modernization-master-20260828
+
+permissions:
+  contents: write
+
+jobs:
+  modernize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dice-modernization-master-20260828
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Apply canonical catalog
+        run: node scripts/apply-dice-modernization-catalog-20260828.mjs
+      - name: Apply canonical battle engine
+        run: node scripts/apply-dice-modernization-source-20260828.mjs
+      - name: Validate catalog and mirror
+        run: npm run check:catalog
+      - name: Validate full repository
+        run: npm run check
+      - name: Verify no whitespace corruption
+        run: git diff --check
+      - name: Commit only authoritative product changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm scripts/apply-dice-modernization-catalog-20260828.mjs scripts/apply-dice-modernization-source-20260828.mjs .github/workflows/apply-dice-modernization-20260828.yml
+          git add random-dice-game-33.html dicefile.json functions/dicefile.generated.json
+          git commit -m "feat: modernize dice roster from 2026-08-28 master canon"
+          git push origin HEAD:dice-modernization-master-20260828
