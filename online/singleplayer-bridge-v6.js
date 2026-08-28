@@ -2,6 +2,13 @@
   'use strict';
 
   const ORIGIN = location.origin;
+  const LEGACY_DIE_KEYS = Object.freeze({ arrow:'skyhorn' });
+  function canonicalSnapshotKey(rawKey, context) {
+    const original = String(rawKey || '');
+    const key = LEGACY_DIE_KEYS[original] || original;
+    if (!key || !DICE[key]) throw new Error(`${context} references unknown die key "${original}".`);
+    return key;
+  }
   let v6Ready = false;
   let requestCounter = 0;
   const pending = new Map();
@@ -34,15 +41,24 @@
   function applySnapshot(s) {
     if (!validSnapshot(s)) throw new Error('The server returned an invalid full account snapshot.');
     const owned = {};
+    const ownedKeyById = new Map();
     for (const grant of s.dice) {
-      if (!grant || !DICE[grant.key] || !grant.instance?.id) continue;
-      if (!owned[grant.key]) owned[grant.key] = [];
-      owned[grant.key].push({ id:grant.instance.id, cls:grant.instance.cls, enchants:normalizeSlots(grant.instance.enchants) });
+      if (!grant || !grant.instance?.id) throw new Error('The server returned an invalid die in the full account snapshot.');
+      const key = canonicalSnapshotKey(grant.key, 'Inventory');
+      if (!owned[key]) owned[key] = [];
+      owned[key].push({ id:grant.instance.id, cls:grant.instance.cls, enchants:normalizeSlots(grant.instance.enchants) });
+      ownedKeyById.set(grant.instance.id, key);
     }
     account.gold = s.gameState.economy.pips;
     account.astras = s.gameState.economy.astras;
     account.owned = owned;
-    account.decks = s.decks.slice().sort((a,b)=>a.index-b.index).map((deck) => deck.slots.map((slot) => slot ? { key:slot.key, instId:slot.instId } : null));
+    account.decks = s.decks.slice().sort((a,b)=>a.index-b.index).map((deck) => deck.slots.map((slot) => {
+      if (!slot) return null;
+      if (typeof slot.key !== 'string' || typeof slot.instId !== 'string') throw new Error('The server returned an invalid deck slot.');
+      const key = canonicalSnapshotKey(slot.key, 'Deck');
+      if (ownedKeyById.get(slot.instId) !== key) throw new Error(`Deck slot ${slot.instId} does not match its owned canonical die.`);
+      return { key, instId:slot.instId };
+    }));
     account.activeDeckIdx = Math.max(0, Math.min(account.decks.length-1, Number(s.gameState.activeDeckIdx || 0)));
     account.favoriteDice = Array.isArray(s.favorites) ? s.favorites.slice(0,10) : [];
     account.inventory = {

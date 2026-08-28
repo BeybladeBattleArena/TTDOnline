@@ -26,7 +26,7 @@ for(const forbidden of [
 
 const expectedUrls=[
   '/online/dice-catalog-bridge-v8.js?v=8','/online/soul-scimitar-svg-v14.js?v=14','/online/slither-vine-bridge-v8.js?v=8',
-  '/online/game-bridge-inner.js?v=4','/online/progression-bridge-v5.js?v=5','/online/singleplayer-bridge-v6.js?v=6',
+  '/online/game-bridge-inner.js?v=5','/online/progression-bridge-v5.js?v=5','/online/singleplayer-bridge-v6.js?v=7',
   '/online/merge-bridge-v6.js?v=6','/online/run-ui-bridge-v21.js?v=21','/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9','/online/interaction-effects-v10.js?v=10','/online/collection-portrait-fit-v16.js?v=16',
   '/online/deck-editor-v18.js?v=18','/online/item-assets-v1.js?v=4','/online/avatar-inventory-v22.js?v=22','/online/world-items-v1.js?v=1',
