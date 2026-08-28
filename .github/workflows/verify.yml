@@ -6,8 +6,11 @@ on:
     branches: [cleanup/lossless-infrastructure]
 
 permissions:
-  contents: write
+  contents: read
 
+# Development branches are assembled before a PR is opened. Pull-request verification remains
+# the authoritative full gate. The temporary push-only audit job reports lexical bridge dependencies
+# without changing source and is removed after the bridge migration is complete.
 concurrency:
   group: verify-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -34,43 +37,7 @@ jobs:
             git status --short
             exit 1
           fi
-
-  canonical-dice-cloud-fix:
-    if: github.event_name == 'pull_request' && github.head_ref == 'fix/startup-canonical-dice-cloud-20260828'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - run: npm install
-      - run: npm --prefix functions install
-      - name: Apply native backend authority repair
-        run: node scripts/apply-startup-canonical-dice-cloud-fix-20260828.mjs
-      - name: Validate repaired backend and complete game
-        run: npm run check
-      - name: Verify clean patch semantics
-        run: git diff --check
-      - name: Commit authoritative repair only
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/verify.yml
-          rm -f scripts/apply-startup-canonical-dice-cloud-fix-20260828.mjs
-          git add functions/index.js functions/deck-social-v18.js scripts/check-backend-canonical-dice-v1.mjs package.json .github/workflows/verify.yml scripts/apply-startup-canonical-dice-cloud-fix-20260828.mjs
-          changed="$(git diff --cached --name-only)"
-          printf '%s\n' "$changed"
-          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(functions/index\.js|functions/deck-social-v18\.js|scripts/check-backend-canonical-dice-v1\.mjs|package\.json|\.github/workflows/verify\.yml|scripts/apply-startup-canonical-dice-cloud-fix-20260828\.mjs)$' || true)"
-          if [[ -n "$unexpected" ]]; then echo "Unexpected files: $unexpected"; exit 1; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "fix: migrate cloud Arrow records to Skyhorn canon"
-          git push origin HEAD:${{ github.head_ref }}
+          echo 'Validation completed without changing tracked source.'
 
   bridge-audit:
     if: github.event_name == 'push' && startsWith(github.event.head_commit.message, '[bridge-lexical-audit-v1]')
