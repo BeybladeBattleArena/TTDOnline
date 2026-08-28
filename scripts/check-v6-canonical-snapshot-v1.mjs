@@ -1,0 +1,27 @@
+import fs from 'node:fs';
+const server=fs.readFileSync('functions/singleplayer-v6.js','utf8');
+const bridge=fs.readFileSync('online/singleplayer-bridge-v6.js','utf8');
+const gameBridge=fs.readFileSync('online/game-bridge-inner.js','utf8');
+const loader=fs.readFileSync('online/runtime-bridge-loader-v1.js','utf8');
+const main=fs.readFileSync('functions/main-v6.js','utf8');
+const catalog=JSON.parse(fs.readFileSync('functions/dicefile.generated.json','utf8'));
+function assert(ok,msg){if(!ok)throw new Error(msg);}
+assert(catalog.dice.skyhorn && !catalog.dice.arrow,'Catalog must expose Skyhorn and retire Arrow.');
+assert(server.includes("const catalog = require('./dicefile.generated.json');"),'v6 snapshot backend must consume canonical catalog.');
+assert(server.includes("LEGACY_DIE_KEYS = Object.freeze({ arrow:'skyhorn' })"),'v6 snapshot backend must normalize Arrow to Skyhorn.');
+assert(!server.includes("rare: ['electric','iron','arrow'"),'v6 backend must not retain the old Arrow gacha roster.');
+assert(server.includes('const key = canonicalDieKey(data.key);'),'v6 public dice must canonicalize stored keys.');
+assert(server.includes('const key = canonicalDieKey(slot.key);'),'v6 deck snapshots must canonicalize stored keys.');
+assert(server.includes('canonicalDieKey(die.key) !== slot.key'),'v6 deck ownership must compare canonical identities.');
+assert(server.includes('canonicalDieKey(cleanString(spec?.key, 40))'),'gift rewards must canonicalize legacy die keys.');
+assert(bridge.includes('function canonicalSnapshotKey(rawKey, context)'),'v6 browser snapshot bridge must validate canonical keys before rendering.');
+assert(bridge.includes("const key = canonicalSnapshotKey(grant.key, 'Inventory');"),'inventory ingress must canonicalize.');
+assert(bridge.includes("const key = canonicalSnapshotKey(slot.key, 'Deck');"),'deck ingress must canonicalize.');
+assert(bridge.includes('ownedKeyById.get(slot.instId) !== key'),'deck slots must match owned canonical instances.');
+assert(!bridge.includes('if (!grant || !DICE[grant.key] || !grant.instance?.id) continue;'),'v6 bridge must not silently drop an unknown die and then render its deck slot.');
+assert(gameBridge.includes('canonicalDieKey(grant.key) in DICE'),'v4 bridge must accept only renderable canonical grants.');
+assert(gameBridge.includes('key: canonicalDieKey(slot.key)'),'v4 bridge must store canonical deck keys.');
+assert(loader.includes("'/online/game-bridge-inner.js?v=5'"),'runtime loader must cache-bust corrected v4 bridge.');
+assert(loader.includes("'/online/singleplayer-bridge-v6.js?v=7'"),'runtime loader must cache-bust corrected v6 bridge.');
+assert(main.indexOf('...singleplayer')>main.indexOf('...base'),'Regression premise changed: singleplayer no longer overrides base later; update this validator intentionally.');
+console.log('V6 canonical full-account snapshot ingress verified.');

@@ -2,6 +2,8 @@
   'use strict';
 
   const ORIGIN = location.origin;
+  const LEGACY_DIE_KEYS = Object.freeze({ arrow:'skyhorn' });
+  const canonicalDieKey = (key) => LEGACY_DIE_KEYS[key] || key;
   const originalSaveAccount = saveAccount;
   let gachaPending = false;
   let requestCounter = 0;
@@ -28,7 +30,7 @@
 
   function validDie(grant) {
     return grant &&
-      typeof grant.key === 'string' && grant.key in DICE &&
+      typeof grant.key === 'string' && canonicalDieKey(grant.key) in DICE &&
       grant.instance && typeof grant.instance.id === 'string' && grant.instance.id &&
       Number.isSafeInteger(grant.instance.cls) && grant.instance.cls >= 1 && grant.instance.cls <= 10 &&
       Array.isArray(grant.instance.enchants) && grant.instance.enchants.length === 4;
@@ -38,7 +40,7 @@
     return Array.isArray(decks) && decks.length === 3 && decks.every((deck, expectedIndex) =>
       deck && deck.index === expectedIndex && Array.isArray(deck.slots) && deck.slots.length === 5 &&
       deck.slots.every((slot) => slot == null ||
-        (typeof slot === 'object' && typeof slot.key === 'string' && typeof slot.instId === 'string')));
+        (typeof slot === 'object' && typeof slot.key === 'string' && canonicalDieKey(slot.key) in DICE && typeof slot.instId === 'string')));
   }
 
   function deckSnapshot() {
@@ -82,8 +84,9 @@
     const owned = {};
     const validIds = new Set();
     for (const grant of dice) {
-      if (!owned[grant.key]) owned[grant.key] = [];
-      owned[grant.key].push({
+      const key = canonicalDieKey(grant.key);
+      if (!owned[key]) owned[key] = [];
+      owned[key].push({
         id: grant.instance.id,
         cls: grant.instance.cls,
         enchants: [...grant.instance.enchants],
@@ -100,18 +103,19 @@
   function applyCanonicalDecks(decks, activeDeckIdx) {
     if (!validDecks(decks) || !Number.isSafeInteger(activeDeckIdx) || activeDeckIdx < 0 || activeDeckIdx > 2) return false;
     account.decks = decks.map((deck) => deck.slots.map((slot) =>
-      slot ? { key: slot.key, instId: slot.instId } : null));
+      slot ? { key: canonicalDieKey(slot.key), instId: slot.instId } : null));
     account.activeDeckIdx = activeDeckIdx;
     return true;
   }
 
   function mergeGrant(grant) {
     if (!validDie(grant)) return false;
-    if (!account.owned[grant.key]) account.owned[grant.key] = [];
+    const key = canonicalDieKey(grant.key);
+    if (!account.owned[key]) account.owned[key] = [];
     const exists = Object.values(account.owned).some((instances) =>
       Array.isArray(instances) && instances.some((inst) => inst?.id === grant.instance.id));
     if (exists) return false;
-    account.owned[grant.key].push({
+    account.owned[key].push({
       id: grant.instance.id,
       cls: grant.instance.cls,
       enchants: [...grant.instance.enchants],
@@ -154,7 +158,7 @@
     if (!wrap || !Array.isArray(results)) return;
     wrap.innerHTML = '';
     results.forEach((result, i) => {
-      const card = renderPullCard(result.key);
+      const card = renderPullCard(canonicalDieKey(result.key));
       if (results.length > 1) card.style.animationDelay = `${i * 0.06}s`;
       wrap.appendChild(card);
     });

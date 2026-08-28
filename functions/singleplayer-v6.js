@@ -3,6 +3,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
 const progressionV21 = require('./account-progression-core-v21');
 const levelRewardsV21 = require('./account-progression-v21');
+const catalog = require('./dicefile.generated.json');
 
 const db = getFirestore();
 const REGION = 'us-central1';
@@ -15,16 +16,23 @@ const JEWEL_IDS = [
   ...ELEMENTS.map((element) => `elem_${element}`),
 ];
 const JEWEL_ID_SET = new Set(JEWEL_IDS);
-const GACHA_POOLS = Object.freeze({
-  common: ['fire','ice','wind','poison','broken'],
-  rare: ['electric','iron','arrow','light','crack','magnet','shuriken'],
-  unique: ['laser','teleport','mine','mimic','absorb','goldrush','blackwind','bubble','haunt','bubblebeam','devilshadow'],
-  legendary: ['growth','joker','gun','blizzard','nuclear','luckylucky','heavensfist','asclepius','comet','hitman','crossinggate'],
-});
+// Canonical dice authority for the full v6 account surface. This module is loaded
+// after functions/index.js and therefore must not reintroduce an older hard-coded roster.
+const LEGACY_DIE_KEYS = Object.freeze({ arrow:'skyhorn' });
+function canonicalDieKey(key) { return LEGACY_DIE_KEYS[key] || key; }
+function canonicalDieDef(key) { return catalog.dice?.[canonicalDieKey(key)] || null; }
+function buildCanonicalGachaPools() {
+  const pools = { common:[], rare:[], unique:[], legendary:[] };
+  for (const [key, die] of Object.entries(catalog.dice || {})) {
+    if (!die || die.chestExclusive || !Array.isArray(pools[die.rarity])) continue;
+    pools[die.rarity].push(key);
+  }
+  return Object.freeze(Object.fromEntries(Object.entries(pools).map(([rarity, keys]) => [rarity, Object.freeze(keys)])));
+}
+const GACHA_POOLS = buildCanonicalGachaPools();
 const DICE_RARITY = Object.freeze(Object.fromEntries(
-  Object.entries(GACHA_POOLS).flatMap(([rarity, keys]) => keys.map((key) => [key, rarity])),
+  Object.entries(catalog.dice || {}).map(([key, die]) => [key, die?.rarity || 'common']),
 ));
-DICE_RARITY.bruteforceblizzard = 'legendary';
 
 const SHOP = Object.freeze({
   key_normal: { kind:'key', difficultyKey:'normal', name:'Chest Key [Normal]', cost:200, sellValue:100 },
@@ -97,11 +105,14 @@ function normalizeEnchantSlots(value) {
 }
 function publicDie(data = {}, id = data.id) {
   if (!id || typeof data.key !== 'string') throw new HttpsError('internal', 'A stored die instance is malformed.');
+  const key = canonicalDieKey(data.key);
+  const def = canonicalDieDef(key);
+  if (!def) throw new HttpsError('internal', 'A stored die references an unknown canonical die.');
   const cls = Number(data.cls);
   if (!Number.isSafeInteger(cls) || cls < 1 || cls > 10) throw new HttpsError('internal', 'A stored die Class is malformed.');
   return {
-    key: data.key,
-    rarity: data.rarity || DICE_RARITY[data.key] || 'common',
+    key,
+    rarity: def.rarity || data.rarity || 'common',
     source: data.source || null,
     instance: { id, cls, enchants: normalizeEnchantSlots(data.enchants) },
   };
@@ -112,8 +123,12 @@ function normalizeDeckDoc(data, index) {
   while (slots.length < 5) slots.push(null);
   return {
     index,
-    slots: slots.map((slot) => slot && typeof slot === 'object' && typeof slot.key === 'string' && typeof slot.instId === 'string'
-      ? { key: slot.key, instId: slot.instId } : null),
+    slots: slots.map((slot) => {
+      if (!slot || typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string') return null;
+      const key = canonicalDieKey(slot.key);
+      if (!canonicalDieDef(key)) throw new HttpsError('internal', 'A stored deck references an unknown canonical die.');
+      return { key, instId:slot.instId };
+    }),
   };
 }
 function slotCountForClass(cls) { return 1 + (cls >= 3 ? 1 : 0) + (cls >= 5 ? 1 : 0) + (cls >= 7 ? 1 : 0); }
@@ -260,9 +275,11 @@ exports.setDeckState = onCall({ region:REGION, timeoutSeconds:30 }, async (reque
     const slots = deck.map((slot) => {
       if (slot == null) return null;
       if (typeof slot !== 'object' || typeof slot.key !== 'string' || typeof slot.instId !== 'string') throw new HttpsError('invalid-argument', 'A deck slot is invalid.');
-      if (keys.has(slot.key)) throw new HttpsError('failed-precondition', 'A deck cannot contain the same die type twice.');
-      keys.add(slot.key);
-      return { key:slot.key, instId:slot.instId };
+      const key = canonicalDieKey(slot.key);
+      if (!canonicalDieDef(key)) throw new HttpsError('invalid-argument', 'A deck references an unknown die type.');
+      if (keys.has(key)) throw new HttpsError('failed-precondition', 'A deck cannot contain the same die type twice.');
+      keys.add(key);
+      return { key, instId:slot.instId };
     });
     return { index, slots };
   });
@@ -280,7 +297,7 @@ exports.setDeckState = onCall({ region:REGION, timeoutSeconds:30 }, async (reque
     const byId = new Map(dieSnaps.filter((snap) => snap.exists).map((snap) => [snap.id, snap.data()]));
     for (const deck of decks) for (const slot of deck.slots) if (slot) {
       const die = byId.get(slot.instId);
-      if (!die || die.key !== slot.key) throw new HttpsError('failed-precondition', 'A deck references a die this account does not own.');
+      if (!die || canonicalDieKey(die.key) !== slot.key) throw new HttpsError('failed-precondition', 'A deck references a die this account does not own.');
     }
     const revision = Number.isSafeInteger(game.revision) ? game.revision + 1 : 1;
     decks.forEach((deck) => tx.set(db.doc(`users/${auth.uid}/decks/deck-${deck.index}`), { schemaVersion:1, index:deck.index, slots:deck.slots, updatedAt:FieldValue.serverTimestamp() }));
@@ -745,7 +762,7 @@ exports.redeemOnlineGiftCode = onCall({ region:REGION, timeoutSeconds:30 }, asyn
     const reward = validateGiftReward(codeData.reward); const game = gameSnap.data();
     const grantedDice = []; const grantedJewels = [];
     for (const spec of reward.dice) {
-      const key = cleanString(spec?.key, 40); if (!DICE_RARITY[key]) continue;
+      const key = canonicalDieKey(cleanString(spec?.key, 40)); if (!DICE_RARITY[key]) continue;
       const cls = Math.max(1, Math.min(10, Number.isSafeInteger(spec.cls) ? spec.cls : 1)); const id = serverId('d'); const rarity = DICE_RARITY[key];
       const grant = { key, rarity, instance:{ id, cls, enchants:[null,null,null,null] } }; grantedDice.push(grant);
       tx.set(db.doc(`users/${auth.uid}/dice/${id}`), { id, key, rarity, source:'gift_code', cls, enchants:[null,null,null,null], createdAt:FieldValue.serverTimestamp(), updatedAt:FieldValue.serverTimestamp() });
