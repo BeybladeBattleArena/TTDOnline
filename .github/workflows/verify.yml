@@ -44,6 +44,19 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npm --prefix functions install
+      - name: Correct final audit transformer brace
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/finalize-dice-modernization-v2.mjs')
+          s=p.read_text()
+          old="else if(s.c>=7)canonApplyStun(e,.4);}}}}`;"
+          new="else if(s.c>=7)canonApplyStun(e,.4);}}}`;"
+          if s.count(old)!=1:
+              raise SystemExit(f'Expected exactly one Mace transformer brace target, found {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Apply final gameplay audit corrections
         run: node scripts/finalize-dice-modernization-v2.mjs
       - name: Refresh canonical backend mirror
@@ -53,17 +66,6 @@ jobs:
         run: |
           sed -i "/    'pvpLockdownDeferred'/d" scripts/finalize-dice-modernization-v2.mjs
           node scripts/finalize-dice-modernization-v2.mjs --verify
-      - name: Show extracted core parse-error window
-        shell: bash
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          const html=fs.readFileSync('random-dice-game-33.html','utf8');
-          const bodies=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(Boolean);
-          const core=bodies.sort((a,b)=>b.length-a.length)[0];
-          const lines=core.split('\n');
-          for(let n=4835;n<=4852;n++) console.log(String(n).padStart(5), lines[n-1]);
-          NODE
       - name: Release and catalog checks
         run: npm run check:release && npm run check:catalog
       - name: Function client bridge checks
