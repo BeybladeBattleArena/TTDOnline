@@ -58,20 +58,23 @@ const gateRequired=[
   'Promise.all(Array.from({length:4},worker))',
   'Promise.race([welcomePromise,sleep(5000)])',
   'waitOperational(20000)',
-  'child.__TTD_GAME_ASSETS',
-  'child.__TTD_ITEM_ASSETS_V1',
-  'child.__TTD_WORLD_ITEMS_V1',
-  "doc.getElementById('homeScreen')",
-  "doc.getElementById('shopScreen')",
-  "doc.getElementById('inventoryScreen')",
+  "status?.dataset?.kind==='ok'",
+  'child.__TTD_CORE_API_V1',
+  "home.classList.contains('active')",
+  "console.warn('TTD nonfatal startup asset preload failure'",
+  'Promise.race([criticalPromise,sleep(1200)])',
+  'function startupFailureReason(error)',
+  "greeting.textContent=lastError",
   "tap.textContent='TAP TO RETRY'",
   'splash.hidden=true',
   'audio?.enterMainMenu?.()',
   "splash.addEventListener('pointerup',intercept,true)",
   'event.stopImmediatePropagation()',
 ];
-for(const marker of gateRequired)if(!gate.includes(marker))throw new Error(`Startup gate v33 behavior missing: ${marker}`);
+for(const marker of gateRequired)if(!gate.includes(marker))throw new Error(`Startup gate v34 behavior missing: ${marker}`);
 if(gate.indexOf('preloadCritical()')>gate.indexOf('waitOperational(20000)'))throw new Error('Critical image preload must begin no later than the operational readiness wait.');
+if(gate.includes('child.__TTD_ITEM_ASSETS_V1')||gate.includes('child.__TTD_WORLD_ITEMS_V1'))throw new Error('Startup readiness must not depend on optional item/world bridge globals.');
+if(gate.includes("/cloud account ready/i.test(status?.textContent"))throw new Error('Startup gate must not use human-readable status copy as a readiness API.');
 if(gate.includes("console.warn('TTD startup reveal timed out"))throw new Error('Startup gate may not reveal the game after a readiness timeout.');
 
 const polishRequired=[
@@ -134,7 +137,7 @@ if(onlineHtml.indexOf(syncGuardTag)>onlineHtml.indexOf(firebaseTag))throw new Er
 const diagnosticImport="import './bridge-diagnostic-guard-v1.js?v=1';";
 if(!entry.includes(diagnosticImport))throw new Error('Online client lost the secondary bridge diagnostic logger.');
 if(!entry.includes("import './startup-splash-v26.js?v=31';"))throw new Error('Online client does not load startup splash v31 behavior.');
-if(!entry.includes("import './startup-gate-v33.js?v=33';"))throw new Error('Online client does not load startup gate v33.');
+if(!entry.includes("import './startup-gate-v33.js?v=34';"))throw new Error('Online client does not load startup gate v34 behavior.');
 if(!entry.includes("import './startup-polish-v28.js?v=31';"))throw new Error('Online client does not load startup polish v31 behavior.');
 if(entry.indexOf('startup-splash-v26')>entry.indexOf('startup-gate-v33'))throw new Error('Startup gate must initialize after the splash exists.');
 if(entry.indexOf('startup-gate-v33')>entry.indexOf('startup-polish-v28'))throw new Error('Startup gate must register before legacy startup-polish tap interception.');
@@ -143,4 +146,4 @@ if(!/DICE_COUNT\s*=\s*(?:2\d\d|[3-9]\d\d)/.test(splash))throw new Error('Startup
 if(splash.indexOf("'Okay, Die Master'")>splash.indexOf("'TAP to DIE'"))throw new Error('Greeting must type before TAP to DIE.');
 if(splash.indexOf('unlockAudioFromGesture()')>splash.indexOf("tapButton.textContent=accountReady()?"))throw new Error('Audio unlock must happen synchronously before post-tap waiting UI.');
 if(splash.indexOf('sequenceToken++;')>splash.indexOf('diceReveal=1'))throw new Error('Early title skip must cancel the in-flight animation before forcing its final state.');
-console.log('Startup v34 verified: the splash remains two-stage, black-screen entry preloads native-resolution PNG critical art with the runtime build token, waits for operational menus/code/fonts, and never reveals a partial game shell.');
+console.log('Startup v35 verified: entry waits on Firebase bridge sync plus an active native Home screen, eager PNG preload is nonfatal, and retry exposes the actual startup failure instead of silently bouncing.');
