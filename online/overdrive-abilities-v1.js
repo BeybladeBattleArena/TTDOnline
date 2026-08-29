@@ -399,8 +399,10 @@
 
   function activateSlot(index) {
     if (busy || !battleActive()) return;
+    if (!Number.isSafeInteger(index) || index < 0 || index > 1) return;
     const api = od();
-    const entry = api?.equipped?.(index);
+    const pair = api?.equipped?.();
+    const entry = Array.isArray(pair) ? pair[index] : null;
     const key = typeof entry === 'string' ? entry : entry?.key;
     const def = catalogDef(key);
     if (!key || !def) return;
