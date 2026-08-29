@@ -8,14 +8,44 @@ on:
 permissions:
   contents: read
 
-# Development branches are assembled before a PR is opened. Pull-request verification remains
-# the authoritative full gate. The temporary push-only audit job reports lexical bridge dependencies
-# without changing source and is removed after the bridge migration is complete.
 concurrency:
   group: verify-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
+  canon-completion-materialize:
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'dice-modernization-canon-completion-')
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Materialize canon completion
+        run: node scripts/apply-canon-completion-20260828.mjs
+      - name: Validate syntax and patch semantics
+        run: |
+          node --check scripts/apply-canon-completion-20260828.mjs
+          git diff --check
+      - name: Commit materialized canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- random-dice-game-33.html; then
+            echo 'Canonical source is already materialized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add random-dice-game-33.html
+          git commit -m 'feat: materialize dice canon mechanics and presentation'
+          git push origin HEAD:${{ github.head_ref }}
+
   syntax:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
