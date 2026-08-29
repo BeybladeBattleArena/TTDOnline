@@ -15,7 +15,7 @@ const engineUrl=pathToFileURL(path.join(root,'online/moving-screen-engine-v4.js'
 const harness=path.join(os.tmpdir(),`ttd-moving-screen-${process.pid}.html`);
 
 const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b14;color:white;font-family:Arial,sans-serif}#app{position:fixed;inset:0}.screen{position:absolute;inset:0;display:none;flex-direction:column}.screen.active{display:flex}#modeScreen .modeBody{padding:10px}.modeCard{padding:8px;border:1px solid #555}.modeCard button{min-height:40px}#hud{display:flex;gap:8px;padding:8px;height:54px}.hud-stat{display:flex;gap:4px}.label{opacity:.7}#laneWrap{position:relative;height:33vh}#laneCanvas{width:100%;height:100%}#boardWrap{height:250px}#tray{min-height:110px}.toast{position:fixed;left:0;top:0}#testResult{white-space:pre-wrap;font-size:10px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b14;color:white;font-family:Arial,sans-serif}#app{position:fixed;inset:0}.screen{position:absolute;inset:0;display:none;flex-direction:column;min-height:0}.screen.active{display:flex!important}#modeScreen .modeBody{padding:10px}.modeCard{padding:8px;border:1px solid #555}.modeCard button{min-height:40px}#hud{display:flex;gap:8px;padding:8px;height:54px;flex:0 0 54px}.hud-stat{display:flex;gap:4px}.label{opacity:.7}#laneWrap{position:relative;height:33vh;min-height:160px;max-height:235px;flex-shrink:0}#laneCanvas{width:100%;height:100%}#boardWrap{height:250px;flex:1 1 auto}#tray{min-height:110px;flex-shrink:0}.toast{position:fixed;left:0;top:0}#testResult{white-space:pre-wrap;font-size:10px}
 </style></head><body><div id="app">
 <div id="modeScreen" class="screen active"><div class="modeBody"></div></div>
 <div id="deckScreen" class="screen"></div>
@@ -32,18 +32,26 @@ async function run(){
  try{
   await sleep(80);
   const card=document.querySelector('#ttdMovingScreenCardV4 button');report.card=!!card;card?.click();
-  await sleep(180);
-  const game=document.getElementById('gameScreen'),summon=document.getElementById('ttdMsSummonV4'),lane=document.getElementById('laneWrap'),controls=document.getElementById('ttdMsControlsV4');
-  const sr=summon?.getBoundingClientRect(),lr=lane?.getBoundingClientRect(),cr=controls?.getBoundingClientRect();
+  await sleep(220);
+  const game=document.getElementById('gameScreen'),summon=document.getElementById('ttdMsSummonV4'),lane=document.getElementById('laneWrap'),controls=document.getElementById('ttdMsControlsV4'),canvas=document.getElementById('ttdMovingScreenCanvasV4');
+  const sr=summon?.getBoundingClientRect(),lr=lane?.getBoundingClientRect(),cr=controls?.getBoundingClientRect(),state=window.TTDMovingScreen?.state;
   report.gameActive=game?.classList.contains('active')===true;
   report.usesGameShell=game?.classList.contains('ttd-moving-screen-v4')===true;
-  report.canvas=!!document.getElementById('ttdMovingScreenCanvasV4');
+  report.gameDisplayFlex=getComputedStyle(game).display==='flex';
+  report.canvas=!!canvas;
   report.legacyBoardHidden=getComputedStyle(document.getElementById('boardWrap')).display==='none';
   report.controlsVisible=!!cr&&cr.width>80&&cr.height>45&&cr.top>=0&&cr.bottom<=innerHeight+1;
+  report.controlsBelowBattlefield=!!lr&&!!cr&&lr.height>0&&lr.bottom<=cr.top+12&&cr.top>lr.top+lr.height*.80;
+  report.controlsNearBottom=!!cr&&cr.bottom>=innerHeight-12;
   report.summonVisible=!!sr&&sr.width>70&&sr.height>40&&sr.top>=0&&sr.bottom<=innerHeight+1;
   report.summonEnabled=summon?.disabled===false;
   report.battlefieldTall=!!lr&&lr.height>innerHeight*.55;
-  report.openingState=window.TTDMovingScreen?.state;
+  report.canvasCssTall=!!canvas&&canvas.getBoundingClientRect().height>innerHeight*.55;
+  report.canvasBitmapSized=!!canvas&&canvas.width>=300&&canvas.height>=300;
+  let pixelAlpha=0;try{const cx=Math.max(0,Math.min(canvas.width-1,Math.floor(canvas.width*.5))),cy=Math.max(0,Math.min(canvas.height-1,Math.floor(canvas.height*.5)));pixelAlpha=canvas.getContext('2d').getImageData(cx,cy,1,1).data[3];}catch(error){report.errors.push(String(error?.stack||error));}
+  report.canvasPainted=pixelAlpha>0;
+  report.runtimeViewportMatchesLane=!!state?.viewport&&Math.abs(state.viewport.h-lr.height)<3&&state.viewport.h>innerHeight*.55&&Math.abs(state.viewport.w-lr.width)<3;
+  report.openingState=state;
   summon?.click();await sleep(240);
   report.afterSummon=window.TTDMovingScreen?.state;
   report.summoned=report.afterSummon?.players===1;
@@ -70,7 +78,7 @@ async function run(){
   report.failReturn=document.getElementById('modeScreen')?.classList.contains('active')===true&&!document.getElementById('ttdMsResultV4');
   report.noRuntimeErrors=report.errors.length===0;
  }catch(error){report.errors.push(String(error?.stack||error));}
- const checks=['card','gameActive','usesGameShell','canvas','legacyBoardHidden','controlsVisible','summonVisible','summonEnabled','battlefieldTall','summoned','firstRouteVisible','crossroadChoices','awningChoiceVisible','branchTraversalSurvived','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
+ const checks=['card','gameActive','usesGameShell','gameDisplayFlex','canvas','legacyBoardHidden','controlsVisible','controlsBelowBattlefield','controlsNearBottom','summonVisible','summonEnabled','battlefieldTall','canvasCssTall','canvasBitmapSized','canvasPainted','runtimeViewportMatchesLane','summoned','firstRouteVisible','crossroadChoices','awningChoiceVisible','branchTraversalSurvived','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
  report.ok=checks.every(k=>report[k]===true);document.getElementById('testResult').textContent=JSON.stringify(report);
 }
 run();

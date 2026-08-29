@@ -24,8 +24,9 @@
     '/online/world-items-v1.js?v=1',
     // Moving Screen is direct committed source. Stage data loads before the engine. The v4 engine
     // mounts inside the normal gameScreen/laneWrap shell and does not patch/eval core source.
+    // Query v=5 is the cache key for the visible-battlefield flex-layout hotfix.
     '/online/moving-screen-neon-rooftops-v2.js?v=2',
-    '/online/moving-screen-engine-v4.js?v=4',
+    '/online/moving-screen-engine-v4.js?v=5',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
