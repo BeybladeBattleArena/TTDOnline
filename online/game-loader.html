@@ -43,6 +43,13 @@
         collectionAuthorityAttempts+=1;
         const ready=document.getElementById('deckScreen')&&document.getElementById('collectionGrid');
         if(ready){
+          if(!document.getElementById('ttdOverdriveSystemV1Script')){
+            const overdrive=document.createElement('script');
+            overdrive.id='ttdOverdriveSystemV1Script';
+            overdrive.src=window.__TTD_ASSET_URL('/online/overdrive-system-v1.js');
+            overdrive.async=false;
+            document.head.appendChild(overdrive);
+          }
           if(!document.getElementById('ttdCollectionAuthorityScript')){
             const authority=document.createElement('script');
             authority.id='ttdCollectionAuthorityScript';
