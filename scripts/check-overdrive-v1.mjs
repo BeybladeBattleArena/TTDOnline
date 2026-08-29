@@ -89,7 +89,7 @@ for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHit
 
 // OD battle controls and inspection.
 for(const marker of [
-  'ttdBattleActionRow','ttdOdCast1','ttdOdCast2','OD ${index+1}','ttdOdCastButton.castable','ttdOdCastable','ttdOdUncastable',
+  'ttdBattleActionRow','ttdOdCast${index+1}','OD ${index+1}','ttdOdCastButton.castable','ttdOdCastable','ttdOdUncastable',
   'abilityApi()?.activateSlot?.(index)','showOdInfo','Nonelemental','ttdOdInfoFlavor','.ttdOverdriveBattleSlot.filled','.ttdOdCard',
 ])must(collectionUi.includes(marker),`Overdrive control/inspection UI missing: ${marker}`);
 must(loader.includes('/online/collection-actions-ui-v1.js'),'Game loader does not inject collection/Overdrive action UI.');
