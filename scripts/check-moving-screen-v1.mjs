@@ -78,13 +78,19 @@ for(const marker of [
   'function drawForeground(',
   'function summonDie()',
   'function mergeDice(',
+  'a.awaitingBranch||b.awaitingBranch||!a.zoneId||!b.zoneId',
   'function startSlotMove(',
   'function playerRouteOptions(',
   'function shortestPath(',
   'function chooseAiBranch(',
   'chooseAiBranch(ent);',
+  'function pickCombatTarget(',
+  'if(ent.moving||ent.airborne||ent.awaitingBranch||!ent.zoneId)return null',
+  'filter(h=>!h.moving&&!h.airborne&&!h.awaitingBranch&&!!h.zoneId)',
+  'if(!ent.alive||ent.moving||ent.airborne||ent.awaitingBranch||!ent.zoneId)return',
   'function breakDestructible(',
   'function barrierAttackable(',
+  '!ent.awaitingBranch&&!!ent.zoneId&&worldDist(ent.world,d)<=ent.range+70',
   'function losBlocked(a,b,ignoreDestructibleId=null)',
   'd.id!==ignoreDestructibleId',
   '!losBlocked(ent.world,d,d.id)',
@@ -101,6 +107,7 @@ for(const marker of [
   'runtime.lives=Math.max(0,runtime.lives-1)',
   "if(runtime.lives<=0)finish(false,'All 10 lives were lost.')",
   'function pickupFlag(',
+  'ent.awaitingBranch||!ent.zoneId||!runtime.flag',
   'function dropFlagFromHolder(',
   'function beginFlagRespawn(',
   "runtime.kills=Math.min(runtime.killGoal,runtime.kills+1)",
@@ -125,4 +132,4 @@ must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen v4 verified: normal game shell, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
+console.log('Moving Screen v4 verified: normal game shell, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, safe-surface-only combat/actions, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
