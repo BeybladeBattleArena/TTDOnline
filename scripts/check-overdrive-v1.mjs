@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { execFileSync } from 'node:child_process';
 
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
 const catalog=JSON.parse(fs.readFileSync('overdrivefile.json','utf8'));
@@ -8,6 +9,10 @@ const backend=fs.readFileSync('functions/overdrive-v1.js','utf8');
 const client=fs.readFileSync('online/overdrive-client-v1.js','utf8');
 const runtime=fs.readFileSync('online/overdrive-system-v1.js','utf8');
 const abilities=fs.readFileSync('online/overdrive-abilities-v1.js','utf8');
+const collectionServer=fs.readFileSync('functions/collection-actions-v1.js','utf8');
+const collectionClient=fs.readFileSync('online/collection-actions-client-v1.js','utf8');
+const collectionUi=fs.readFileSync('online/collection-actions-ui-v1.js','utf8');
+const singleplayerClient=fs.readFileSync('online/singleplayer-client-v6.js','utf8');
 const shell=fs.readFileSync('online/shell-ui-v9.js','utf8');
 const loader=fs.readFileSync('online/game-loader.html','utf8');
 const main=fs.readFileSync('functions/main-v6.js','utf8');
@@ -15,6 +20,10 @@ const main=fs.readFileSync('functions/main-v6.js','utf8');
 new vm.Script(backend,{filename:'functions/overdrive-v1.js'});
 new vm.Script(runtime,{filename:'online/overdrive-system-v1.js'});
 new vm.Script(abilities,{filename:'online/overdrive-abilities-v1.js'});
+new vm.Script(collectionServer,{filename:'functions/collection-actions-v1.js'});
+new vm.Script(collectionUi,{filename:'online/collection-actions-ui-v1.js'});
+execFileSync(process.execPath,['--input-type=module','--check'],{input:collectionClient,stdio:['pipe','pipe','pipe']});
+
 must(JSON.stringify(catalog)===JSON.stringify(mirror),'Overdrive server catalog mirror drifted from overdrivefile.json.');
 must(catalog.schemaVersion===1,'Overdrive catalog schema version must remain 1.');
 must(catalog.system?.baseDP===45,'Base player DP must remain 45.');
@@ -77,6 +86,40 @@ for(const marker of [
 for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHitKnockback','relaunchAirborne']){
   must(JSON.stringify(catalog).includes(marker),`Overdrive ability data missing: ${marker}`);
 }
+
+for(const marker of [
+  'ttdBattleActionRow','ttdOdCast${index+1}','OD ${index+1}','ttdOdCastButton.castable','ttdOdCastable','ttdOdUncastable',
+  'abilityApi()?.activateSlot?.(index)','showOdInfo','Nonelemental','ttdOdInfoFlavor','.ttdOverdriveBattleSlot.filled','.ttdOdCard',
+])must(collectionUi.includes(marker),`Overdrive control/inspection UI missing: ${marker}`);
+must(loader.includes('/online/collection-actions-ui-v1.js'),'Game loader does not inject collection/Overdrive action UI.');
+
+for(const marker of [
+  'exports.mergeAllDiceV1','scope===\'class\'','for(let cls=1;cls<10;cls++)','while(queue.length>=2)','resolveAlias',
+  'returnedByMergeAll','enchants:[null,null,null,null]','operation:\'merge_all\'','beforeCounts','afterCounts',
+])must(collectionServer.includes(marker),`Merge All backend contract missing: ${marker}`);
+for(const marker of [
+  'ttdMergeAllBtn','Merge All','All of \'em','Only this Class (C${mergeSelection.classLevel})','ttdMergeAllActive',
+  'ttd:collection-mergeall-request','ttd:collection-mergeall-result',
+  'All slotted gems were removed from each instance of these dice in order to merge all selected instances.',
+])must(collectionUi.includes(marker),`Merge All UI contract missing: ${marker}`);
+
+for(const marker of [
+  'common:25','rare:50','unique:100','legendary:150','1:30','2:45','3:80','4:100','5:120','6:140','7:160',
+  'exports.sellDieV1','returnedBySale','operation:\'sell_die\'','pipsAwarded','pipsBalance',
+  'Sale values are currently configured through Class 7 only.',
+])must(collectionServer.includes(marker),`Die sale backend contract missing: ${marker}`);
+for(const marker of [
+  'Sell for ${value.toLocaleString()} Pips','Are you sure you want to sell','Transaction Successful','ttd:collection-sell-request','ttd:collection-sell-result',
+  'Sale value not configured for C${instance.cls}','window.account.gold=Number(m.pipsBalance)',
+])must(collectionUi.includes(marker),`Die sale UI contract missing: ${marker}`);
+
+must(main.includes("require('./collection-actions-v1')"),'Collection action module is not loaded by main-v6.js.');
+must(main.includes('mergeAllDiceV1: collectionActions.mergeAllDiceV1'),'Merge All callable is not explicitly exported from main-v6.js.');
+must(main.includes('sellDieV1: collectionActions.sellDieV1'),'Sell callable is not explicitly exported from main-v6.js.');
+must(!main.includes('...collectionActions'),'Collection action helper exports must never be spread into the Firebase function surface.');
+must(singleplayerClient.includes("import './collection-actions-client-v1.js?v=1'"),'Online shell client chain does not load collection mutation client.');
+for(const marker of ['mergeAllDiceV1','sellDieV1','ttd:collection-mergeall-result','ttd:collection-sell-result'])must(collectionClient.includes(marker),`Collection authenticated client contract missing: ${marker}`);
+
 for(const forbidden of ['classLevel','pipLevel','jewelSlots','enchantSlots','upgradeOverdrive','mergeOverdrive']){
   must(!runtime.includes(forbidden)&&!backend.includes(forbidden)&&!abilities.includes(forbidden),`Overdrive WYSIWYG contract regressed with progression marker: ${forbidden}`);
 }
@@ -84,4 +127,4 @@ must(loader.includes('/online/overdrive-system-v1.js'),'Game loader does not inj
 must(loader.includes('/online/overdrive-abilities-v1.js'),'Game loader does not inject playable Overdrive abilities.');
 must(shell.includes("import('/online/overdrive-client-v1.js?v=1')"),'Online shell does not load the Overdrive authenticated client.');
 
-console.log('Overdrive v1 content verified: Moon Wolf and Gaia Crash preserve their starter acquisition, DP costs, combat/targeting contracts, legacy-account rollout, and WYSIWYG no-progression rules.');
+console.log('Overdrive/collection action contract verified: explicit OD 1/OD 2 casting, warm-purple readiness, shared inspection, gem-safe cascading Merge All, and authoritative C1-C7 die sales are wired without changing approved assets.');

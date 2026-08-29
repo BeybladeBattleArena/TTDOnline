@@ -38,7 +38,7 @@
       // Final Collection authority, Overdrive battle abilities and page-entry polish are
       // injected after the transformed game document exists. They are independent of the
       // synchronous bridge chain so an earlier optional bridge error cannot prevent the
-      // portrait UI, Overdrive content, or page-reset contract.
+      // portrait UI, Overdrive content, collection transactions, or page-reset contract.
       let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
         collectionAuthorityAttempts+=1;
@@ -57,6 +57,13 @@
             abilities.src=window.__TTD_ASSET_URL('/online/overdrive-abilities-v1.js');
             abilities.async=false;
             document.head.appendChild(abilities);
+          }
+          if(!document.getElementById('ttdCollectionActionsUiV1Script')){
+            const actions=document.createElement('script');
+            actions.id='ttdCollectionActionsUiV1Script';
+            actions.src=window.__TTD_ASSET_URL('/online/collection-actions-ui-v1.js');
+            actions.async=false;
+            document.head.appendChild(actions);
           }
           if(!document.getElementById('ttdCollectionAuthorityScript')){
             const authority=document.createElement('script');
