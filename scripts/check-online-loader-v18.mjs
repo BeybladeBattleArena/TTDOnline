@@ -30,6 +30,7 @@ const expectedUrls=[
   '/online/merge-bridge-v6.js?v=6','/online/run-ui-bridge-v21.js?v=21','/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9','/online/interaction-effects-v10.js?v=10','/online/collection-portrait-fit-v16.js?v=16',
   '/online/deck-editor-v18.js?v=18','/online/item-assets-v1.js?v=4','/online/avatar-inventory-v22.js?v=22','/online/world-items-v1.js?v=1',
+  '/online/moving-screen-neon-rooftops-v2.js?v=2','/online/moving-screen-engine-v3.js?v=3',
 ];
 let lastRuntimeIndex=-1;
 for(const url of expectedUrls){
@@ -38,6 +39,8 @@ for(const url of expectedUrls){
   must(index>lastRuntimeIndex,`native runtime authority order regressed at ${url}.`);
   lastRuntimeIndex=index;
 }
+must(!runtime.includes('/online/moving-screen-engine-v1.js?v=1'),'retired Moving Screen v1 engine must not be runtime-loaded beside v3.');
+must(!runtime.includes('/online/moving-screen-engine-v2.js?v=2'),'superseded Moving Screen v2 engine must not be runtime-loaded beside v3.');
 for(const marker of [
   "link.rel='preload'","link.as='script'",'script.async=false',"window.addEventListener('error',onRuntimeError,true)",
   "event.preventDefault?.()",'failed without blocking later bridges.','bridge-load-error','bridge-runtime-error',
@@ -76,4 +79,4 @@ for(const marker of ['data-mode="loader-v9"','name="ttd-build" content="release-
   must(loaderHtml.includes(marker),`loader HTML freshness/asset contract missing: ${marker}`);
 }
 
-console.log('Loader v19 recovery contract verified: the native loader waits for the audited nested Test Map/presentation bootstrap before declaring bridges ready; item/world authorities execute in explicit order; battle hooks retain stable publication; and game-loader.js still performs no runtime source reconstruction.');
+console.log('Loader v19 recovery contract verified: native bridge readiness remains ordered and source-direct; item/world authorities and Moving Screen v2-stage/v3-engine load explicitly; battle hooks remain stable; and game-loader.js still performs no runtime source reconstruction.');

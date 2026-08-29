@@ -19,9 +19,13 @@
     // Item art is data-only and must exist before either inventory authority renders.
     '/online/item-assets-v1.js?v=4',
     '/online/avatar-inventory-v22.js?v=22',
-    // World items deliberately loads last so its wrappers extend the final Shop/Inventory
-    // renderers instead of being overwritten by the avatar inventory authority.
+    // World items deliberately loads after the inventory authorities so its wrappers extend the
+    // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
+    // Moving Screen playtest is direct committed source. Stage data loads before the engine and
+    // neither authority rewrites, evals, or patches the core game document.
+    '/online/moving-screen-neon-rooftops-v2.js?v=2',
+    '/online/moving-screen-engine-v3.js?v=3',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
