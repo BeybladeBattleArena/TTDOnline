@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import * as espree from 'espree';
 
-const enginePath='online/moving-screen-engine-v2.js';
+const enginePath='online/moving-screen-engine-v3.js';
 const stagePath='online/moving-screen-neon-rooftops-v2.js';
 const loaderPath='online/runtime-bridge-loader-v1.js';
 const specPath='docs/moving-screen-v2-playtest.md';
@@ -20,6 +20,7 @@ for(const [file,source] of [[enginePath,engine],[stagePath,stageSource]]){
     must(!forbidden.test(source),`${file} must remain direct committed source with no tray/core source-patching dependency: ${forbidden}`);
   }
 }
+must(!/\breturn\d/.test(engine),'Moving Screen engine may not contain accidental compact return identifiers such as return175.');
 
 const context={window:{}};
 vm.createContext(context);
@@ -63,15 +64,19 @@ const intactAfterBillboardBreak=new Set(stage.destructibles.map(d=>d.id).filter(
 must(routeExists({broken:new Set(['billboard_brace']),intact:intactAfterBillboardBreak}),'Breaking the billboard brace must replace rather than destroy upward progression.');
 
 for(const marker of [
-  'window.__TTD_MOVING_SCREEN_V2 = true',
+  'window.__TTD_MOVING_SCREEN_V3 = true',
   "const STAGE_ID='neon_rooftops_v2'",
   'const MOVING_AS_MULT=.85',
+  "if(r==='close')return 175",
+  "if(r==='mid')return 300",
+  "if(r==='map')return 850",
   'function summonDie()',
   'function mergeDice(',
   'function startSlotMove(',
   'function playerRouteOptions(',
   'function chooseAiBranch(',
   'function shortestPath(',
+  '// Planning is topological. Only the edge an entity is about to traverse receives the live camera safety test in startMove().',
   'function breakDestructible(',
   'function guardForZone(',
   'function applyImpulse(',
@@ -92,9 +97,9 @@ for(const marker of [
   'function beginFlagRespawn()',
   'function updateFlag(',
   "if(runtime.kills>=runtime.killGoal&&playerHoldsFlag())finish(true",
-  "runtime.kills++",
+  'runtime.kills++',
   "creditFaction==='player'||(e.lastHitFaction==='player'&&e.lastHitT<=3)",
-  "p?.presentOutcome",
+  'p?.presentOutcome',
   "p.presentOutcome(win?'clear':'fail'",
   'function drawFlag(',
   'function drawSafeOverlay(',
@@ -102,14 +107,17 @@ for(const marker of [
   "moving.innerHTML='<h3>Moving Screen</h3>",
   "future.innerHTML='<h3>King of the Hill</h3>",
   "deck:activeDeck().map(e=>({...e}))",
-])must(engine.includes(marker),`Moving Screen v2 gameplay/presentation contract missing: ${marker}`);
+  'function currentSummonZones()',
+  'Math.abs(z.y-runtime.cameraY)<=band',
+])must(engine.includes(marker),`Moving Screen v3 gameplay/presentation contract missing: ${marker}`);
 
 const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=2'";
-const engineUrl="'/online/moving-screen-engine-v2.js?v=2'";
+const engineUrl="'/online/moving-screen-engine-v3.js?v=3'";
 must(loader.includes(stageUrl),'Runtime loader does not load Moving Screen v2 stage as committed source.');
-must(loader.includes(engineUrl),'Runtime loader does not load Moving Screen v2 engine as committed source.');
-must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl),'Moving Screen v2 stage data must load before its engine.');
-must(!loader.includes("'/online/moving-screen-engine-v1.js?v=1'"),'Retired Moving Screen v1 engine must not load alongside v2.');
+must(loader.includes(engineUrl),'Runtime loader does not load hardened Moving Screen v3 engine as committed source.');
+must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl),'Moving Screen stage data must load before its v3 engine.');
+must(!loader.includes("'/online/moving-screen-engine-v1.js?v=1'"),'Retired Moving Screen v1 engine must not load alongside v3.');
+must(!loader.includes("'/online/moving-screen-engine-v2.js?v=2'"),'Superseded Moving Screen v2 engine must not load alongside v3.');
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 
 for(const phrase of [
@@ -127,6 +135,6 @@ for(const phrase of [
   'No normal 15-tile dice tray',
   '15% attack-speed penalty',
   'King of the Hill',
-])must(spec.includes(phrase),`Moving Screen v2 written contract missing: ${phrase}`);
+])must(spec.includes(phrase),`Moving Screen v3 written contract missing: ${phrase}`);
 
-console.log('Moving Screen v2 playtest contract verified: 10-life stock, 3+5 empty-field fail countdown, 60-defeat plus physical flag victory, flag AI/drop/respawn/merge behavior, direct world summoning, graph routing, death planes, destructibles, displacement and normal outcome presentation are guarded.');
+console.log('Moving Screen v3 playtest contract verified: hardened runtime, 10-life stock, 3+5 empty-field fail countdown, 60-defeat plus physical flag victory, flag AI/drop/respawn/merge behavior, camera-band world summoning, graph routing, death planes, destructibles, displacement and normal outcome presentation are guarded.');
