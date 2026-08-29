@@ -8,7 +8,125 @@
     "passiveDrivePerSecond": 1.25,
     "playerHpDrivePerDamage": 0.8,
     "towerLifeDrivePerLife": 8,
-    "dieDamageDrivePerDamage": 0.08
+    "dieDamageDrivePerDamage": 0.08,
+    "starterChoiceCount": 1,
+    "starterOptionCount": 4,
+    "starterCompletionLevelMax": 10,
+    "releasedStarterKeys": [
+      "moonwolfsummon",
+      "gaiacrash"
+    ]
   },
-  "dice": {}
+  "dice": {
+    "moonwolfsummon": {
+      "name": "Protect me, Moon Wolf!",
+      "element": "Neutral",
+      "dpCost": 20,
+      "flavor": "Summon a Moon Wolf from the die to fight alongside you.",
+      "description": "Summons a durable allied Moon Wolf that blocks enemies, draws nearby aggression, and attacks independently.",
+      "acquisition": {
+        "kind": "starter",
+        "starterChoiceGroup": "starter-overdrive-v1",
+        "starterChoiceCount": 1,
+        "starterOptionCount": 4,
+        "eventualGrantAll": true,
+        "completionByLevel": 10,
+        "rollout": "released-2-of-4"
+      },
+      "special": {
+        "kind": "moonWolfSummon",
+        "oneActivePerPlayer": true,
+        "sizeReference": "standard-ogre",
+        "hp": 210,
+        "attack": 24,
+        "damageReduction": 0.03,
+        "weak": ["metal", "holy"],
+        "resist": ["shadow", "nature", "fire"],
+        "weaknessMultiplier": 1.5,
+        "resistanceMultiplier": 0.5,
+        "deathFadeSeconds": 1.2,
+        "attacks": {
+          "dashAndSnack": {
+            "category": "physical",
+            "range": "melee",
+            "target": "frontmost-single",
+            "weights": [0.85, 1.05],
+            "majorBossWeights": [1.05, 1.1],
+            "biteGapSeconds": 0.35,
+            "stunSeconds": 0.8,
+            "restrainNonMajorBoss": true
+          },
+          "howl": {
+            "category": "status",
+            "target": "360-aoe",
+            "confusionChance": 0.4,
+            "confusionSeconds": 2.4,
+            "knockback": 7
+          },
+          "clawCombo": {
+            "category": "physical",
+            "range": "melee",
+            "target": "frontmost-single",
+            "weights": [1.05, 1.2],
+            "secondHitKnockback": 15,
+            "hitGapSeconds": 0.22
+          },
+          "raidKick": {
+            "category": "physical",
+            "range": "melee-wide",
+            "target": "frontmost-cluster",
+            "weight": 0.95,
+            "windupSeconds": 0.5,
+            "hitRadius": 38,
+            "launch": {
+              "rise": 0.18,
+              "hold": 0.08,
+              "fall": 0.36,
+              "height": 34,
+              "juggleable": true
+            }
+          }
+        }
+      }
+    },
+    "gaiacrash": {
+      "name": "Gaia Crash!",
+      "element": "Earth",
+      "dpCost": 15,
+      "flavor": "Rip the earth asunder just to spite your enemy.",
+      "description": "Place a medium Earth upheaval that damages and launches enemies, relaunching targets that are already airborne.",
+      "acquisition": {
+        "kind": "starter",
+        "starterChoiceGroup": "starter-overdrive-v1",
+        "starterChoiceCount": 1,
+        "starterOptionCount": 4,
+        "eventualGrantAll": true,
+        "completionByLevel": 10,
+        "rollout": "released-2-of-4"
+      },
+      "special": {
+        "kind": "gaiaCrash",
+        "damage": 42,
+        "damageTuning": "provisional-moderate",
+        "damageCategory": "special",
+        "affinities": {"earth": 1},
+        "areaReference": "3x3-standard-ogres",
+        "radiusFractionOfBattleWidth": 0.15,
+        "radiusMin": 48,
+        "radiusMax": 78,
+        "reticleArmSeconds": 0.45,
+        "countdownSeconds": 3,
+        "tapToActivateEarly": true,
+        "draggable": true,
+        "launch": {
+          "rise": 0.2,
+          "hold": 0.08,
+          "fall": 0.4,
+          "height": 42,
+          "juggleable": true,
+          "relaunchAirborne": true
+        }
+      }
+    }
+  }
 }
