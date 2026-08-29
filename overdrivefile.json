@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "system": {
+    "baseHP": 50,
+    "baseDP": 45,
+    "baseLuck": 0,
+    "driveMax": 100,
+    "passiveDrivePerSecond": 1.25,
+    "playerHpDrivePerDamage": 0.8,
+    "towerLifeDrivePerLife": 8,
+    "dieDamageDrivePerDamage": 0.08
+  },
+  "dice": {}
+}
