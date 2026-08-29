@@ -20,12 +20,23 @@ if(failSafePos<0||legacyPos<0||failSafePos>legacyPos)throw new Error('Fail-safe 
 
 requireMarkers(server,[
   "const VALID_MODES=new Set(['survival','bossrush','sudden','adventure','endlesshorde'])",
+  "const LEGACY_DIE_KEYS=Object.freeze({arrow:'skyhorn'})",
+  "function canonicalDieKey(key){return LEGACY_DIE_KEYS[key]||key;}",
+  'const key=canonicalDieKey(slot.key)',
+  'const canonicalStoredKey=canonicalDieKey(storedKey)',
+  'canonicalStoredKey!==slots[index].key',
+  'keyMigratedFrom:storedKey',
+  'if(rawSlots[index]?.key!==slots[index].key)deckNeedsMigration=true',
+  'if(deckNeedsMigration)',
+  'const key=canonicalDieKey(data.key)',
   'Math.min(count-1,candidate)',
   'repair.v6ActiveDeckIdx=active',
   "throw new HttpsError('failed-precondition','Your active deck must contain five dice.')",
   'exports.beginRun=onCall',
   "status:'active'",
 ],'run-start server');
+if(server.includes("snap.data()?.key!==slots[index].key"))throw new Error('Run-start must not raw-compare persisted legacy die keys against canonical deck keys.');
+if(server.includes('key:data.key,'))throw new Error('Friend support must not publish a legacy die key.');
 requireMarkers(serverEntry,["const runStart = require('./run-start-v19');",'...deckSocial, ...runStart'],'function entrypoint');
 
-console.log('Run-start v19 verified: Zombie Horde and Adventure share a fail-safe ticket path, stale active-deck indices self-repair, and every beginRun request receives success or error.');
+console.log('Run-start v20 verified: Zombie Horde and Adventure share a fail-safe ticket path, stale active-deck indices self-repair, Arrow/Skyhorn identity canonicalizes and self-heals before ownership validation, friend support publishes canonical keys, and every beginRun request receives success or error.');
