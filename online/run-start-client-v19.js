@@ -34,6 +34,7 @@ window.addEventListener('message',async(event)=>{
     const result=await httpsCallable(functions,'beginRun')({
       modeKey:message.modeKey,
       difficultyKey:message.difficultyKey||null,
+      mapKey:message.mapKey||null,
       campaign:!!message.campaign,
     });
     frame.contentWindow.postMessage({type:'ttd:v6-run-begin-result',requestId,...(result.data||{})},location.origin);
