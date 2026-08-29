@@ -56,8 +56,11 @@ for(const marker of [
   "document.getElementById('laneWrap')",
   "document.getElementById('tray')",
   "showCore('game')",
-  '#gameScreen.ttd-moving-screen-v4{display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important',
-  '#gameScreen.ttd-moving-screen-v4 #laneWrap{grid-row:2',
+  '#gameScreen.ttd-moving-screen-v4{display:flex!important;flex-direction:column!important;min-height:0!important',
+  '#gameScreen.ttd-moving-screen-v4 #hud{order:0;flex:0 0 auto!important',
+  '#gameScreen.ttd-moving-screen-v4 #laneWrap{order:1;',
+  'flex:1 1 0!important;overflow:hidden!important',
+  '#gameScreen.ttd-moving-screen-v4 #tray{order:2;display:block!important;flex:0 0 auto!important',
   '#gameScreen.ttd-moving-screen-v4 #boardWrap{display:none!important;}',
   '#gameScreen.ttd-moving-screen-v4 #tray>*:not(#ttdMsControlsV4){display:none!important;}',
   'env(safe-area-inset-bottom)',
@@ -67,6 +70,12 @@ for(const marker of [
   "controls.querySelector('#ttdMsSummonV4').addEventListener('click',summonDie)",
   "result.querySelector('button').addEventListener('click',()=>exit())",
   "showCore('mode')",
+  'resizeObserver:null',
+  "if(typeof ResizeObserver==='function')",
+  'runtime.resizeObserver=new ResizeObserver(()=>resize())',
+  'runtime.resizeObserver.observe(runtime.lane)',
+  'r.resizeObserver?.disconnect?.()',
+  'requestAnimationFrame(resize)',
   'function projectionMetrics()',
   'sy:clamp(H/430,1.05,2.55)',
   'depth=clamp((Number(z)+260)/520,0,1)',
@@ -114,6 +123,7 @@ for(const marker of [
   "runtime.kills>=runtime.killGoal&&playerHoldsFlag()",
   "p.presentOutcome(win?'clear':'fail'",
   "future.innerHTML='<h3>King of the Hill</h3>",
+  'viewport:{w:runtime.w,h:runtime.h}',
 ])must(engine.includes(marker),`Moving Screen v4 gameplay/runtime contract missing: ${marker}`);
 
 function projectPhone(x,z,y,cameraY=stage.cameraStops[0],W=390,H=650){const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const sx=clamp(W/520,.58,1.05),sy=clamp(H/430,1.05,2.55),baseY=H*.72,depth=clamp((z+260)/520,0,1),persp=.78+depth*.28,relX=x-stage.cameraX,relY=y-cameraY;return{x:W*.50+relX*sx*persp,y:baseY+z*.28*sx-relY*sy-relX*.035*sx};}
@@ -132,4 +142,4 @@ must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen v4 verified: normal game shell, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, safe-surface-only combat/actions, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
+console.log('Moving Screen v4 verified: native flex game-shell layout, live-resizing battlefield canvas, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, safe-surface-only combat/actions, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
