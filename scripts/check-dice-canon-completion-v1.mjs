@@ -4,6 +4,10 @@ const src = fs.readFileSync('random-dice-game-33.html','utf8');
 const must = (needle,label)=>{if(!src.includes(needle))throw new Error(`Canon regression: ${label}`);};
 const mustNot = (needle,label)=>{if(src.includes(needle))throw new Error(`Canon regression: ${label}`);};
 
+// Materialized source must be structurally clean.
+mustNot("const d = DICE[die.key]; const puMult = 1+die.pu*0.16;",'obsolete effDmg body must not survive below canonical effDmg');
+mustNot("transfer:f.transfer",'obsolete recursive Fracture transfer body must not survive');
+
 // Skyhorn sequence and cancellation canon.
 must("canonFireSkyRapid(idx,die,s.shot)",'Skyhorn Rapid must receive real tile, die and shot index');
 mustNot("canonFireSkyRapid(die,s)",'legacy malformed Skyhorn Rapid call must not return');
@@ -55,8 +59,17 @@ must("function drawCanonStatusAura",'modern status aura renderer must exist');
 must("drawCanonStatusAura(e,p.x,p.y)",'enemy rendering must invoke modern status visuals');
 must("function drawCanonWorldEffects",'persistent canon world renderer must exist');
 must("drawCanonWorldEffects();",'battle renderer must invoke persistent canon effects');
-for(const fx of ["case 'skyRapid'","case 'skyPower'","case 'widowling'","case 'undineSong'","case 'fullBloom'","case 'padlockSeal'","case 'lionBeam'","case 'lionRoar'","case 'aceFlat'","case 'grandSlam'","case 'pinchHit'","case 'nuclear'"]) must(fx,`${fx} presentation must exist`);
+must("kind==='canonLight'",'Light must render its live Radiance geometry');
+must("kind==='canonGrowth'",'Growth must render Seed-to-Bloom maturation art');
+for(const fx of [
+  "case 'ironFall'","case 'fractureStrike'","case 'spatialBolt'","case 'mineExtract'","case 'richVein'",
+  "case 'mimicMerge'","case 'jokerMask'","case 'growthBloom'","case 'snowfallCast'","case 'radiancePulse'",
+  "case 'skyRapid'","case 'skyPower'","case 'widowling'","case 'undineSong'","case 'fullBloom'",
+  "case 'padlockSeal'","case 'lionBeam'","case 'lionRoar'","case 'aceFlat'","case 'grandSlam'",
+  "case 'pinchHit'","case 'nuclear'"
+]) must(fx,`${fx} presentation must exist`);
 must("canonTileStateBadge(die)",'board tiles must expose canonical build-up/hold states');
+must("canonTileMotif(die)",'board tiles must expose non-text canonical motifs');
 must("HOLD READY",'full hold gauges must be visibly announced');
 
 console.log('Dice canon completion regression guard passed.');
