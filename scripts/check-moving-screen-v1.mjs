@@ -27,6 +27,7 @@ const stage=context.window.TTDMovingScreenStages?.neon_rooftops_v2;
 must(stage,'Neon Rooftops v2 stage authority did not register.');
 must(stage.tiers?.length===4,'Moving Screen must retain four major visual tiers.');
 must(stage.cameraStops?.length>=7,'Moving Screen needs multiple camera pauses across the four tiers.');
+must(stage.cameraStops?.[0]===85,'Opening camera stop must preserve reliable phone summon/enemy-spawn room.');
 must(stage.zones?.length>=14,'Moving Screen needs enough safe surfaces for meaningful route choice.');
 must(stage.zones.some(z=>z.choke&&z.slots<=2),'At least one constrained two-slot choke point is required.');
 must(stage.zones.filter(z=>z.summon).length>=4,'Each major tier needs a direct-world summon surface.');
@@ -80,7 +81,13 @@ for(const marker of [
   'function startSlotMove(',
   'function playerRouteOptions(',
   'function shortestPath(',
+  'function chooseAiBranch(',
+  'chooseAiBranch(ent);',
   'function breakDestructible(',
+  'function barrierAttackable(',
+  'function losBlocked(a,b,ignoreDestructibleId=null)',
+  'd.id!==ignoreDestructibleId',
+  '!losBlocked(ent.world,d,d.id)',
   'function applyImpulse(',
   'function updateDeathPlanes()',
   "if(p.x<0||p.x>runtime.w||p.y<0||p.y>runtime.h)killEntity(e,'deathPlane',null)",
@@ -102,12 +109,11 @@ for(const marker of [
   "future.innerHTML='<h3>King of the Hill</h3>",
 ])must(engine.includes(marker),`Moving Screen v4 gameplay/runtime contract missing: ${marker}`);
 
-// Reproduce the v4 projection numerically for a narrow phone battlefield. The current section must
-// be visible, the next major roof may peek in, and higher tiers must remain outside the death plane.
 function projectPhone(x,z,y,cameraY=stage.cameraStops[0],W=390,H=650){const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const sx=clamp(W/520,.58,1.05),sy=clamp(H/430,1.05,2.55),baseY=H*.72,depth=clamp((z+260)/520,0,1),persp=.78+depth*.28,relX=x-stage.cameraX,relY=y-cameraY;return{x:W*.50+relX*sx*persp,y:baseY+z*.28*sx-relY*sy-relX*.035*sx};}
 const lower=stage.zones.find(z=>z.id==='roof1_main'),second=stage.zones.find(z=>z.id==='roof2_west'),third=stage.zones.find(z=>z.id==='roof3_main'),final=stage.zones.find(z=>z.id==='roof4_final');
 const P1=projectPhone(lower.x,lower.z,lower.y),P2=projectPhone(second.x,second.z,second.y),P3=projectPhone(third.x,third.z,third.y),PF=projectPhone(final.x,final.z,final.y);
 must(P1.y>650*.48&&P1.y<650*.90,'Phone framing must put the current lower rooftop in the playable lower half.');
+must(P1.y<650*.70,'Opening Tier-1 enemy-spawn surface must fit above the conservative spawn cutoff on a phone viewport.');
 must(P2.y>-80&&P2.y<650*.30,'The next major rooftop should only peek near the upper boundary at the first camera stop.');
 must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final tiers at the opening camera stop.');
 
@@ -119,4 +125,4 @@ must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen v4 verified: normal game shell, phone-safe controls, Adventure-style pseudo-3D projection, camera framing, direct summoning, graph movement, combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
+console.log('Moving Screen v4 verified: normal game shell, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
