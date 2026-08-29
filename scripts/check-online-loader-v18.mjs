@@ -30,12 +30,13 @@ const expectedUrls=[
   '/online/merge-bridge-v6.js?v=6','/online/run-ui-bridge-v21.js?v=21','/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9','/online/interaction-effects-v10.js?v=10','/online/collection-portrait-fit-v16.js?v=16',
   '/online/deck-editor-v18.js?v=18','/online/item-assets-v1.js?v=4','/online/avatar-inventory-v22.js?v=22','/online/world-items-v1.js?v=1',
-  '/online/moving-screen-neon-rooftops-v2.js?v=2','/online/moving-screen-engine-v4.js?v=5',
+  '/online/moving-screen-neon-rooftops-v2.js?v=2','/online/moving-screen-engine-v4.js?v=6',
 ];
 let lastRuntimeIndex=-1;
 for(const url of expectedUrls){const index=runtime.indexOf(url);must(index>=0,`native runtime bridge order is missing ${url}.`);must(index>lastRuntimeIndex,`native runtime authority order regressed at ${url}.`);lastRuntimeIndex=index;}
 for(const retired of ['/online/moving-screen-engine-v1.js?v=1','/online/moving-screen-engine-v2.js?v=2','/online/moving-screen-engine-v3.js?v=3'])must(!runtime.includes(retired),`retired Moving Screen runtime must not load beside v4: ${retired}`);
-must(!runtime.includes('/online/moving-screen-engine-v4.js?v=4'),'Moving Screen visible-battlefield hotfix must not reuse the cached v4 query key.');
+must(!runtime.includes('/online/moving-screen-engine-v4.js?v=4'),'Moving Screen hotfix must not reuse the cached v4 query key.');
+must(!runtime.includes('/online/moving-screen-engine-v4.js?v=5'),'Moving Screen full-viewport hotfix must not reuse the previous v5 query key.');
 for(const marker of [
   "link.rel='preload'","link.as='script'",'script.async=false',"window.addEventListener('error',onRuntimeError,true)",
   "event.preventDefault?.()",'failed without blocking later bridges.','bridge-load-error','bridge-runtime-error',
@@ -61,4 +62,4 @@ must(!game.includes("__ttdExposeCore('renderCollection'"),'obsolete renderCollec
 
 for(const marker of ['data-mode="loader-v9"','name="ttd-build" content="release-integrity-v15"','__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS',"cache:'no-store'",'/assets/game-assets.json',"window.__TTD_ASSET_URL('/online/game-loader.js')"])must(loaderHtml.includes(marker),`loader HTML freshness/asset contract missing: ${marker}`);
 
-console.log('Loader recovery contract verified: bridge readiness stays ordered/source-direct and Moving Screen loads its v2 stage followed only by the rebuilt v4 game-shell engine on the hotfix cache key.');
+console.log('Loader recovery contract verified: bridge readiness stays ordered/source-direct and Moving Screen loads its v2 stage followed only by the rebuilt v4 game-shell engine on the full-viewport hotfix cache key.');
