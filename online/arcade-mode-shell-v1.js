@@ -44,6 +44,7 @@
         overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;justify-content:flex-start;
       }
       .ttdArcadeLandingIntro{padding:2px 2px 4px;color:var(--mist,#97a0bd);font-size:11px;line-height:1.45;}
+      .ttdArcadeMapListV1{display:flex;flex-direction:column;gap:12px;}
       .ttdArcadeMapCard{position:relative;border-radius:14px;padding:15px;background:linear-gradient(155deg,var(--ink-850,#171c34),var(--ink-900,#12162a));border:1px solid var(--ink-700,#2a3160);text-align:left;box-shadow:0 8px 22px rgba(0,0,0,.16)}
       .ttdArcadeMapCard.available{border-color:rgba(243,212,145,.52);box-shadow:0 8px 24px rgba(0,0,0,.2),0 0 15px rgba(217,178,106,.08)}
       .ttdArcadeMapCard h3{font-family:'Cinzel',serif;margin:0 0 5px;font-size:16px;color:var(--gold-glow,#f3d491);padding-right:84px}
@@ -111,6 +112,12 @@
     send('ttd:v6-run-finish-request',{requestId,runId:currentRun.runId,...metrics,overlayKind});
   }
 
+  function movingMetrics(){
+    const state=window.TTDMovingScreen?.state||{};
+    const elapsed=currentRun?.startedAt?Math.max(0,(performance.now()-currentRun.startedAt)/1000):0;
+    return {completedWaves:Math.max(0,Number(state.stopIndex)||0),kills:Math.max(0,Number(state.kills)||0),coinGold:0,wave:Math.max(0,Number(state.stopIndex)||0),playSeconds:elapsed,typhoonDefeated:false,luckBonus:0};
+  }
+
   function startMovingMap(mapKey){
     if(mapKey!=='neon_rooftops_v2'){toast('That Moving Screen map is not ready yet.');return;}
     if(!window.TTDMovingScreen?.start){toast('Moving Screen is still loading.');return;}
@@ -133,8 +140,7 @@
     const title=String(box.querySelector('h2')?.textContent||'RUN COMPLETE');
     const reason=String(box.querySelector('p')?.textContent||'The Moving Screen run has ended.');
     box.classList.remove('show');
-    const elapsed=currentRun?.startedAt?Math.max(0,(performance.now()-currentRun.startedAt)/1000):0;
-    finishOnlineRun({completedWaves:Math.max(0,Number(state?.stopIndex)||0),kills:Math.max(0,Number(state?.kills)||0),coinGold:0,wave:Math.max(0,Number(state?.stopIndex)||0),playSeconds:elapsed,typhoonDefeated:false,luckBonus:0},'moving_screen');
+    finishOnlineRun(movingMetrics(),'moving_screen');
 
     const overlay=document.getElementById('gameOverlay');if(!overlay){box.classList.add('show');return;}
     const overlayTitle=document.getElementById('overlayTitle'),overlayText=document.getElementById('overlayText'),overlayStats=document.getElementById('overlayStats');
@@ -162,14 +168,21 @@
       return;
     }
     if(m.type==='ttd:v6-run-begin-result-error'&&pendingStart&&m.requestId===pendingStart.requestId){pendingStart=null;toast(m.message||'That Arcade run could not start.');return;}
-    if(m.type==='ttd:v6-run-finish-result'&&currentRun&&m.runId===currentRun.runId){currentRun.finishedResult=true;send('ttd:v6-refresh-request');return;}
-    if(m.type==='ttd:v6-run-finish-result-error'&&currentRun&&m.runId===currentRun.runId){toast(m.message||'Run rewards could not be finalized.');send('ttd:v6-refresh-request');return;}
+    if(m.type==='ttd:v6-run-finish-result'&&currentRun&&m.runId===currentRun.runId){
+      const manualExit=!!currentRun.manualExit;currentRun.finishedResult=true;send('ttd:v6-refresh-request');if(manualExit)currentRun=null;return;
+    }
+    if(m.type==='ttd:v6-run-finish-result-error'&&currentRun&&m.runId===currentRun.runId){const manualExit=!!currentRun.manualExit;toast(m.message||'Run rewards could not be finalized.');send('ttd:v6-refresh-request');if(manualExit)currentRun=null;return;}
   }
 
   function cleanupAfterCanonicalContinue(){
     if(!movingResultActive)return;
     movingResultActive=false;pendingStart=null;currentRun=null;
     try{window.TTDMovingScreen?.exit?.();}catch(error){console.error(error);}
+  }
+  function finalizeManualMovingExit(){
+    if(!currentRun||currentRun.kind!=='moving'||currentRun.finishing||movingResultActive)return;
+    currentRun.manualExit=true;finishOnlineRun(movingMetrics(),'moving_screen_exit');
+    setTimeout(()=>{if(currentRun?.manualExit)currentRun=null;},2500);
   }
 
   function installObservers(){
@@ -180,7 +193,10 @@
 
   installStyles();ensureScreens();ownArcadeCards();installObservers();
   window.addEventListener('message',onMessage,true);
-  document.addEventListener('click',(event)=>{if(event.target?.id==='overlayBtn')cleanupAfterCanonicalContinue();},true);
+  document.addEventListener('click',(event)=>{
+    if(event.target?.id==='ttdMsExitV4')finalizeManualMovingExit();
+    if(event.target?.id==='overlayBtn')cleanupAfterCanonicalContinue();
+  },true);
   [50,250,550,950,1500].forEach(ms=>setTimeout(()=>{ensureScreens();ownArcadeCards();installObservers();},ms));
 
   window.TTDArcadeModeShell=Object.freeze({
