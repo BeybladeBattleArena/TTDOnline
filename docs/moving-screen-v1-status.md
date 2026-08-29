@@ -11,4 +11,4 @@ The playtest mode has: Arcade Moving Screen entry plus future King of the Hill e
 
 The repository validators guard the active stage/engine, objective constants, connectivity, runtime compatibility, loader order, numeric range returns, camera-band summoning, and topological AI planning.
 
-Release note: the immediately preceding frozen candidate passed the complete GitHub Verify workflow, including `npm run check` and read-only validation. This status-only note does not alter gameplay code; release must still verify the exact merge candidate before production deployment.
+Release candidate verification: full GitHub Verify passed, including `npm run check` and read-only validation. Merge/deployment must use this code without gameplay source changes.
