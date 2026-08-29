@@ -22,13 +22,14 @@
     // World items deliberately loads after the inventory authorities so its wrappers extend the
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
-    // Moving Screen remains direct committed source. Stage data loads before the engine, and the
-    // presentation-only UI authority loads last. No source text is rewritten/evaluated.
-    // Stage v=3 carries the slower camera travel; UI v=1 adds the safe inset, loadout rail,
-    // pre-move direction chevrons, and highlighted route overlay.
-    '/online/moving-screen-neon-rooftops-v2.js?v=3',
+    // Moving Screen remains direct committed source. Stage data loads before the engine; the two
+    // presentation/input authorities load after it and never rewrite/eval engine source.
+    // Stage v=4 carries the 30-KO / lower-pressure topology expansion. UI v=1 owns loadout and
+    // selected-route emphasis; topology UI v=1 adds physical connector cues plus route tap/swipe.
+    '/online/moving-screen-neon-rooftops-v2.js?v=4',
     '/online/moving-screen-engine-v4.js?v=6',
     '/online/moving-screen-ui-v1.js?v=1',
+    '/online/moving-screen-topology-ui-v1.js?v=1',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
