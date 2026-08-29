@@ -135,11 +135,12 @@ must(P2.y>-80&&P2.y<650*.30,'The next major rooftop should only peek near the up
 must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final tiers at the opening camera stop.');
 
 const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=2'";
-const engineUrl="'/online/moving-screen-engine-v4.js?v=4'";
-must(loader.includes(stageUrl)&&loader.includes(engineUrl),'Runtime loader must load the v2 stage and rebuilt v4 engine.');
+const engineUrl="'/online/moving-screen-engine-v4.js?v=5'";
+must(loader.includes(stageUrl)&&loader.includes(engineUrl),'Runtime loader must load the v2 stage and rebuilt v4 engine using the hotfix cache key.');
 must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl),'Stage authority must load before Moving Screen v4.');
+must(!loader.includes('/online/moving-screen-engine-v4.js?v=4'),'Moving Screen hotfix may not reuse the cached broken v4 query key.');
 must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached-screen v3 runtime must not load in production.');
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen v4 verified: native flex game-shell layout, live-resizing battlefield canvas, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, safe-surface-only combat/actions, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
+console.log('Moving Screen v4 verified: native flex game-shell layout, live-resizing battlefield canvas, hotfix cache key, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, safe-surface-only combat/actions, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
