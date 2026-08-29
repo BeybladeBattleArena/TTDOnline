@@ -25,7 +25,7 @@
     // Moving Screen playtest is direct committed source. Stage data loads before the engine and
     // neither authority rewrites, evals, or patches the core game document.
     '/online/moving-screen-neon-rooftops-v2.js?v=2',
-    '/online/moving-screen-engine-v2.js?v=2',
+    '/online/moving-screen-engine-v3.js?v=3',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
