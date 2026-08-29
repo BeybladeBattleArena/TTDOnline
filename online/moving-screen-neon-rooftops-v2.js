@@ -10,7 +10,7 @@
     direction: 'up',
     cameraX: 520,
     cameraStops: [85, 270, 445, 625, 805, 990, 1160],
-    timing: { pause: 22, travel: 4.8 },
+    timing: { pause: 22, travel: 16.0 },
     world: { minX: 85, maxX: 960, minZ: -250, maxZ: 250, minY: 0, maxY: 1240 },
     objective: {
       startingLives: 10,
