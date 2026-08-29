@@ -47,7 +47,14 @@ async function run(){
   summon?.click();await sleep(240);
   report.afterSummon=window.TTDMovingScreen?.state;
   report.summoned=report.afterSummon?.players===1;
-  await sleep(3500);
+
+  let firstRoute=document.querySelector('#ttdMsRoutesV4 .ttdMsRouteBtnV4');report.firstRouteVisible=!!firstRoute;firstRoute?.click();await sleep(520);
+  const branchButtons=[...document.querySelectorAll('#ttdMsRoutesV4 .ttdMsRouteBtnV4')];
+  report.crossroadChoices=branchButtons.length>=2;
+  const awning=branchButtons.find(b=>/awning/i.test(b.textContent||''));report.awningChoiceVisible=!!awning;awning?.click();await sleep(750);
+  report.branchTraversalSurvived=window.TTDMovingScreen?.state?.players===1&&report.errors.length===0;
+
+  await sleep(2200);
   report.simulationAdvanced=(window.TTDMovingScreen?.state?.sp||0)>60;
   report.aiCrossroadSurvived=report.errors.length===0&&window.TTDMovingScreen?.state?.enemies>=1;
   document.getElementById('ttdMsExitV4')?.click();await sleep(100);
@@ -63,7 +70,7 @@ async function run(){
   report.failReturn=document.getElementById('modeScreen')?.classList.contains('active')===true&&!document.getElementById('ttdMsResultV4');
   report.noRuntimeErrors=report.errors.length===0;
  }catch(error){report.errors.push(String(error?.stack||error));}
- const checks=['card','gameActive','usesGameShell','canvas','legacyBoardHidden','controlsVisible','summonVisible','summonEnabled','battlefieldTall','summoned','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
+ const checks=['card','gameActive','usesGameShell','canvas','legacyBoardHidden','controlsVisible','summonVisible','summonEnabled','battlefieldTall','summoned','firstRouteVisible','crossroadChoices','awningChoiceVisible','branchTraversalSurvived','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
  report.ok=checks.every(k=>report[k]===true);document.getElementById('testResult').textContent=JSON.stringify(report);
 }
 run();
