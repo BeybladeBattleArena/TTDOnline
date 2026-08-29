@@ -30,6 +30,7 @@ const expectedUrls=[
   '/online/merge-bridge-v6.js?v=6','/online/run-ui-bridge-v21.js?v=21','/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9','/online/interaction-effects-v10.js?v=10','/online/collection-portrait-fit-v16.js?v=16',
   '/online/deck-editor-v18.js?v=18','/online/item-assets-v1.js?v=4','/online/avatar-inventory-v22.js?v=22','/online/world-items-v1.js?v=1',
+  '/online/moving-screen-engine-v1.js?v=1',
 ];
 let lastRuntimeIndex=-1;
 for(const url of expectedUrls){
@@ -76,4 +77,4 @@ for(const marker of ['data-mode="loader-v9"','name="ttd-build" content="release-
   must(loaderHtml.includes(marker),`loader HTML freshness/asset contract missing: ${marker}`);
 }
 
-console.log('Loader v19 recovery contract verified: the native loader waits for the audited nested Test Map/presentation bootstrap before declaring bridges ready; item/world authorities execute in explicit order; battle hooks retain stable publication; and game-loader.js still performs no runtime source reconstruction.');
+console.log('Loader v19 recovery contract verified: the native loader waits for the audited nested Test Map/presentation bootstrap before declaring bridges ready; item/world/Moving Screen authorities execute in explicit order; battle hooks retain stable publication; and game-loader.js still performs no runtime source reconstruction.');
