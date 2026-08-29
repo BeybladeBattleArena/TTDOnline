@@ -26,7 +26,7 @@
   function installStyles(){
     if(document.getElementById('ttdMovingScreenStyleV4'))return;
     const s=document.createElement('style');s.id='ttdMovingScreenStyleV4';s.textContent=`
-      #gameScreen.ttd-moving-screen-v4{display:flex!important;flex-direction:column!important;min-height:0!important;background:#050712!important;}
+      #gameScreen.ttd-moving-screen-v4{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:flex!important;flex-direction:column!important;min-height:0!important;max-height:none!important;overflow:hidden!important;background:#050712!important;}
       #gameScreen.ttd-moving-screen-v4 #hud{order:0;flex:0 0 auto!important;position:relative;z-index:20;}
       #gameScreen.ttd-moving-screen-v4 #laneWrap{order:1;position:relative!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;flex:1 1 0!important;overflow:hidden!important;background:#050812!important;border-bottom:1px solid rgba(85,216,255,.22)!important;}
       #gameScreen.ttd-moving-screen-v4 #laneCanvas{display:none!important;}
