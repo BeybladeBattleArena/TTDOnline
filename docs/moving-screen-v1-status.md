@@ -44,4 +44,4 @@ Projection uses independent horizontal and vertical scaling so portrait/mobile v
 
 The repository has dedicated Moving Screen validation in `scripts/check-moving-screen-v1.mjs`, included in both full and Hosting validation. It guards objective constants, stage connectivity, direct-source/no-tray constraints, route/death-plane rules, flag behavior markers, camera-band summoning, correct numeric range returns, and topological AI planning. Runtime compatibility and loader-order checks include only the active v2-stage/v3-engine authorities.
 
-The final candidate must pass the complete GitHub Verify workflow, including `npm run check` and the read-only validation check, before merge/deploy.
+Shipment gate: the exact final feature-branch head must pass the complete GitHub Verify workflow, including `npm run check` and the read-only validation check, before merge/deploy.
