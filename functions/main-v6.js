@@ -11,5 +11,6 @@ const overdrive = require('./overdrive-v1');
 const runStart = require('./run-start-v19');
 const accountProgression = require('./account-progression-v21');
 const items = require('./items-v1');
+const collectionActions = require('./collection-actions-v1');
 
-module.exports = { ...base, ...progression, ...singleplayer, ...secureGift, ...socialFix, ...catalogGacha, ...hga1Shop, ...onboarding, ...deckSocial, ...runStart, ...overdrive, ...items, getAccountProgressionV21:accountProgression.getAccountProgressionV21 };
+module.exports = { ...base, ...progression, ...singleplayer, ...secureGift, ...socialFix, ...catalogGacha, ...hga1Shop, ...onboarding, ...deckSocial, ...runStart, ...overdrive, ...items, ...collectionActions, getAccountProgressionV21:accountProgression.getAccountProgressionV21 };
