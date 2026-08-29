@@ -35,9 +35,10 @@
         return nativeFetch(input,init);
       };
 
-      // Final Collection authority and page-entry polish are injected after the transformed
-      // game document exists. They are independent of the synchronous bridge chain so an
-      // earlier optional bridge error cannot prevent the portrait UI or page-reset contract.
+      // Final Collection authority, Overdrive battle abilities and page-entry polish are
+      // injected after the transformed game document exists. They are independent of the
+      // synchronous bridge chain so an earlier optional bridge error cannot prevent the
+      // portrait UI, Overdrive content, or page-reset contract.
       let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
         collectionAuthorityAttempts+=1;
@@ -49,6 +50,13 @@
             overdrive.src=window.__TTD_ASSET_URL('/online/overdrive-system-v1.js');
             overdrive.async=false;
             document.head.appendChild(overdrive);
+          }
+          if(!document.getElementById('ttdOverdriveAbilitiesV1Script')){
+            const abilities=document.createElement('script');
+            abilities.id='ttdOverdriveAbilitiesV1Script';
+            abilities.src=window.__TTD_ASSET_URL('/online/overdrive-abilities-v1.js');
+            abilities.async=false;
+            document.head.appendChild(abilities);
           }
           if(!document.getElementById('ttdCollectionAuthorityScript')){
             const authority=document.createElement('script');

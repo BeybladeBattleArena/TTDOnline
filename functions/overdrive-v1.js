@@ -8,6 +8,10 @@ const REGION = 'us-central1';
 const MIN_DECKS = 3;
 const MAX_DECKS = 5;
 const DEFAULT_STATS = Object.freeze({ hp: 50, dp: 45, luck: 0 });
+// Accounts that predate the first playable Overdrive content get the currently released
+// starter pair automatically so existing players can test/use the new system. New accounts
+// remain reserved for the intended 1-of-4 starter choice once all four starter dice exist.
+const RELEASED_STARTER_BACKFILL_CUTOFF_MS = Date.parse('2026-08-29T04:15:00Z');
 
 function requireAuth(request) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Authentication required.');
@@ -88,6 +92,44 @@ async function ensurePlayerStats(uid) {
   }
   return stats;
 }
+function releasedStarterKeys() {
+  const keys = Array.isArray(catalog.system?.releasedStarterKeys) ? catalog.system.releasedStarterKeys : [];
+  return [...new Set(keys.filter((key) => isKnownKey(key)))];
+}
+async function ensureReleasedStarterBackfill(uid) {
+  const keys = releasedStarterKeys();
+  if (!keys.length) return false;
+  const userRef = db.doc(`users/${uid}`);
+  const rolloutRef = db.doc(`users/${uid}/game/overdriveStarterRolloutV1`);
+  return db.runTransaction(async (tx) => {
+    const [userSnap, rolloutSnap] = await Promise.all([tx.get(userRef), tx.get(rolloutRef)]);
+    if (rolloutSnap.exists) return false;
+    if (!userSnap.exists) return false;
+    const createdAt = userSnap.data()?.createdAt;
+    const createdMs = createdAt && typeof createdAt.toMillis === 'function' ? createdAt.toMillis() : Number.POSITIVE_INFINITY;
+    const eligible = Number.isFinite(createdMs) && createdMs <= RELEASED_STARTER_BACKFILL_CUTOFF_MS;
+    if (eligible) {
+      for (const key of keys) {
+        tx.set(db.doc(`users/${uid}/overdriveDice/${key}`), {
+          key,
+          source: 'legacy-starter-rollout',
+          starter: true,
+          acquisitionGroup: 'starter-overdrive-v1',
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+    tx.set(rolloutRef, {
+      schemaVersion: 1,
+      eligible,
+      releasedKeys: keys,
+      cutoffMs: RELEASED_STARTER_BACKFILL_CUTOFF_MS,
+      appliedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return eligible;
+  });
+}
 async function readOwnedKeys(uid) {
   const snap = await db.collection(`users/${uid}/overdriveDice`).get();
   return snap.docs
@@ -108,12 +150,13 @@ async function validateOwnedSlots(tx, uid, slots) {
 }
 async function readOverdriveState(uid) {
   const gameRef = db.doc(`users/${uid}/game/state`);
-  const [gameSnap, playerStats, ownedKeys] = await Promise.all([
+  const [gameSnap, playerStats] = await Promise.all([
     gameRef.get(),
     ensurePlayerStats(uid),
-    readOwnedKeys(uid),
   ]);
   if (!gameSnap.exists) throw new HttpsError('failed-precondition', 'The online game profile is not initialized.');
+  await ensureReleasedStarterBackfill(uid);
+  const ownedKeys = await readOwnedKeys(uid);
   const game = gameSnap.data() || {};
   const count = deckCount(game);
   const refs = Array.from({ length: count }, (_, index) => db.doc(`users/${uid}/overdriveDecks/deck-${index}`));
