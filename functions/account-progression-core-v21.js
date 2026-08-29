@@ -54,10 +54,11 @@ function publicLevel(data = {}) {
 
 function inferModeFamily(modeKey, explicitFamily = '') {
   const explicit = String(explicitFamily || '').toLowerCase();
-  if (explicit === 'adventure' || explicit === 'zombie') return explicit;
+  if (explicit === 'adventure' || explicit === 'zombie' || explicit === 'arcade') return explicit;
   const key = String(modeKey || '').toLowerCase();
   if (key === 'adventure' || key.startsWith('adventure') || key.includes('campaign')) return 'adventure';
   if (key === 'endlesshorde' || key.startsWith('zombie') || key.includes('zombie') || key.includes('horde')) return 'zombie';
+  if (['survival','bossrush','sudden','moving_screen','king_of_the_hill'].includes(key) || key.startsWith('arcade')) return 'arcade';
   return 'other';
 }
 
@@ -78,6 +79,10 @@ function calculateRunXp(run = {}) {
     // A Zombie run earns nothing before the first kill. Once kill #1 lands, retain the existing
     // calibrated Horde scale exactly: survival time + kills + the small deep-run quadratic term.
     if (kills > 0) xp = playSeconds * 0.16 + kills * 0.35 + playSeconds * playSeconds * 0.0001;
+  } else if (family === 'arcade') {
+    // Arcade is intentionally flatter than Adventure/Zombie: waves/territory progress matter,
+    // KOs contribute steadily, and simply idling in a run has very little value.
+    if (completedWaves > 0 || kills > 0) xp = completedWaves * 1.2 + kills * 0.18 + Math.min(playSeconds, 1800) * 0.012;
   }
 
   return Math.max(0, Math.min(10000, Math.round(xp)));
