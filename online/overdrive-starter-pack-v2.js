@@ -253,7 +253,9 @@
     const rawEquivalent = hpMode ? lost : lost * 10;
     const leftoverEquivalent = absorbThroughBranches(rawEquivalent, null);
     const absorbedEquivalent = Math.max(0, rawEquivalent - leftoverEquivalent);
-    const leftoverLives = hpMode ? leftoverEquivalent : leftoverEquivalent / 10;
+    // HP modes preserve exact leftover damage. Tower lives are indivisible: if any portion of
+    // a life-equivalent hit pierces the branches, that tower life is lost as a whole unit.
+    const leftoverLives = hpMode ? leftoverEquivalent : Math.ceil(leftoverEquivalent / 10);
     state.lives = Math.max(0, lastLives - leftoverLives);
     if (hpMode && Number.isFinite(Number(state.zTotalDamageTaken))) {
       state.zTotalDamageTaken = Math.max(0, Number(state.zTotalDamageTaken) - absorbedEquivalent);
