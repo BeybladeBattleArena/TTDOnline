@@ -1,46 +1,47 @@
-# Moving Screen v1 — Implementation Status
+# Moving Screen — Playtest Shipment Status
 
-Branch: `feature/moving-screen-v1`
-Snapshot: `snapshot/pre-moving-screen-2026-08-29` @ `6b6e965f7320ece48255f137d9fa5884661b8b98`
+Updated: 2026-08-29
 
-## Implemented in the first structural pass
+## Protected baseline
 
-- Dedicated Arcade-mode screen/canvas with no normal dice tray.
-- Moving Screen Arcade card and future King of the Hill placeholder.
-- Four-tier neon-rooftop procedural battlefield.
-- Pseudo-3D `(x,z,y)` world projection with vertical `cameraY` progression.
-- Multiple camera pauses and animated transitions.
-- Four lethal screen-edge death planes evaluated at each entity anchor.
-- Random direct summoning from the active five-die deck into available world spots.
-- Safe-surface outlines and explicit inhabitant spots.
-- Bidirectional marching-path graph.
-- Diverging junction/crossroad indicators and manual player branch choice.
-- Movement disables attacking.
-- Stationary-camera player route safety checks.
-- Transition-time player route risk remains manual and can produce Screen Out.
-- Enemy graph pathfinding with transition-time risk evaluation.
-- Path occupancy and constrained choke zones.
-- Same-safe-surface combat during camera movement.
-- 15% attack-speed reduction during camera movement.
-- Stationary-camera ranged cross-surface combat with world-space range + large-obstacle LOS.
-- Player and enemy HP/destruction.
-- Basic compatible-die merging on world spots.
-- Two topology-changing destructibles and player tap attacks.
-- Enemy AI can identify/break a destructible blocking its preferred route.
-- Prototype knockback/launch -> airborne displacement -> landing/void vulnerability.
-- Procedural background skyline, neon accents, foreground occlusion and rooftop obstacles.
-- Moving Screen-specific source validator wired into normal and hosting checks.
-- Runtime compatibility audit and loader-order contract include the Moving Screen module.
+- Known-good production snapshot branch: `snapshot/pre-moving-screen-2026-08-29`
+- Snapshot commit: `6b6e965f7320ece48255f137d9fa5884661b8b98`
+- Development branch: `feature/moving-screen-v1`
+- Production/main is not modified until the exact candidate passes repository verification.
 
-## Deliberately not represented as complete yet
+## Active shipping authorities
 
-- Browser/play feel validation on every viewport.
-- Full visual/environment art pass.
-- Full parity for every existing Die special in world-space combat.
-- Detailed per-monster Adventure skill parity.
-- Full physical railing/barrier collision for displacement.
-- Networked PvP / opponent Dice.
-- King of the Hill gameplay/scoring.
-- Final rewards/economy/progression integration.
+Only these Moving Screen runtime authorities are loaded:
 
-Those follow only after the structural pass survives CI and hands-on play testing.
+- `online/moving-screen-neon-rooftops-v2.js` — four-tier Neon Rooftops stage data and objective configuration.
+- `online/moving-screen-engine-v3.js` — hardened Moving Screen world/combat/objective runtime.
+
+Superseded v1/v2 runtime experiments were removed from the branch before shipment. Moving Screen is loaded as ordinary committed JavaScript from `online/runtime-bridge-loader-v1.js`; it uses no deployment-time code patch, source-text replacement, `eval`, generated reconstruction, or asset mutation.
+
+## Current single-player playtest rules
+
+- Arcade entry: **Moving Screen**.
+- **King of the Hill** is reserved directly beneath it as a disabled future entry.
+- No normal Dice Tray.
+- Random direct summoning from the active five-Die deck into legal world-space summon spots.
+- 10 starting lives; every destructive player-Die loss costs one life; merges do not.
+- If the map has no surviving player Dice: 3-second grace, then animated purple/blue `5,4,3,2,1`; still empty after `1` means FAIL.
+- Victory requires at least 60 credited enemy defeats plus a surviving player Die physically carrying the final-area flag.
+- The flag is a world object: player tap pickup, enemy AI pickup/pathing, attached carrier rendering, loose bounce, drop, respawn after off-map loss, and merge transfer.
+- Enemy AI prioritizes the flag/player carrier while obeying graph occupancy and live camera-death-plane checks.
+- Stationary routes reject obvious screen suicide; player routes during camera travel remain intentionally risky.
+- Top, bottom, left, and right camera borders are lethal death planes.
+- Same-safe-area combat continues during camera travel at a 15% attack-speed reduction; cross-area fire requires a stationary camera, range, and line of sight.
+- Choke surfaces, destructibles, path replacement, knockback/launch, rail guards, in-surface repositioning, and branching crossroads are active.
+
+## Presentation
+
+The first playtest map is a procedural nighttime rooftop district with four major tiers, building facades, fire escapes/stairs, scaffold and billboard connectors, awning/ledge routes, neon signs, rooftop lamps, HVAC/tanks/sheds, foreground structures, skyline parallax, safe-surface outlines, inhabitant spots, branch markers, camera progression display, death-plane glow, flag rendering, and Moving Screen HUD/objective presentation.
+
+Projection uses independent horizontal and vertical scaling so portrait/mobile view still fits rooftop width without revealing the entire vertical battlefield at once. Summoning is restricted to the current camera band so a visible future rooftop cannot become a random free elevator.
+
+## Validation
+
+The repository has dedicated Moving Screen validation in `scripts/check-moving-screen-v1.mjs`, included in both full and Hosting validation. It guards objective constants, stage connectivity, direct-source/no-tray constraints, route/death-plane rules, flag behavior markers, camera-band summoning, correct numeric range returns, and topological AI planning. Runtime compatibility and loader-order checks include only the active v2-stage/v3-engine authorities.
+
+Shipment requires the exact final feature-branch head to pass the complete GitHub Verify workflow, including `npm run check` and the read-only validation check, before merge/deploy.
