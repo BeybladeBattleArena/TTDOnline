@@ -74,7 +74,7 @@ for(const marker of [
 ])must(ui.includes(marker),`Moving Screen UI polish contract missing: ${marker}`);
 
 for(const marker of [
-  'window.__TTD_MOVING_SCREEN_TOPOLOGY_UI_V1 = true','ttdMsTopologyCanvasV1','function drawConnector(','function drawTopology(','rgba(116,76,45,.74)','e.kind===\'fire_escape\'','e.kind===\'stairs\'','e.kind===\'scaffold\'','rgba(4,7,15,.23)','function nearestRoute(','function onPointerDown(','hit.score>30','function onPointerMove(','function onPointerUp(','dot>.12','g.hit.button.click()','addEventListener(\'pointerdown\',onPointerDown,true)','30 KOs',
+  'window.__TTD_MOVING_SCREEN_TOPOLOGY_UI_V1 = true','ttdMsTopologyCanvasV1','function drawConnector(','function drawTopology(','rgba(116,76,45,.74)','e.kind===\'fire_escape\'','e.kind===\'stairs\'','e.kind===\'scaffold\'','rgba(4,7,15,.23)','function nearestRoute(','function onPointerDown(','hit.score>30','function onPointerMove(','function onPointerUp(','dot>.12','g.hit.button.click()','addEventListener(\'pointerdown\',onPointerDown,true)','const goal=s.objective?.killGoal||30','KOs, one rooftop flag.',
 ])must(topology.includes(marker),`Moving Screen physical-topology/gesture contract missing: ${marker}`);
 
 function projectPhone(x,z,y,cameraY=stage.cameraStops[0],W=390,H=650){const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const sx=clamp(W/520,.58,1.05),sy=clamp(H/430,1.05,2.55),baseY=H*.72,depth=clamp((z+260)/520,0,1),persp=.78+depth*.28,relX=x-stage.cameraX,relY=y-cameraY;return{x:W*.50+relX*sx*persp,y:baseY+z*.28*sx-relY*sy-relX*.035*sx};}
