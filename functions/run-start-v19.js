@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const catalog = require('./dicefile.generated.json');
 
 const db=getFirestore();
 const REGION='us-central1';
@@ -7,7 +8,10 @@ const MIN_DECKS=3;
 const MAX_DECKS=5;
 const VALID_MODES=new Set(['survival','bossrush','sudden','adventure','endlesshorde']);
 const VALID_DIFFS=new Set(['normal','hard','hell']);
+const LEGACY_DIE_KEYS=Object.freeze({arrow:'skyhorn'});
 
+function canonicalDieKey(key){return LEGACY_DIE_KEYS[key]||key;}
+function isCanonicalDieKey(key){return !!catalog.dice?.[key];}
 function requireAuth(request){
   if(!request.auth) throw new HttpsError('unauthenticated','Authentication required.');
   return request.auth;
@@ -24,7 +28,12 @@ function activeDeckFrom(game={},count=MIN_DECKS){
 function normalizeSlots(data){
   const slots=Array.isArray(data?.slots)?data.slots.slice(0,5):[];
   while(slots.length<5)slots.push(null);
-  return slots.map((slot)=>slot&&typeof slot==='object'&&typeof slot.key==='string'&&typeof slot.instId==='string'&&slot.key&&slot.instId?{key:slot.key,instId:slot.instId}:null);
+  return slots.map((slot)=>{
+    if(!slot||typeof slot!=='object'||typeof slot.key!=='string'||typeof slot.instId!=='string'||!slot.key||!slot.instId)return null;
+    const key=canonicalDieKey(slot.key);
+    if(!isCanonicalDieKey(key))throw new HttpsError('failed-precondition','Your active deck references an unknown die type. Save the deck again.');
+    return {key,instId:slot.instId};
+  });
 }
 async function repairAndReadActiveDeck(uid){
   const gameRef=db.doc(`users/${uid}/game/state`);
@@ -43,12 +52,37 @@ async function repairAndReadActiveDeck(uid){
   }
   const deckRef=db.doc(`users/${uid}/decks/deck-${active}`);
   const deckSnap=await deckRef.get();
-  const slots=normalizeSlots(deckSnap.exists?deckSnap.data():null);
+  const deckData=deckSnap.exists?deckSnap.data():null;
+  const rawSlots=Array.isArray(deckData?.slots)?deckData.slots.slice(0,5):[];
+  while(rawSlots.length<5)rawSlots.push(null);
+  const slots=normalizeSlots(deckData);
   if(slots.some((slot)=>!slot)) throw new HttpsError('failed-precondition','Your active deck must contain five dice.');
-  const dieSnaps=await Promise.all(slots.map((slot)=>db.doc(`users/${uid}/dice/${slot.instId}`).get()));
+  const dieRefs=slots.map((slot)=>db.doc(`users/${uid}/dice/${slot.instId}`));
+  const dieSnaps=await Promise.all(dieRefs.map((ref)=>ref.get()));
+  const batch=db.batch();
+  let hasMigration=false;
+  let deckNeedsMigration=false;
   dieSnaps.forEach((snap,index)=>{
-    if(!snap.exists||snap.data()?.key!==slots[index].key) throw new HttpsError('failed-precondition','Your active deck contains a die that is no longer available. Save the deck again.');
+    const storedKey=snap.exists?snap.data()?.key:null;
+    const canonicalStoredKey=canonicalDieKey(storedKey);
+    if(!snap.exists||!isCanonicalDieKey(canonicalStoredKey)||canonicalStoredKey!==slots[index].key){
+      throw new HttpsError('failed-precondition','Your active deck contains a die that is no longer available. Save the deck again.');
+    }
+    if(storedKey!==canonicalStoredKey){
+      batch.set(dieRefs[index],{
+        key:canonicalStoredKey,
+        keyMigratedFrom:storedKey,
+        keyMigratedAt:FieldValue.serverTimestamp(),
+      },{merge:true});
+      hasMigration=true;
+    }
+    if(rawSlots[index]?.key!==slots[index].key)deckNeedsMigration=true;
   });
+  if(deckNeedsMigration){
+    batch.set(deckRef,{slots,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+    hasMigration=true;
+  }
+  if(hasMigration)await batch.commit();
   return {active,slots};
 }
 async function acceptedFriend(uid,friendUid){
@@ -69,11 +103,20 @@ async function sharedSupportSnapshot(uid){
   ]);
   if(!dieSnap.exists)return null;
   const data=dieSnap.data()||{};
+  const key=canonicalDieKey(data.key);
+  if(!isCanonicalDieKey(key))return null;
+  if(data.key!==key){
+    await dieSnap.ref.set({
+      key,
+      keyMigratedFrom:data.key,
+      keyMigratedAt:FieldValue.serverTimestamp(),
+    },{merge:true});
+  }
   const cls=Number.isSafeInteger(data.cls)?data.cls:1;
   return {
     lenderUid:friendUid,
     lenderName:profileSnap.data()?.displayName||'Friend',
-    key:data.key,
+    key,
     rarity:data.rarity||null,
     instance:{id:dieSnap.id,cls,enchants:Array.isArray(data.enchants)?data.enchants.slice(0,4):[null,null,null,null]},
   };
