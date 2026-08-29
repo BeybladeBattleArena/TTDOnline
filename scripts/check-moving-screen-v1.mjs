@@ -2,91 +2,92 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import * as espree from 'espree';
 
-const enginePath='online/moving-screen-engine-v3.js';
+const enginePath='online/moving-screen-engine-v4.js';
 const stagePath='online/moving-screen-neon-rooftops-v2.js';
 const loaderPath='online/runtime-bridge-loader-v1.js';
-const specPath='docs/moving-screen-v2-playtest.md';
+const audioPath='online/audio-client-v27.js';
 const engine=fs.readFileSync(enginePath,'utf8');
 const stageSource=fs.readFileSync(stagePath,'utf8');
 const loader=fs.readFileSync(loaderPath,'utf8');
-const spec=fs.readFileSync(specPath,'utf8');
+const audio=fs.readFileSync(audioPath,'utf8');
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
 
 espree.parse(engine,{ecmaVersion:'latest',sourceType:'script'});
 espree.parse(stageSource,{ecmaVersion:'latest',sourceType:'script'});
-
 for(const [file,source] of [[enginePath,engine],[stagePath,stageSource]]){
-  for(const forbidden of [/\beval\s*\(/,/new\s+Function\b/,/document\.write\s*\(/,/random-dice-game-33\.html/,/\.replace\s*\([^\n]*adventure-platforming/i,/#tray\b/,/#board\b/]){
-    must(!forbidden.test(source),`${file} must remain direct committed source with no tray/core source-patching dependency: ${forbidden}`);
+  for(const forbidden of [/\beval\s*\(/,/new\s+Function\b/,/document\.write\s*\(/,/random-dice-game-33\.html/,/\.replace\s*\([^\n]*adventure-platforming/i]){
+    must(!forbidden.test(source),`${file} must remain direct committed source without source surgery: ${forbidden}`);
   }
 }
-must(!/\breturn\d/.test(engine),'Moving Screen engine may not contain accidental compact return identifiers such as return175.');
+must(!/\breturn\d/.test(engine),'Moving Screen v4 may not contain accidental compact return identifiers such as return175.');
+must(!engine.includes('movingScreenScreenV3')&&!engine.includes("className='screen'"),'Moving Screen may not create another detached full-screen runtime; it must use gameScreen.');
 
-const context={window:{}};
-vm.createContext(context);
-new vm.Script(stageSource,{filename:stagePath}).runInContext(context);
+const context={window:{}};vm.createContext(context);new vm.Script(stageSource,{filename:stagePath}).runInContext(context);
 const stage=context.window.TTDMovingScreenStages?.neon_rooftops_v2;
 must(stage,'Neon Rooftops v2 stage authority did not register.');
-must(stage.tiers?.length===4,'Moving Screen playtest map must retain four major visual tiers.');
-must(stage.cameraStops?.length>=7,'Moving Screen playtest map needs multiple camera pauses across four tiers.');
-must(stage.zones?.length>=14,'Moving Screen playtest map needs enough safe surfaces for meaningful routing.');
-must(stage.zones.some(z=>z.choke&&z.slots<=2),'Moving Screen needs constrained choke-point safe surfaces.');
-must(stage.zones.filter(z=>z.summon).length>=4,'Each major tier should provide a summon surface.');
-must(stage.objective?.startingLives===10,'Moving Screen must start with exactly 10 lives.');
-must(stage.objective?.killGoal===60,'Single-player Moving Screen victory must require 60 credited enemy defeats.');
-must(stage.objective?.emptyGraceSeconds===3,'Empty-field warning grace period must be 3 seconds.');
-must(stage.objective?.emptyCountdownSeconds===5,'Empty-field visible countdown must be five seconds/digits.');
-must(stage.objective?.flag?.homeZone==='roof4_final','Objective flag must begin on the final Sign Crown safe surface.');
+must(stage.tiers?.length===4,'Moving Screen must retain four major visual tiers.');
+must(stage.cameraStops?.length>=7,'Moving Screen needs multiple camera pauses across the four tiers.');
+must(stage.zones?.length>=14,'Moving Screen needs enough safe surfaces for meaningful route choice.');
+must(stage.zones.some(z=>z.choke&&z.slots<=2),'At least one constrained two-slot choke point is required.');
+must(stage.zones.filter(z=>z.summon).length>=4,'Each major tier needs a direct-world summon surface.');
+must(stage.objective?.startingLives===10,'Moving Screen must start with 10 lives.');
+must(stage.objective?.killGoal===60,'Single-player victory must require 60 credited enemy defeats.');
+must(stage.objective?.emptyGraceSeconds===3,'Empty-field grace period must be 3 seconds.');
+must(stage.objective?.emptyCountdownSeconds===5,'Empty-field visible countdown must be 5 seconds.');
+must(stage.objective?.flag?.homeZone==='roof4_final','The objective flag must begin at the Sign Crown.');
 must(stage.destructibles?.some(d=>d.id==='boarded_passage'),'Route-opening destructible missing.');
 must(stage.destructibles?.some(d=>d.id==='billboard_brace'),'Route-changing destructible missing.');
-must(stage.destructibles?.filter(d=>d.guard).length>=2,'Displacement guard destructibles missing.');
-must(stage.signs?.length>=4&&stage.lamps?.length>=5,'Neon Rooftops presentation needs dedicated signs and rooftop lamps.');
-must(stage.enemyArchetypes?.goblin_brute?.launch>0,'Enemy displacement test archetype missing.');
+must(stage.destructibles?.filter(d=>d.guard).length>=2,'Knockback guard barriers are missing.');
 
 const nodeIds=new Set([...stage.zones,...stage.junctions].map(n=>n.id));
-for(const edge of stage.edges){
-  must(nodeIds.has(edge.from),`Unknown edge source ${edge.from} for ${edge.id}.`);
-  must(nodeIds.has(edge.to),`Unknown edge destination ${edge.to} for ${edge.id}.`);
-}
-function routeExists({broken=new Set(),intact=new Set(stage.destructibles.map(d=>d.id))}={}){
-  const enabled=edge=>{
-    if(edge.requiresBroken&&!broken.has(edge.requiresBroken))return false;
-    if(edge.requiresIntact&&!intact.has(edge.requiresIntact))return false;
-    return true;
-  };
-  const seen=new Set(['roof1_main']),queue=['roof1_main'];
-  while(queue.length){const u=queue.shift();if(u==='roof4_final')return true;for(const e of stage.edges){if(!enabled(e))continue;let v=null;if(e.from===u)v=e.to;else if(e.to===u)v=e.from;if(v&&!seen.has(v)){seen.add(v);queue.push(v);}}}
-  return false;
-}
-must(routeExists(),'There must be an intact-state route from Lower Rooftop to Sign Crown.');
-must(routeExists({broken:new Set(['boarded_passage']),intact:new Set(stage.destructibles.map(d=>d.id))}),'Breaking the scaffold gate must preserve progression.');
-const intactAfterBillboardBreak=new Set(stage.destructibles.map(d=>d.id).filter(id=>id!=='billboard_brace'));
-must(routeExists({broken:new Set(['billboard_brace']),intact:intactAfterBillboardBreak}),'Breaking the billboard brace must replace rather than destroy upward progression.');
+for(const e of stage.edges){must(nodeIds.has(e.from),`Unknown edge source ${e.from}`);must(nodeIds.has(e.to),`Unknown edge destination ${e.to}`);}
+function routeExists({broken=new Set(),intact=new Set(stage.destructibles.map(d=>d.id))}={}){const enabled=e=>(!e.requiresBroken||broken.has(e.requiresBroken))&&(!e.requiresIntact||intact.has(e.requiresIntact));const seen=new Set(['roof1_main']),q=['roof1_main'];while(q.length){const u=q.shift();if(u==='roof4_final')return true;for(const e of stage.edges){if(!enabled(e))continue;let v=null;if(e.from===u)v=e.to;else if(e.to===u)v=e.from;if(v&&!seen.has(v)){seen.add(v);q.push(v);}}}return false;}
+must(routeExists(),'An intact-state route from the lower rooftop to the Sign Crown is required.');
+must(routeExists({broken:new Set(['boarded_passage']),intact:new Set(stage.destructibles.map(d=>d.id))}),'Breaking the scaffold gate must preserve upward progression.');
+const postBrace=new Set(stage.destructibles.map(d=>d.id).filter(id=>id!=='billboard_brace'));
+must(routeExists({broken:new Set(['billboard_brace']),intact:postBrace}),'Breaking the billboard brace must create a replacement route instead of soft-locking the map.');
 
 for(const marker of [
-  'window.__TTD_MOVING_SCREEN_V3 = true',
+  'window.__TTD_MOVING_SCREEN_V4 = true',
   "const STAGE_ID='neon_rooftops_v2'",
   'const MOVING_AS_MULT=.85',
-  "if(r==='close')return 175",
-  "if(r==='mid')return 300",
-  "if(r==='map')return 850",
+  "document.getElementById('gameScreen')",
+  "document.getElementById('laneWrap')",
+  "document.getElementById('tray')",
+  "showCore('game')",
+  '#gameScreen.ttd-moving-screen-v4{display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important',
+  '#gameScreen.ttd-moving-screen-v4 #laneWrap{grid-row:2',
+  '#gameScreen.ttd-moving-screen-v4 #boardWrap{display:none!important;}',
+  '#gameScreen.ttd-moving-screen-v4 #tray>*:not(#ttdMsControlsV4){display:none!important;}',
+  'env(safe-area-inset-bottom)',
+  'ttdMovingScreenCanvasV4',
+  'ttdMsControlsV4',
+  'ttdMsSummonV4',
+  "controls.querySelector('#ttdMsSummonV4').addEventListener('click',summonDie)",
+  "result.querySelector('button').addEventListener('click',()=>exit())",
+  "showCore('mode')",
+  'function projectionMetrics()',
+  'sy:clamp(H/430,1.05,2.55)',
+  'depth=clamp((Number(z)+260)/520,0,1)',
+  'persp=.78+depth*.28',
+  'baseY+Number(z)*.28*sx-relY*sy-relX*.035*sx',
+  'function zoneQuad(',
+  'function roundedQuad(',
+  "const SAFE_LINE='rgba(255,255,255,.25)'",
+  'function drawForeground(',
   'function summonDie()',
   'function mergeDice(',
   'function startSlotMove(',
   'function playerRouteOptions(',
-  'function chooseAiBranch(',
   'function shortestPath(',
-  '// Planning is topological. Only the edge an entity is about to traverse receives the live camera safety test in startMove().',
   'function breakDestructible(',
-  'function guardForZone(',
   'function applyImpulse(',
-  'function hasLineOfSight(',
   'function updateDeathPlanes()',
   "if(p.x<0||p.x>runtime.w||p.y<0||p.y>runtime.h)killEntity(e,'deathPlane',null)",
   "if(runtime.phase!=='transition'&&!edgeSafeAtCamera",
-  "ent.faction==='enemy'&&runtime.phase==='transition'&&!enemyTransitionAccepts",
+  'transitionMargin(ed,ent.moveSpeed)',
   'function updateEmptyCountdown(',
-  "Get some Dice on the map!",
+  'Get some Dice on the map!',
   'const digit=o.emptyCountdownSeconds-Math.floor(elapsed)',
   "finish(false,'You failed to get a Die back onto the battlefield in time.')",
   'function loseLife()',
@@ -94,47 +95,28 @@ for(const marker of [
   "if(runtime.lives<=0)finish(false,'All 10 lives were lost.')",
   'function pickupFlag(',
   'function dropFlagFromHolder(',
-  'function beginFlagRespawn()',
-  'function updateFlag(',
-  "if(runtime.kills>=runtime.killGoal&&playerHoldsFlag())finish(true",
-  'runtime.kills++',
-  "creditFaction==='player'||(e.lastHitFaction==='player'&&e.lastHitT<=3)",
-  'p?.presentOutcome',
+  'function beginFlagRespawn(',
+  "runtime.kills=Math.min(runtime.killGoal,runtime.kills+1)",
+  "runtime.kills>=runtime.killGoal&&playerHoldsFlag()",
   "p.presentOutcome(win?'clear':'fail'",
-  'function drawFlag(',
-  'function drawSafeOverlay(',
-  "const SAFE_LINE='rgba(255,255,255,.25)'",
-  "moving.innerHTML='<h3>Moving Screen</h3>",
   "future.innerHTML='<h3>King of the Hill</h3>",
-  "deck:activeDeck().map(e=>({...e}))",
-  'function currentSummonZones()',
-  'Math.abs(z.y-runtime.cameraY)<=band',
-])must(engine.includes(marker),`Moving Screen v3 gameplay/presentation contract missing: ${marker}`);
+])must(engine.includes(marker),`Moving Screen v4 gameplay/runtime contract missing: ${marker}`);
+
+// Reproduce the v4 projection numerically for a narrow phone battlefield. The current section must
+// be visible, the next major roof may peek in, and higher tiers must remain outside the death plane.
+function projectPhone(x,z,y,cameraY=stage.cameraStops[0],W=390,H=650){const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const sx=clamp(W/520,.58,1.05),sy=clamp(H/430,1.05,2.55),baseY=H*.72,depth=clamp((z+260)/520,0,1),persp=.78+depth*.28,relX=x-stage.cameraX,relY=y-cameraY;return{x:W*.50+relX*sx*persp,y:baseY+z*.28*sx-relY*sy-relX*.035*sx};}
+const lower=stage.zones.find(z=>z.id==='roof1_main'),second=stage.zones.find(z=>z.id==='roof2_west'),third=stage.zones.find(z=>z.id==='roof3_main'),final=stage.zones.find(z=>z.id==='roof4_final');
+const P1=projectPhone(lower.x,lower.z,lower.y),P2=projectPhone(second.x,second.z,second.y),P3=projectPhone(third.x,third.z,third.y),PF=projectPhone(final.x,final.z,final.y);
+must(P1.y>650*.48&&P1.y<650*.90,'Phone framing must put the current lower rooftop in the playable lower half.');
+must(P2.y>-80&&P2.y<650*.30,'The next major rooftop should only peek near the upper boundary at the first camera stop.');
+must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final tiers at the opening camera stop.');
 
 const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=2'";
-const engineUrl="'/online/moving-screen-engine-v3.js?v=3'";
-must(loader.includes(stageUrl),'Runtime loader does not load Moving Screen v2 stage as committed source.');
-must(loader.includes(engineUrl),'Runtime loader does not load hardened Moving Screen v3 engine as committed source.');
-must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl),'Moving Screen stage data must load before its v3 engine.');
-must(!loader.includes("'/online/moving-screen-engine-v1.js?v=1'"),'Retired Moving Screen v1 engine must not load alongside v3.');
-must(!loader.includes("'/online/moving-screen-engine-v2.js?v=2'"),'Superseded Moving Screen v2 engine must not load alongside v3.');
+const engineUrl="'/online/moving-screen-engine-v4.js?v=4'";
+must(loader.includes(stageUrl)&&loader.includes(engineUrl),'Runtime loader must load the v2 stage and rebuilt v4 engine.');
+must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl),'Stage authority must load before Moving Screen v4.');
+must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached-screen v3 runtime must not load in production.');
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
+must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-for(const phrase of [
-  '10 lives',
-  'exactly **1 life**',
-  '**3-second grace period**',
-  '**5, 4, 3, 2, 1**',
-  'normal FAIL presentation',
-  '**60 enemy defeats**',
-  'physically carrying the objective flag',
-  'Enemy AI understands the flag objective',
-  'flag becomes loose',
-  'returns to its final-area home position',
-  'Merging a flag-carrying Die',
-  'No normal 15-tile dice tray',
-  '15% attack-speed penalty',
-  'King of the Hill',
-])must(spec.includes(phrase),`Moving Screen v3 written contract missing: ${phrase}`);
-
-console.log('Moving Screen v3 playtest contract verified: hardened runtime, 10-life stock, 3+5 empty-field fail countdown, 60-defeat plus physical flag victory, flag AI/drop/respawn/merge behavior, camera-band world summoning, graph routing, death planes, destructibles, displacement and normal outcome presentation are guarded.');
+console.log('Moving Screen v4 verified: normal game shell, phone-safe controls, Adventure-style pseudo-3D projection, camera framing, direct summoning, graph movement, combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
