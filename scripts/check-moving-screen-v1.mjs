@@ -86,6 +86,8 @@ for(const marker of [
   "const SAFE_LINE = 'rgba(255,255,255,.25)'",
   "moving.innerHTML='<h3>Moving Screen</h3>",
   "future.innerHTML='<h3>King of the Hill</h3>",
+  "deck:activeDeck().map(entry=>({...entry}))",
+  "if(!runtime.deck.length){coreToast('No Dice are available in the active deck');return;}",
   'function summonDie()',
   'function mergeDice(',
   'function beginFinale(',
