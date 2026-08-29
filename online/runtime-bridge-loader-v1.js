@@ -22,8 +22,9 @@
     // World items deliberately loads after the inventory authorities so its wrappers extend the
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
-    // Moving Screen is a committed Arcade-mode runtime authority. It is loaded as a normal source
-    // module; it does not source-replace, eval-patch, or mutate the core game document.
+    // Moving Screen is direct committed source. Stage data loads before the engine and neither
+    // authority rewrites, evals, or patches the core game document.
+    '/online/moving-screen-neon-rooftops-v1.js?v=1',
     '/online/moving-screen-engine-v1.js?v=1',
   ];
 
