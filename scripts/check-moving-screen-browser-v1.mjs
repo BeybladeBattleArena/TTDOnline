@@ -15,7 +15,7 @@ const engineUrl=pathToFileURL(path.join(root,'online/moving-screen-engine-v4.js'
 const harness=path.join(os.tmpdir(),`ttd-moving-screen-${process.pid}.html`);
 
 const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b14;color:white;font-family:Arial,sans-serif}#app{position:fixed;inset:0}.screen{position:absolute;inset:0;display:none;flex-direction:column;min-height:0}.screen.active{display:flex!important}#modeScreen .modeBody{padding:10px}.modeCard{padding:8px;border:1px solid #555}.modeCard button{min-height:40px}#hud{display:flex;gap:8px;padding:8px;height:54px;flex:0 0 54px}.hud-stat{display:flex;gap:4px}.label{opacity:.7}#laneWrap{position:relative;height:33vh;min-height:160px;max-height:235px;flex-shrink:0}#laneCanvas{width:100%;height:100%}#boardWrap{height:250px;flex:1 1 auto}#tray{min-height:110px;flex-shrink:0}.toast{position:fixed;left:0;top:0}#testResult{white-space:pre-wrap;font-size:10px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090b14;color:white;font-family:Arial,sans-serif}#app{position:fixed;inset:0;display:flex;flex-direction:column}.screen{position:absolute;inset:0;display:none;flex-direction:column;min-height:0}.screen.active{display:flex!important}#gameScreen{position:relative}#modeScreen .modeBody{padding:10px}.modeCard{padding:8px;border:1px solid #555}.modeCard button{min-height:40px}#hud{display:flex;gap:8px;padding:8px;height:54px;flex:0 0 54px}.hud-stat{display:flex;gap:4px}.label{opacity:.7}#laneWrap{position:relative;height:33vh;min-height:160px;max-height:235px;flex-shrink:0}#laneCanvas{width:100%;height:100%}#boardWrap{height:250px;flex:1 1 auto}#tray{min-height:110px;flex-shrink:0}.toast{position:fixed;left:0;top:0}#testResult{white-space:pre-wrap;font-size:10px}
 </style></head><body><div id="app">
 <div id="modeScreen" class="screen active"><div class="modeBody"></div></div>
 <div id="deckScreen" class="screen"></div>
@@ -34,10 +34,11 @@ async function run(){
   const card=document.querySelector('#ttdMovingScreenCardV4 button');report.card=!!card;card?.click();
   await sleep(220);
   const game=document.getElementById('gameScreen'),summon=document.getElementById('ttdMsSummonV4'),lane=document.getElementById('laneWrap'),controls=document.getElementById('ttdMsControlsV4'),canvas=document.getElementById('ttdMovingScreenCanvasV4');
-  const sr=summon?.getBoundingClientRect(),lr=lane?.getBoundingClientRect(),cr=controls?.getBoundingClientRect(),state=window.TTDMovingScreen?.state;
+  const gr=game?.getBoundingClientRect(),sr=summon?.getBoundingClientRect(),lr=lane?.getBoundingClientRect(),cr=controls?.getBoundingClientRect(),state=window.TTDMovingScreen?.state;
   report.gameActive=game?.classList.contains('active')===true;
   report.usesGameShell=game?.classList.contains('ttd-moving-screen-v4')===true;
   report.gameDisplayFlex=getComputedStyle(game).display==='flex';
+  report.gameFullViewport=!!gr&&getComputedStyle(game).position==='absolute'&&Math.abs(gr.top)<2&&Math.abs(gr.left)<2&&Math.abs(gr.width-innerWidth)<3&&Math.abs(gr.height-innerHeight)<3;
   report.canvas=!!canvas;
   report.legacyBoardHidden=getComputedStyle(document.getElementById('boardWrap')).display==='none';
   report.controlsVisible=!!cr&&cr.width>80&&cr.height>45&&cr.top>=0&&cr.bottom<=innerHeight+1;
@@ -78,7 +79,7 @@ async function run(){
   report.failReturn=document.getElementById('modeScreen')?.classList.contains('active')===true&&!document.getElementById('ttdMsResultV4');
   report.noRuntimeErrors=report.errors.length===0;
  }catch(error){report.errors.push(String(error?.stack||error));}
- const checks=['card','gameActive','usesGameShell','gameDisplayFlex','canvas','legacyBoardHidden','controlsVisible','controlsBelowBattlefield','controlsNearBottom','summonVisible','summonEnabled','battlefieldTall','canvasCssTall','canvasBitmapSized','canvasPainted','runtimeViewportMatchesLane','summoned','firstRouteVisible','crossroadChoices','awningChoiceVisible','branchTraversalSurvived','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
+ const checks=['card','gameActive','usesGameShell','gameDisplayFlex','gameFullViewport','canvas','legacyBoardHidden','controlsVisible','controlsBelowBattlefield','controlsNearBottom','summonVisible','summonEnabled','battlefieldTall','canvasCssTall','canvasBitmapSized','canvasPainted','runtimeViewportMatchesLane','summoned','firstRouteVisible','crossroadChoices','awningChoiceVisible','branchTraversalSurvived','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
  report.ok=checks.every(k=>report[k]===true);document.getElementById('testResult').textContent=JSON.stringify(report);
 }
 run();
