@@ -87,14 +87,12 @@ for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHit
   must(JSON.stringify(catalog).includes(marker),`Overdrive ability data missing: ${marker}`);
 }
 
-// OD battle controls and inspection.
 for(const marker of [
   'ttdBattleActionRow','ttdOdCast${index+1}','OD ${index+1}','ttdOdCastButton.castable','ttdOdCastable','ttdOdUncastable',
   'abilityApi()?.activateSlot?.(index)','showOdInfo','Nonelemental','ttdOdInfoFlavor','.ttdOverdriveBattleSlot.filled','.ttdOdCard',
 ])must(collectionUi.includes(marker),`Overdrive control/inspection UI missing: ${marker}`);
 must(loader.includes('/online/collection-actions-ui-v1.js'),'Game loader does not inject collection/Overdrive action UI.');
 
-// Merge All must be authoritative, cascading, gem-safe, and available only in the normal collection.
 for(const marker of [
   'exports.mergeAllDiceV1','scope===\'class\'','for(let cls=1;cls<10;cls++)','while(queue.length>=2)','resolveAlias',
   'returnedByMergeAll','enchants:[null,null,null,null]','operation:\'merge_all\'','beforeCounts','afterCounts',
@@ -105,7 +103,6 @@ for(const marker of [
   'All slotted gems were removed from each instance of these dice in order to merge all selected instances.',
 ])must(collectionUi.includes(marker),`Merge All UI contract missing: ${marker}`);
 
-// Die sale values are exact through C7. Higher Classes intentionally remain unavailable until priced.
 for(const marker of [
   'common:25','rare:50','unique:100','legendary:150','1:30','2:45','3:80','4:100','5:120','6:140','7:160',
   'exports.sellDieV1','returnedBySale','operation:\'sell_die\'','pipsAwarded','pipsBalance',
@@ -116,8 +113,10 @@ for(const marker of [
   'Sale value not configured for C${instance.cls}','window.account.gold=Number(m.pipsBalance)',
 ])must(collectionUi.includes(marker),`Die sale UI contract missing: ${marker}`);
 
-for(const marker of ['mergeAllDiceV1','sellDieV1','collection-actions-v1'])must(main.includes(marker)||collectionServer.includes(marker),`Collection server export marker missing: ${marker}`);
-must(main.includes("require('./collection-actions-v1')")&&main.includes('...collectionActions'),'Collection actions are not exported from main-v6.js.');
+must(main.includes("require('./collection-actions-v1')"),'Collection action module is not loaded by main-v6.js.');
+must(main.includes('mergeAllDiceV1: collectionActions.mergeAllDiceV1'),'Merge All callable is not explicitly exported from main-v6.js.');
+must(main.includes('sellDieV1: collectionActions.sellDieV1'),'Sell callable is not explicitly exported from main-v6.js.');
+must(!main.includes('...collectionActions'),'Collection action helper exports must never be spread into the Firebase function surface.');
 must(singleplayerClient.includes("import './collection-actions-client-v1.js?v=1'"),'Online shell client chain does not load collection mutation client.');
 for(const marker of ['mergeAllDiceV1','sellDieV1','ttd:collection-mergeall-result','ttd:collection-sell-result'])must(collectionClient.includes(marker),`Collection authenticated client contract missing: ${marker}`);
 
