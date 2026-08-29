@@ -22,11 +22,13 @@
     // World items deliberately loads after the inventory authorities so its wrappers extend the
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
-    // Moving Screen is direct committed source. Stage data loads before the engine. The v4 engine
-    // mounts inside the normal gameScreen/laneWrap shell and does not patch/eval core source.
-    // Query v=6 is the cache key for the full-viewport ownership hotfix.
-    '/online/moving-screen-neon-rooftops-v2.js?v=2',
+    // Moving Screen remains direct committed source. Stage data loads before the engine, and the
+    // presentation-only UI authority loads last. No source text is rewritten/evaluated.
+    // Stage v=3 carries the slower camera travel; UI v=1 adds the safe inset, loadout rail,
+    // pre-move direction chevrons, and highlighted route overlay.
+    '/online/moving-screen-neon-rooftops-v2.js?v=3',
     '/online/moving-screen-engine-v4.js?v=6',
+    '/online/moving-screen-ui-v1.js?v=1',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;

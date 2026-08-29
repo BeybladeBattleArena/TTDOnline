@@ -4,17 +4,20 @@ import * as espree from 'espree';
 
 const enginePath='online/moving-screen-engine-v4.js';
 const stagePath='online/moving-screen-neon-rooftops-v2.js';
+const uiPath='online/moving-screen-ui-v1.js';
 const loaderPath='online/runtime-bridge-loader-v1.js';
 const audioPath='online/audio-client-v27.js';
 const engine=fs.readFileSync(enginePath,'utf8');
 const stageSource=fs.readFileSync(stagePath,'utf8');
+const ui=fs.readFileSync(uiPath,'utf8');
 const loader=fs.readFileSync(loaderPath,'utf8');
 const audio=fs.readFileSync(audioPath,'utf8');
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
 
 espree.parse(engine,{ecmaVersion:'latest',sourceType:'script'});
 espree.parse(stageSource,{ecmaVersion:'latest',sourceType:'script'});
-for(const [file,source] of [[enginePath,engine],[stagePath,stageSource]]){
+espree.parse(ui,{ecmaVersion:'latest',sourceType:'script'});
+for(const [file,source] of [[enginePath,engine],[stagePath,stageSource],[uiPath,ui]]){
   for(const forbidden of [/\beval\s*\(/,/new\s+Function\b/,/document\.write\s*\(/,/random-dice-game-33\.html/,/\.replace\s*\([^\n]*adventure-platforming/i]){
     must(!forbidden.test(source),`${file} must remain direct committed source without source surgery: ${forbidden}`);
   }
@@ -28,6 +31,7 @@ must(stage,'Neon Rooftops v2 stage authority did not register.');
 must(stage.tiers?.length===4,'Moving Screen must retain four major visual tiers.');
 must(stage.cameraStops?.length>=7,'Moving Screen needs multiple camera pauses across the four tiers.');
 must(stage.cameraStops?.[0]===85,'Opening camera stop must preserve reliable phone summon/enemy-spawn room.');
+must(Math.abs(Number(stage.timing?.travel)-16)<0.001,'Moving Screen camera transition must use the ~70% slower 16-second travel time.');
 must(stage.zones?.length>=14,'Moving Screen needs enough safe surfaces for meaningful route choice.');
 must(stage.zones.some(z=>z.choke&&z.slots<=2),'At least one constrained two-slot choke point is required.');
 must(stage.zones.filter(z=>z.summon).length>=4,'Each major tier needs a direct-world summon surface.');
@@ -126,6 +130,29 @@ for(const marker of [
   'viewport:{w:runtime.w,h:runtime.h}',
 ])must(engine.includes(marker),`Moving Screen v4 gameplay/runtime contract missing: ${marker}`);
 
+for(const marker of [
+  'window.__TTD_MOVING_SCREEN_UI_V1 = true',
+  '#gameScreen.ttd-moving-screen-v4{top:0!important;bottom:max(18px,env(safe-area-inset-bottom))!important;height:auto!important;}',
+  '@media(max-width:560px)',
+  'bottom:max(26px,env(safe-area-inset-bottom))!important',
+  'ttdMsLoadoutRailV1',
+  "<div class=\"railLabel\">DECK</div>",
+  "<div class=\"railLabel\">OD</div>",
+  'normalizeDeck()',
+  'normalizeOdPair()',
+  "fetch(asset('/overdrivefile.json')",
+  'ttdMsDirectionPromptV1',
+  "phase.seconds <= 5",
+  "down ? '<span>▼</span><span>▼</span>' : '<span>▲</span><span>▲</span>'",
+  "down ? 'MOVE DOWN' : 'MOVE UP'",
+  'ttdMsPathHighlightV1',
+  'routeDestinationNodes()',
+  'inferSource(destinations)',
+  'g.setLineDash([13, 8])',
+  'drawChevron(g, A, B, .54)',
+  'drawChevron(g, A, B, .70)',
+])must(ui.includes(marker),`Moving Screen UI polish contract missing: ${marker}`);
+
 function projectPhone(x,z,y,cameraY=stage.cameraStops[0],W=390,H=650){const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const sx=clamp(W/520,.58,1.05),sy=clamp(H/430,1.05,2.55),baseY=H*.72,depth=clamp((z+260)/520,0,1),persp=.78+depth*.28,relX=x-stage.cameraX,relY=y-cameraY;return{x:W*.50+relX*sx*persp,y:baseY+z*.28*sx-relY*sy-relX*.035*sx};}
 const lower=stage.zones.find(z=>z.id==='roof1_main'),second=stage.zones.find(z=>z.id==='roof2_west'),third=stage.zones.find(z=>z.id==='roof3_main'),final=stage.zones.find(z=>z.id==='roof4_final');
 const P1=projectPhone(lower.x,lower.z,lower.y),P2=projectPhone(second.x,second.z,second.y),P3=projectPhone(third.x,third.z,third.y),PF=projectPhone(final.x,final.z,final.y);
@@ -134,14 +161,16 @@ must(P1.y<650*.70,'Opening Tier-1 enemy-spawn surface must fit above the conserv
 must(P2.y>-80&&P2.y<650*.30,'The next major rooftop should only peek near the upper boundary at the first camera stop.');
 must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final tiers at the opening camera stop.');
 
-const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=2'";
+const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=3'";
 const engineUrl="'/online/moving-screen-engine-v4.js?v=6'";
-must(loader.includes(stageUrl)&&loader.includes(engineUrl),'Runtime loader must load the v2 stage and rebuilt v4 engine using the full-viewport cache key.');
-must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl),'Stage authority must load before Moving Screen v4.');
+const uiUrl="'/online/moving-screen-ui-v1.js?v=1'";
+must(loader.includes(stageUrl)&&loader.includes(engineUrl)&&loader.includes(uiUrl),'Runtime loader must load the cache-busted stage, rebuilt v4 engine, and UI polish authority.');
+must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl)&&loader.indexOf(engineUrl)<loader.indexOf(uiUrl),'Moving Screen load order must be stage -> engine -> UI polish.');
+must(!loader.includes('/online/moving-screen-neon-rooftops-v2.js?v=2'),'Moving Screen timing polish may not reuse the stale stage v2 query key.');
 must(!loader.includes('/online/moving-screen-engine-v4.js?v=5'),'Moving Screen full-viewport hotfix may not reuse the previous cached v5 query key.');
 must(!loader.includes('/online/moving-screen-engine-v4.js?v=4'),'Moving Screen hotfix may not reuse the cached broken v4 query key.');
 must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached-screen v3 runtime must not load in production.');
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen v4 verified: full-viewport gameScreen ownership, native flex layout, live-resizing battlefield canvas, fresh cache key, phone-safe controls/framing, Adventure-style pseudo-3D, direct summoning, safe-surface-only combat/actions, crossroads AI, targetable LOS barriers, graph combat, destructibles, death planes, 10-life stock, emergency countdown, 60-KO plus flag victory, and return-to-Arcade cleanup are guarded.');
+console.log('Moving Screen v4 verified: full-viewport gameScreen ownership, safer phone inset, 70%-slower camera travel, deck/OD side rail, pre-move direction chevrons, highlighted selected routes, native flex layout, pseudo-3D combat, objectives, and return-to-Arcade cleanup are guarded.');
