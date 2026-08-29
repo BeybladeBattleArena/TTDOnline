@@ -195,4 +195,6 @@
 
   // New-account naming is intentionally lazy: it never blocks the game loader or returning users.
   import('/online/onboarding-client-v9.js?v=9').catch((err) => console.error('Player-name onboarding failed to load.', err));
+  // Overdrive owns its own authenticated state/persistence bridge and remains independent of startup gating.
+  import('/online/overdrive-client-v1.js?v=1').catch((err) => console.error('Overdrive client failed to load.', err));
 })();
