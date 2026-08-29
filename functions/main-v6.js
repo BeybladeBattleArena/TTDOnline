@@ -18,5 +18,5 @@ module.exports = {
   ...onboarding, ...deckSocial, ...runStart, ...overdrive, ...items,
   mergeAllDiceV1: collectionActions.mergeAllDiceV1,
   sellDieV1: collectionActions.sellDieV1,
-  getAccountProgressionV21: accountProgression.getAccountProgressionV21,
+  getAccountProgressionV21:accountProgression.getAccountProgressionV21,
 };
