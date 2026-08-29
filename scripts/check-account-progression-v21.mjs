@@ -26,6 +26,9 @@ if(progression.calculateRunXp({modeKey:'future_zombie_night',modeFamily:'zombie'
 if(progression.calculateRunXp({modeKey:'adventure',difficultyKey:'normal',completedWaves:26,kills:188,playSeconds:390,typhoonDefeated:false})!==107)throw new Error('Measured Al Hata calibration must award 107 EXP.');
 if(progression.calculateRunXp({modeKey:'future_zombie_night',modeFamily:'zombie',playSeconds:190,kills:69})!==58)throw new Error('Future Zombie modes must inherit the Zombie EXP family.');
 if(progression.calculateRunXp({modeKey:'future_adventure_2',modeFamily:'adventure',difficultyKey:'normal',completedWaves:26,kills:188,playSeconds:390})!==107)throw new Error('Future Adventure modes must inherit the Adventure EXP family.');
+for(const key of ['survival','bossrush','sudden','moving_screen','king_of_the_hill'])if(progression.inferModeFamily(key)!=='arcade')throw new Error(`${key} must use the Arcade progression family.`);
+if(progression.calculateRunXp({modeKey:'moving_screen',completedWaves:6,kills:30,playSeconds:120})!==14)throw new Error('Representative completed Moving Screen run must award 14 EXP on the conservative Arcade curve.');
+if(progression.calculateRunXp({modeKey:'survival',completedWaves:0,kills:0,playSeconds:9999})!==0)throw new Error('Idle Arcade time without progress or KOs must award zero EXP.');
 if(Object.keys(progression.LEVEL_REWARDS).length!==100||Object.values(progression.LEVEL_REWARDS).some((list)=>!Array.isArray(list)||list.length!==0))throw new Error('All 100 level reward listings must exist and remain empty for this release.');
 
 const markers=(text,list,label)=>{for(const marker of list)if(!text.includes(marker))throw new Error(`${label} missing: ${marker}`);};
@@ -70,4 +73,4 @@ if(!clientEntry.includes("import './run-client-v21.js?v=21';"))throw new Error('
 if(!runtimeBridges.includes("'/online/run-ui-bridge-v21.js?v=21'"))throw new Error('Native runtime bridge authority does not load the run-result forwarding bridge v21.');
 if(!main.includes('getAccountProgressionV21:accountProgression.getAccountProgressionV21'))throw new Error('Account progression v21 callable is not exported.');
 
-console.log('Account progression v21 verified: levels 1-100, calibrated Adventure/Zombie EXP, zero EXP before the first Zombie kill, extensible empty per-level rewards, canonical v35 PIPS/EXP result rows, verified server EXP forwarding through the native runtime bridge authority, and friend-list levels are wired end to end.');
+console.log('Account progression verified: levels 1-100, calibrated Adventure/Zombie EXP, conservative Arcade EXP for every Arcade battle mode, canonical PIPS/EXP result rows, server result forwarding, and friend-list levels remain wired end to end.');
