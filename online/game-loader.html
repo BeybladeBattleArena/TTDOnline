@@ -58,6 +58,13 @@
             abilities.async=false;
             document.head.appendChild(abilities);
           }
+          if(!document.getElementById('ttdOverdriveStarterPackV2Script')){
+            const starterPack=document.createElement('script');
+            starterPack.id='ttdOverdriveStarterPackV2Script';
+            starterPack.src=window.__TTD_ASSET_URL('/online/overdrive-starter-pack-v2.js');
+            starterPack.async=false;
+            document.head.appendChild(starterPack);
+          }
           if(!document.getElementById('ttdCollectionActionsUiV1Script')){
             const actions=document.createElement('script');
             actions.id='ttdCollectionActionsUiV1Script';

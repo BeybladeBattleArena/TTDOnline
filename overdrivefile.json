@@ -14,7 +14,9 @@
     "starterCompletionLevelMax": 10,
     "releasedStarterKeys": [
       "moonwolfsummon",
-      "gaiacrash"
+      "gaiacrash",
+      "embracedryad",
+      "meteorimpact"
     ]
   },
   "dice": {
@@ -31,7 +33,7 @@
         "starterOptionCount": 4,
         "eventualGrantAll": true,
         "completionByLevel": 10,
-        "rollout": "released-2-of-4"
+        "rollout": "released-4-of-4"
       },
       "special": {
         "kind": "moonWolfSummon",
@@ -102,7 +104,7 @@
         "starterOptionCount": 4,
         "eventualGrantAll": true,
         "completionByLevel": 10,
-        "rollout": "released-2-of-4"
+        "rollout": "released-4-of-4"
       },
       "special": {
         "kind": "gaiaCrash",
@@ -126,6 +128,81 @@
           "juggleable": true,
           "relaunchAirborne": true
         }
+      }
+    },
+    "embracedryad": {
+      "name": "Embrace of Dryad",
+      "element": "Nature",
+      "dpCost": 18,
+      "flavor": "Be embraced by the fortifying arms of nature itself.",
+      "description": "Grow two Nature-aligned protective branches across the player's dice tray. Once fully grown, incoming damage aimed at the player or their dice is redirected into the branches until both are destroyed or the protection expires.",
+      "acquisition": {
+        "kind": "starter",
+        "starterChoiceGroup": "starter-overdrive-v1",
+        "starterChoiceCount": 1,
+        "starterOptionCount": 4,
+        "eventualGrantAll": true,
+        "completionByLevel": 10,
+        "rollout": "released-4-of-4"
+      },
+      "special": {
+        "kind": "dryadEmbrace",
+        "particleRainSeconds": 0.35,
+        "branchGrowDelaySeconds": 0.5,
+        "branchGrowthSeconds": 0.8,
+        "activeSeconds": 12,
+        "cooldownSeconds": 2,
+        "branchCount": 2,
+        "branchBaseHp": 12,
+        "playerMaxHpScale": 0.5,
+        "hpRounding": "floor",
+        "branchLengthFractionOfTray": 0.6667,
+        "branchBaseWidthDieFraction": 0.3333,
+        "branchTipWidthScale": 0.5,
+        "frontLayerRandom": true,
+        "redirectBeginsWhenFullyGrown": true,
+        "redirectTargets": ["player", "tower", "dice"],
+        "elementAffinity": "nature",
+        "elementAffinityFraction": 1,
+        "currentGameMatchingElementDamageMultiplier": 0.5,
+        "destroyFadeSeconds": 0.65,
+        "naturalDisperseSeconds": 0.8
+      }
+    },
+    "meteorimpact": {
+      "name": "Meteor Impact",
+      "element": "Fire",
+      "dpCost": 20,
+      "flavor": "Witness the sky above collapse into burning hellfire upon your foes.",
+      "description": "Charge and launch a violent sphere of energy skyward, then call down a fully Fire-aligned meteor that crashes into the battlefield and detonates in a potent area blast.",
+      "acquisition": {
+        "kind": "starter",
+        "starterChoiceGroup": "starter-overdrive-v1",
+        "starterChoiceCount": 1,
+        "starterOptionCount": 4,
+        "eventualGrantAll": true,
+        "completionByLevel": 10,
+        "rollout": "released-4-of-4"
+      },
+      "special": {
+        "kind": "meteorImpact",
+        "chargeSeconds": 0.8,
+        "postLaunchDelaySeconds": 0.4,
+        "tintToMeteorDelaySeconds": 0.2,
+        "fallSeconds": 1.1,
+        "embedSeconds": 0.3,
+        "hesitateSeconds": 0.2,
+        "damage": 72,
+        "damageTuning": "provisional-potent",
+        "damageCategory": "special",
+        "affinities": {"fire": 1},
+        "meteorSizeDieScale": 0.95,
+        "impactTargetPve": "battlefield-center",
+        "impactTargetPvp": "opponent-dice-tray",
+        "radiusFractionOfBattleWidth": 0.18,
+        "radiusMin": 58,
+        "radiusMax": 92,
+        "explosionFadeSeconds": 0.8
       }
     }
   }

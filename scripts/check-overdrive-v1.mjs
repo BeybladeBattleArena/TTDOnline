@@ -9,6 +9,7 @@ const backend=fs.readFileSync('functions/overdrive-v1.js','utf8');
 const client=fs.readFileSync('online/overdrive-client-v1.js','utf8');
 const runtime=fs.readFileSync('online/overdrive-system-v1.js','utf8');
 const abilities=fs.readFileSync('online/overdrive-abilities-v1.js','utf8');
+const starterPack=fs.readFileSync('online/overdrive-starter-pack-v2.js','utf8');
 const collectionServer=fs.readFileSync('functions/collection-actions-v1.js','utf8');
 const collectionClient=fs.readFileSync('online/collection-actions-client-v1.js','utf8');
 const collectionUi=fs.readFileSync('online/collection-actions-ui-v1.js','utf8');
@@ -20,6 +21,7 @@ const main=fs.readFileSync('functions/main-v6.js','utf8');
 new vm.Script(backend,{filename:'functions/overdrive-v1.js'});
 new vm.Script(runtime,{filename:'online/overdrive-system-v1.js'});
 new vm.Script(abilities,{filename:'online/overdrive-abilities-v1.js'});
+new vm.Script(starterPack,{filename:'online/overdrive-starter-pack-v2.js'});
 new vm.Script(collectionServer,{filename:'functions/collection-actions-v1.js'});
 new vm.Script(collectionUi,{filename:'online/collection-actions-ui-v1.js'});
 execFileSync(process.execPath,['--input-type=module','--check'],{input:collectionClient,stdio:['pipe','pipe','pipe']});
@@ -31,6 +33,7 @@ must(catalog.system?.baseHP===50,'Base player HP must remain aligned with Endles
 must(catalog.system?.driveMax===100,'Drive Meter must use a 100-point normalized maximum.');
 must(catalog.system?.starterOptionCount===4&&catalog.system?.starterChoiceCount===1,'Starter Overdrive design must remain a 1-of-4 choice.');
 must(catalog.system?.starterCompletionLevelMax===10,'All four starter Overdrive Dice must be scheduled within the first 10 account levels.');
+must(JSON.stringify(catalog.system?.releasedStarterKeys)==='["moonwolfsummon","gaiacrash","embracedryad","meteorimpact"]','All four starter Overdrive keys must be released in canonical order.');
 must(catalog.dice&&typeof catalog.dice==='object'&&!Array.isArray(catalog.dice),'Overdrive dice catalog must be an object.');
 
 const wolf=catalog.dice.moonwolfsummon;
@@ -55,15 +58,38 @@ must(gaia?.special?.reticleArmSeconds===0.45&&gaia?.special?.countdownSeconds===
 must(gaia?.special?.tapToActivateEarly===true&&gaia?.special?.draggable===true,'Gaia Crash reticle interaction drifted.');
 must(gaia?.special?.launch?.relaunchAirborne===true&&gaia?.special?.launch?.juggleable===true,'Gaia Crash must launch and relaunch airborne enemies.');
 must(gaia?.special?.damageTuning==='provisional-moderate','Gaia Crash damage must remain explicitly provisional until playtest tuning.');
-for(const def of [wolf,gaia]){
+
+const dryad=catalog.dice.embracedryad;
+must(dryad?.name==='Embrace of Dryad','Dryad display name drifted.');
+must(dryad?.dpCost===18&&dryad?.element==='Nature','Embrace of Dryad must cost 18 DP and be Nature aligned.');
+must(dryad?.flavor==='Be embraced by the fortifying arms of nature itself.','Dryad flavor drifted.');
+must(dryad?.special?.particleRainSeconds===0.35&&dryad?.special?.branchGrowDelaySeconds===0.5&&dryad?.special?.branchGrowthSeconds===0.8,'Dryad growth sequence timing drifted.');
+must(dryad?.special?.branchBaseHp===12&&dryad?.special?.playerMaxHpScale===0.5&&dryad?.special?.hpRounding==='floor','Dryad branch HP formula must remain floor(12 + 0.5 * player max HP).');
+must(dryad?.special?.activeSeconds===12&&dryad?.special?.cooldownSeconds===2,'Dryad duration/cooldown contract drifted.');
+must(dryad?.special?.frontLayerRandom===true&&dryad?.special?.redirectBeginsWhenFullyGrown===true,'Dryad layer and redirect timing drifted.');
+must(JSON.stringify(dryad?.special?.redirectTargets)==='["player","tower","dice"]','Dryad must redirect player, tower, and die damage.');
+must(dryad?.special?.elementAffinity==='nature'&&dryad?.special?.elementAffinityFraction===1,'Dryad branches must remain fully Nature aligned.');
+
+const meteor=catalog.dice.meteorimpact;
+must(meteor?.name==='Meteor Impact','Meteor Impact display name drifted.');
+must(meteor?.dpCost===20&&meteor?.element==='Fire','Meteor Impact must cost 20 DP and be Fire aligned.');
+must(meteor?.flavor==='Witness the sky above collapse into burning hellfire upon your foes.','Meteor flavor drifted.');
+must(meteor?.special?.chargeSeconds===0.8&&meteor?.special?.postLaunchDelaySeconds===0.4&&meteor?.special?.tintToMeteorDelaySeconds===0.2,'Meteor charge/sky timing drifted.');
+must(meteor?.special?.fallSeconds===1.1&&meteor?.special?.embedSeconds===0.3&&meteor?.special?.hesitateSeconds===0.2,'Meteor fall/embed/hesitation timing drifted.');
+must(meteor?.special?.affinities?.fire===1,'Meteor Impact damage must remain 100% Fire affinity.');
+must(meteor?.special?.damageTuning==='provisional-potent'&&Number(meteor?.special?.damage)>Number(gaia?.special?.damage),'Meteor first-pass damage must stay explicitly provisional and stronger than Gaia Crash.');
+must(meteor?.special?.impactTargetPve==='battlefield-center'&&meteor?.special?.impactTargetPvp==='opponent-dice-tray','Meteor PvE/PvP targeting contract drifted.');
+
+for(const def of [wolf,gaia,dryad,meteor]){
   must(def?.acquisition?.starterChoiceCount===1&&def?.acquisition?.starterOptionCount===4,'Starter Overdrive acquisition metadata drifted.');
   must(def?.acquisition?.eventualGrantAll===true&&def?.acquisition?.completionByLevel===10,'Starter Overdrive eventual-grant contract drifted.');
+  must(def?.acquisition?.rollout==='released-4-of-4','Starter Overdrive release metadata must show all four options are designed.');
 }
 
 for(const marker of [
   'getOverdriveStateV1','saveOverdriveDeckV1','overdriveDecks/deck-${index}','overdriveDice/${slot.key}',
   'An Overdrive loadout must contain exactly two optional slots.','Every equipped Overdrive Die must be owned by this account.',
-  'RELEASED_STARTER_BACKFILL_CUTOFF_MS','ensureReleasedStarterBackfill','legacy-starter-rollout',
+  'RELEASED_STARTER_BACKFILL_CUTOFF_MS','ensureReleasedStarterBackfill','legacy-starter-rollout','newlyReleased','priorKeys',
 ])must(backend.includes(marker),`Overdrive backend contract missing: ${marker}`);
 must(main.includes("require('./overdrive-v1')")&&main.includes('...overdrive'),'Overdrive cloud functions are not exported from main-v6.js.');
 
@@ -95,10 +121,21 @@ must(abilities.includes('const entry = Array.isArray(pair) ? pair[index] : null;
 must(!abilities.includes('api?.equipped?.(index)'),'OD activation regressed to treating the OD slot index as a deck index.');
 
 for(const marker of [
+  "new Set(['embracedryad', 'meteorimpact'])",'startDryad','branchHpFor','Math.floor','absorbThroughBranches','dryadRedirectedDieDamage',
+  'dryadAwareEndMatch','dryadAwareEndlessEnd','reconcilePlayerDamage','frontIndex','upperIndex','ttdStarterBlocked',
+  'startMeteor','resolveMeteor','meteorTarget','__TTD_PVP_OVERDRIVE_METEOR_HIT_V1','affinities:{ fire:1 }',
+  'ttdOverdriveStarterPackFxV2','ttdOdCastButton','stopImmediatePropagation','__TTD_OVERDRIVE_STARTER_ABILITIES_V2',
+])must(starterPack.includes(marker),`Starter Overdrive pack missing: ${marker}`);
+must(starterPack.includes("if (key === 'embracedryad') return !dryadBlocked();"),'Dryad active/cooldown state must block casting before DP is spent.');
+must(starterPack.includes("if (key === 'meteorimpact') return !meteorBlocked();"),'Meteor animation must block duplicate casts.');
+must(starterPack.indexOf('if (!canActivate(key)) return false;')<starterPack.indexOf("if (key === 'embracedryad') return startDryad(def);"),'Starter ability castability must be checked before activation/spending.');
+
+for(const marker of [
   'ttdBattleActionRow','ttdOdCast${index+1}','OD ${index+1}','ttdOdCastButton.castable','ttdOdCastable','ttdOdUncastable',
   'abilityApi()?.activateSlot?.(index)','showOdInfo','Nonelemental','ttdOdInfoFlavor','.ttdOverdriveBattleSlot.filled','.ttdOdCard',
 ])must(collectionUi.includes(marker),`Overdrive control/inspection UI missing: ${marker}`);
 must(loader.includes('/online/collection-actions-ui-v1.js'),'Game loader does not inject collection/Overdrive action UI.');
+must(loader.includes('/online/overdrive-starter-pack-v2.js'),'Game loader does not inject the complete starter Overdrive pack.');
 
 for(const marker of [
   'exports.mergeAllDiceV1','scope===\'class\'','for(let cls=1;cls<10;cls++)','while(queue.length>=2)','resolveAlias',
@@ -128,10 +165,10 @@ must(singleplayerClient.includes("import './collection-actions-client-v1.js?v=1'
 for(const marker of ['mergeAllDiceV1','sellDieV1','ttd:collection-mergeall-result','ttd:collection-sell-result'])must(collectionClient.includes(marker),`Collection authenticated client contract missing: ${marker}`);
 
 for(const forbidden of ['classLevel','pipLevel','jewelSlots','enchantSlots','upgradeOverdrive','mergeOverdrive']){
-  must(!runtime.includes(forbidden)&&!backend.includes(forbidden)&&!abilities.includes(forbidden),`Overdrive WYSIWYG contract regressed with progression marker: ${forbidden}`);
+  must(!runtime.includes(forbidden)&&!backend.includes(forbidden)&&!abilities.includes(forbidden)&&!starterPack.includes(forbidden),`Overdrive WYSIWYG contract regressed with progression marker: ${forbidden}`);
 }
 must(loader.includes('/online/overdrive-system-v1.js'),'Game loader does not inject the Overdrive runtime.');
 must(loader.includes('/online/overdrive-abilities-v1.js'),'Game loader does not inject playable Overdrive abilities.');
 must(shell.includes("import('/online/overdrive-client-v1.js?v=1')"),'Online shell does not load the Overdrive authenticated client.');
 
-console.log('Overdrive/collection action contract verified: explicit OD 1/OD 2 casting resolves the active pair correctly, warm-purple readiness, shared inspection, gem-safe cascading Merge All, and authoritative C1-C7 die sales are wired without changing approved assets.');
+console.log('Overdrive/collection action contract verified: all four starter Overdrives are cataloged, Dryad shielding and Meteor Impact are playable through OD 1/OD 2, activation resolves correctly, and existing collection/economy contracts remain intact.');

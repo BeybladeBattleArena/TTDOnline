@@ -8,9 +8,10 @@ const REGION = 'us-central1';
 const MIN_DECKS = 3;
 const MAX_DECKS = 5;
 const DEFAULT_STATS = Object.freeze({ hp: 50, dp: 45, luck: 0 });
-// Accounts that predate the first playable Overdrive content get the currently released
-// starter pair automatically so existing players can test/use the new system. New accounts
-// remain reserved for the intended 1-of-4 starter choice once all four starter dice exist.
+// Accounts that predate the first playable Overdrive content receive released starter
+// Overdrives automatically so existing players can test/use the system. This rollout is
+// incremental: when another starter is released, an already-eligible account receives only
+// the newly added key(s). New-account 1-of-4 choice and level-up grants remain separate.
 const RELEASED_STARTER_BACKFILL_CUTOFF_MS = Date.parse('2026-08-29T04:15:00Z');
 
 function requireAuth(request) {
@@ -103,13 +104,20 @@ async function ensureReleasedStarterBackfill(uid) {
   const rolloutRef = db.doc(`users/${uid}/game/overdriveStarterRolloutV1`);
   return db.runTransaction(async (tx) => {
     const [userSnap, rolloutSnap] = await Promise.all([tx.get(userRef), tx.get(rolloutRef)]);
-    if (rolloutSnap.exists) return false;
     if (!userSnap.exists) return false;
-    const createdAt = userSnap.data()?.createdAt;
-    const createdMs = createdAt && typeof createdAt.toMillis === 'function' ? createdAt.toMillis() : Number.POSITIVE_INFINITY;
-    const eligible = Number.isFinite(createdMs) && createdMs <= RELEASED_STARTER_BACKFILL_CUTOFF_MS;
+
+    const prior = rolloutSnap.exists ? rolloutSnap.data() || {} : null;
+    let eligible = prior ? prior.eligible === true : false;
+    if (!prior) {
+      const createdAt = userSnap.data()?.createdAt;
+      const createdMs = createdAt && typeof createdAt.toMillis === 'function' ? createdAt.toMillis() : Number.POSITIVE_INFINITY;
+      eligible = Number.isFinite(createdMs) && createdMs <= RELEASED_STARTER_BACKFILL_CUTOFF_MS;
+    }
+
+    const priorKeys = new Set(Array.isArray(prior?.releasedKeys) ? prior.releasedKeys.filter((key) => typeof key === 'string') : []);
+    const newlyReleased = keys.filter((key) => !priorKeys.has(key));
     if (eligible) {
-      for (const key of keys) {
+      for (const key of newlyReleased) {
         tx.set(db.doc(`users/${uid}/overdriveDice/${key}`), {
           key,
           source: 'legacy-starter-rollout',
@@ -120,13 +128,17 @@ async function ensureReleasedStarterBackfill(uid) {
         }, { merge: true });
       }
     }
-    tx.set(rolloutRef, {
-      schemaVersion: 1,
-      eligible,
-      releasedKeys: keys,
-      cutoffMs: RELEASED_STARTER_BACKFILL_CUTOFF_MS,
-      appliedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
+
+    if (!prior || newlyReleased.length || JSON.stringify([...priorKeys]) !== JSON.stringify(keys)) {
+      tx.set(rolloutRef, {
+        schemaVersion: 1,
+        eligible,
+        releasedKeys: keys,
+        newlyReleasedKeys: newlyReleased,
+        cutoffMs: RELEASED_STARTER_BACKFILL_CUTOFF_MS,
+        appliedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     return eligible;
   });
 }
