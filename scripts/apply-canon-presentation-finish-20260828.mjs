@@ -1,0 +1,63 @@
+import fs from 'node:fs';
+
+const path='random-dice-game-33.html';
+let src=fs.readFileSync(path,'utf8');
+let changes=0;
+const once=(needle,repl,label)=>{if(!src.includes(needle))throw new Error(`Missing ${label}`);src=src.replace(needle,repl);changes++;};
+
+// Clean two multiline legacy bodies left beneath the first materialized replacements.
+once(
+`  function effDmg(die){const d=DICE[die.key],pu=1+die.pu*.16,power=dieJewelBonus(die,'power'),base=(d.special&&d.special.kind==='canonMimic'&&canonClassForEffective(die)>=2)?11:d.dmg;return base*pu*classMultFromLevel(canonClassForEffective(die))*(1+power);}
+    const d = DICE[die.key]; const puMult = 1+die.pu*0.16;
+    const powerBonus = dieJewelBonus(die, 'power');
+    return d.dmg*puMult*classMultFor(die.key)*(1+powerBonus);
+  }`,
+`  function effDmg(die){const d=DICE[die.key],pu=1+die.pu*.16,power=dieJewelBonus(die,'power'),base=(d.special&&d.special.kind==='canonMimic'&&canonClassForEffective(die)>=2)?11:d.dmg;return base*pu*classMultFromLevel(canonClassForEffective(die))*(1+power);}`,
+'effDmg stale body');
+once(
+`  function canonOnEnemyDeath(e){const f=e.canon&&e.canon.fracture;if(f&&f.stacks>0&&f.transfer>0){const next=canonFront(aliveEnemies().filter(x=>x!==e));if(next){const nc=canonState(next);nc.fracture={stacks:Math.min(f.max,f.transfer),max:f.max,t:2,drSupp:f.drSupp,dotShare:f.dotShare,transfer:0};}}}
+    const f=e.canon&&e.canon.fracture;if(f&&f.stacks>0&&f.transfer>0){const next=canonFront(aliveEnemies().filter(x=>x!==e));if(next){const nc=canonState(next);nc.fracture={stacks:Math.min(f.max,f.transfer),max:f.max,t:2,drSupp:f.drSupp,dotShare:f.dotShare,transfer:f.transfer};}}
+  }`,
+`  function canonOnEnemyDeath(e){const f=e.canon&&e.canon.fracture;if(f&&f.stacks>0&&f.transfer>0){const next=canonFront(aliveEnemies().filter(x=>x!==e));if(next){const nc=canonState(next);nc.fracture={stacks:Math.min(f.max,f.transfer),max:f.max,t:2,drSupp:f.drSupp,dotShare:f.dotShare,transfer:0};}}}`,
+'canonOnEnemyDeath stale body');
+
+// Individual identity presentation for the rest of the modernized roster.
+once("canonApplyFracture(target,die,add);}","canonApplyFracture(target,die,add);fx('fractureStrike',enemyRenderPos(target),{stacks:canonState(target).fracture?.stacks||1,dur:.45});}",'Crack strike FX');
+once("fx('heavy',enemyRenderPos(t));}","fx('ironFall',enemyRenderPos(t),{size,crush:size>tr,dur:.62});}",'Iron Ball fall FX');
+once("canonFireSimple(die,target,12,'status',{arcane:1});const c=canonC(die)","canonFireSimple(die,target,12,'status',{arcane:1});fx('spatialBolt',enemyRenderPos(target),{dur:.38});const c=canonC(die)",'Teleport bolt FX');
+once("state.sp+=base;while(die.canon.ore>=5){", "state.sp+=base;fx('mineExtract',dieTileLaunchPos(idx),{ore:oreAdd,dur:.42});while(die.canon.ore>=5){",'Mine extraction FX');
+once("state.sp+=b;}triggerTilePulse(idx,'pulse-gold',.5);}","state.sp+=b;fx('richVein',dieTileLaunchPos(idx),{mother:mother>0,dur:.62});}triggerTilePulse(idx,'pulse-gold',.5);}",'Mine rich vein FX');
+once("triggerTilePulse(dstIdx,'pulse-rainbow',.5);if(newDot>=7)","triggerTilePulse(dstIdx,'pulse-rainbow',.5);fx('mimicMerge',dieTileLaunchPos(dstIdx),{dur:.7});if(newDot>=7)",'Mimic merge FX');
+once("joker.canon.openingActionActive=false;joker.canon.laserGauge=0;", "joker.canon.openingActionActive=false;const jidx=state.board.indexOf(joker);if(jidx>=0)fx('jokerMask',dieTileLaunchPos(jidx),{dur:transform,key:source.key});joker.canon.laserGauge=0;",'Joker transform FX');
+once("triggerTilePulse(idx,'pulse-rainbow',.5);}\n  function canonTickGrowth", "triggerTilePulse(idx,'pulse-rainbow',.5);fx('growthBloom',dieTileLaunchPos(idx),{final:newP>=7,overgrown,dur:.72});}\n  function canonTickGrowth",'Growth maturation FX');
+once("fx('shockwaveFull',{x:cw/2,y:ch/2});}return true;}","fx('snowfallCast',{x:cw/2,y:ch/2},{heavy:q.terrain==='heavy',dur:1.0});}return true;}",'Snowfall cast FX');
+once("d.sinceLastShot=Math.min(effAtk(d),d.sinceLastShot+effAtk(d)*q.pulse[1]);});}","d.sinceLastShot=Math.min(effAtk(d),d.sinceLastShot+effAtk(d)*q.pulse[1]);});fx('radiancePulse',dieTileLaunchPos(idx),{q,dur:.75});}",'Light pulse FX');
+
+// Improve tile state art beyond text-only cues for Growth and hold skills.
+once(
+".canonStateBadge.lion{color:#ffe99d}.canonStateBadge.growth{color:#c9f0be}",
+".canonStateBadge.lion{color:#ffe99d}.canonStateBadge.growth{color:#c9f0be}.canonDieMotif{position:absolute;right:3px;top:3px;width:15px;height:15px;z-index:3;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}.canonDieMotif.growth i{position:absolute;left:7px;bottom:2px;width:2px;height:8px;background:#416b3c;border-radius:2px}.canonDieMotif.growth i:before,.canonDieMotif.growth i:after{content:'';position:absolute;width:6px;height:4px;background:#8dce75;border-radius:100% 0 100% 0;top:2px}.canonDieMotif.growth i:before{right:1px;transform:rotate(20deg)}.canonDieMotif.growth i:after{left:1px;transform:scaleX(-1) rotate(20deg)}.canonDieMotif.ready{border:1px solid rgba(255,239,133,.9);border-radius:50%;box-shadow:0 0 8px rgba(255,220,80,.7),inset 0 0 6px rgba(255,244,184,.45);animation:canonReadyPulse .8s ease-in-out infinite alternate}@keyframes canonReadyPulse{to{transform:scale(1.14);filter:drop-shadow(0 0 4px #ffe889)}}",
+'canon motif CSS');
+once(
+"  function canonTileStateBadge(die){const key=canonEffKey(die),d=DICE[key],k=d&&d.special&&d.special.kind;",
+"  function canonTileMotif(die){const d=DICE[canonEffKey(die)],k=d&&d.special&&d.special.kind;if(k==='canonGrowth')return '<div class=\"canonDieMotif growth\"><i></i></div>';const g=canonGaugePercent(die);if(g!=null&&g>=99.5)return '<div class=\"canonDieMotif ready\"></div>';return '';}\n  function canonTileStateBadge(die){const key=canonEffKey(die),d=DICE[key],k=d&&d.special&&d.special.kind;",
+'canon tile motif helper');
+once(
+"style=\"background:linear-gradient(155deg, ${d.glow}, ${d.color});\">${canonTileStateBadge(die)}",
+"style=\"background:linear-gradient(155deg, ${d.glow}, ${d.color});\">${canonTileStateBadge(die)}${canonTileMotif(die)}",
+'tile motif markup');
+
+// Persistent Light geometry and Growth stage artwork in battle space.
+once(
+"  function drawCanonWorldEffects(){ctx.save();const now=state.time||0;",
+`  function drawCanonWorldEffects(){ctx.save();const now=state.time||0;state.board.forEach((die,idx)=>{if(!die)return;const def=DICE[canonEffKey(die)],kind=def&&def.special&&def.special.kind,pos=dieTileLaunchPos(idx);if(kind==='canonLight'){const q=canonRadianceParams(die);ctx.save();ctx.globalCompositeOperation='lighter';state.board.forEach((other,j)=>{if(!other||j===idx)return;const v=canonCoverage(idx,j,q);if(v<=0)return;const op=Math.min(.42,.10+v*.22),p2=dieTileLaunchPos(j);ctx.strokeStyle='rgba(255,238,161,'+op+')';ctx.lineWidth=1+v*1.4;ctx.setLineDash(v<.6?[2,3]:[]);ctx.beginPath();ctx.moveTo(pos.x,pos.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();ctx.setLineDash([]);});ctx.fillStyle='rgba(255,244,183,'+(.20+.08*Math.sin(now*3+idx))+')';ctx.beginPath();ctx.arc(pos.x,pos.y,7+Math.sin(now*2.2+idx)*1.3,0,Math.PI*2);ctx.fill();ctx.restore();}if(kind==='canonGrowth'){const g=Math.max(0,Math.min(1,(canonGaugePercent(die)||0)/100));ctx.save();ctx.translate(pos.x,pos.y-10);ctx.strokeStyle='#8fd17a';ctx.fillStyle='rgba(137,207,111,.55)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,7);ctx.quadraticCurveTo(-1,1,0,-3-g*5);ctx.stroke();if(g>.18){ctx.beginPath();ctx.ellipse(-3,-1-g*3,3+g*2,1.8+g, -.5,0,Math.PI*2);ctx.fill();}if(g>.42){ctx.beginPath();ctx.ellipse(3,-4-g*4,3.5+g*2,2+g,.5,0,Math.PI*2);ctx.fill();}if(g>.72){ctx.fillStyle='rgba(244,185,218,.72)';for(let a=0;a<5;a++){ctx.save();ctx.rotate(a*Math.PI*2/5);ctx.beginPath();ctx.ellipse(0,-7-g*4,2.2,4,0,0,Math.PI*2);ctx.fill();ctx.restore();}}ctx.restore();}});`,
+'Light and Growth persistent art');
+
+// High-quality transient effect cases.
+once(
+"        case 'chainPath': {",
+`        case 'ironFall': {ctx.save();ctx.globalCompositeOperation='lighter';const s=e.size||11,y=e.y-(1-p)*32;ctx.fillStyle='#7f8898';ctx.strokeStyle='#dfe6f5';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(e.x,y,s*.55,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(e.x-s*.16,y-s*.18,s*.14,0,Math.PI*2);ctx.fill();if(p>.62){const q=(p-.62)/.38;ctx.strokeStyle=e.crush?'#fff0aa':'#cdd5e4';ctx.lineWidth=e.crush?3:2;ctx.beginPath();ctx.arc(e.x,e.y,s*(.5+q*1.6),0,Math.PI*2);ctx.stroke();for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*s*.7,e.y+Math.sin(a)*s*.35);ctx.lineTo(e.x+Math.cos(a)*s*(1+q*1.4),e.y+Math.sin(a)*s*(.5+q));ctx.stroke();}}ctx.restore();break;}\n        case 'fractureStrike': {ctx.save();ctx.strokeStyle='#f0ad80';ctx.lineWidth=2;for(let i=0;i<Math.min(5,2+(e.stacks||1));i++){const a=-1.3+i*.65,rr=8+p*15;ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*3,e.y+Math.sin(a)*3);ctx.lineTo(e.x+Math.cos(a+.18)*rr*.55,e.y+Math.sin(a+.18)*rr*.55);ctx.lineTo(e.x+Math.cos(a-.08)*rr,e.y+Math.sin(a-.08)*rr);ctx.stroke();}ctx.restore();break;}\n        case 'spatialBolt': {ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#b49cff';ctx.lineWidth=2;for(let i=0;i<3;i++){const r=5+p*(8+i*5);ctx.globalAlpha=(1-p)*(.8-i*.14);ctx.beginPath();ctx.ellipse(e.x,e.y,r,r*.42,p*2+i*.7,0,Math.PI*2);ctx.stroke();}ctx.restore();break;}\n        case 'mineExtract': {ctx.save();ctx.translate(e.x,e.y);ctx.globalCompositeOperation='lighter';for(let i=0;i<5+(e.ore||1)*3;i++){const a=i*2.399+p*3,rr=5+p*(10+(i%3)*3);ctx.fillStyle=i%3===0?'#fff1a8':i%3===1?'#d9b26a':'#9cd7ff';ctx.beginPath();ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);ctx.lineTo(Math.cos(a+.18)*(rr+3),Math.sin(a+.18)*(rr+3));ctx.lineTo(Math.cos(a-.18)*(rr+3),Math.sin(a-.18)*(rr+3));ctx.closePath();ctx.fill();}ctx.restore();break;}\n        case 'richVein': {ctx.save();ctx.translate(e.x,e.y);ctx.globalCompositeOperation='lighter';const n=e.mother?14:9;for(let i=0;i<n;i++){const a=i*Math.PI*2/n+p*2,rr=8+p*(18+(i%2)*6);ctx.fillStyle=e.mother?'#fff2a6':'#f0cf6d';ctx.beginPath();ctx.arc(Math.cos(a)*rr,Math.sin(a)*rr,1.5+(i%3),0,Math.PI*2);ctx.fill();}ctx.strokeStyle=e.mother?'#fff7cf':'#d9b26a';ctx.lineWidth=e.mother?3:2;ctx.beginPath();ctx.arc(0,0,6+p*18,0,Math.PI*2);ctx.stroke();ctx.restore();break;}\n        case 'mimicMerge': {ctx.save();ctx.translate(e.x,e.y);ctx.globalCompositeOperation='lighter';for(let i=0;i<3;i++){ctx.strokeStyle=['#82ead7','#b49cff','#ffe08a'][i];ctx.lineWidth=2;ctx.globalAlpha=(1-p)*(.85-i*.16);ctx.beginPath();ctx.arc(0,0,5+p*(12+i*7),i*.9+p*2,i*.9+p*2+Math.PI*1.4);ctx.stroke();}ctx.restore();break;}\n        case 'jokerMask': {ctx.save();ctx.translate(e.x,e.y);ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#f0c2fa';ctx.fillStyle='rgba(201,139,214,'+(.24*(1-p))+')';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-10,-7);ctx.quadraticCurveTo(0,-13,10,-7);ctx.lineTo(8,6);ctx.quadraticCurveTo(0,12,-8,6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff2a8';ctx.beginPath();ctx.ellipse(-4,-2,2.4,1.2,-.2,0,Math.PI*2);ctx.ellipse(4,-2,2.4,1.2,.2,0,Math.PI*2);ctx.fill();ctx.rotate(p*.8);ctx.strokeStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(0,0,14+p*8,0,Math.PI*1.7);ctx.stroke();ctx.restore();break;}\n        case 'growthBloom': {ctx.save();ctx.translate(e.x,e.y);ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#9ad888';ctx.lineWidth=1.5;for(let i=0;i<8;i++){const a=i*Math.PI/4+p*1.5,rr=5+p*18;ctx.fillStyle=e.final?'#ffd2eb':'#bdeaa8';ctx.beginPath();ctx.ellipse(Math.cos(a)*rr,Math.sin(a)*rr,2.5,5,a,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.restore();break;}\n        case 'snowfallCast': {ctx.save();ctx.globalCompositeOperation='lighter';const n=e.heavy?34:24;for(let i=0;i<n;i++){const a=i*2.399,rr=p*(20+(i%7)*10),x=e.x+Math.cos(a)*rr,y=e.y+Math.sin(a)*rr*.55;ctx.strokeStyle=i%3===0?'#fff':'#bfe0ff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);ctx.moveTo(x-2,y-2);ctx.lineTo(x+2,y+2);ctx.moveTo(x+2,y-2);ctx.lineTo(x-2,y+2);ctx.stroke();}ctx.fillStyle='rgba(188,224,255,'+(.12*(1-p))+')';ctx.fillRect(0,0,cw,ch);ctx.restore();break;}\n        case 'radiancePulse': {ctx.save();ctx.globalCompositeOperation='lighter';const r=8+p*55;ctx.strokeStyle='rgba(255,241,174,'+(1-p)+')';ctx.lineWidth=3-p*1.5;ctx.beginPath();ctx.arc(e.x,e.y,r,0,Math.PI*2);ctx.stroke();for(let i=0;i<8;i++){const a=i*Math.PI/4,ri=7+p*25,ro=12+p*50;ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*ri,e.y+Math.sin(a)*ri);ctx.lineTo(e.x+Math.cos(a)*ro,e.y+Math.sin(a)*ro);ctx.stroke();}ctx.restore();break;}\n        case 'chainPath': {`,
+'identity transient FX');
+
+fs.writeFileSync(path,src);
+console.log(`Applied canon presentation finisher (${changes} guarded replacements).`);
