@@ -22,6 +22,7 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewpor
 <div id="gameScreen" class="screen"><div id="hud"><div id="modeLabel">Arcade</div><div class="hud-stat sp"><span class="label">SP</span><span id="spVal">0</span></div><div class="hud-stat wave"><span class="label">Wave</span><span id="waveVal">0</span></div><div class="hud-stat lives"><span class="label">Lives</span><span id="livesVal">0</span></div><div id="killsStat"></div><div id="coinsStat"></div><button id="pauseBtn"></button><button id="endRunBtn"></button></div><div id="laneWrap"><canvas id="laneCanvas"></canvas></div><div id="boardWrap"></div><div id="tray"><div id="deckRow">legacy tray</div><button id="summonBtn">legacy summon</button></div></div>
 <div id="toast" class="toast"></div></div><pre id="testResult">PENDING</pre>
 <script>
+window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);window.cancelAnimationFrame=id=>clearTimeout(id);
 var DICE={fire:{name:'Fire',hp:70,dmg:10,atk:.8,color:'#e86a4d',glow:'#ffd09e',special:{range:'mid'}},ice:{name:'Ice',hp:72,dmg:9,atk:.9,color:'#77bbee',glow:'#d8f4ff',special:{range:'mid'}},wind:{name:'Wind',hp:66,dmg:8,atk:.72,color:'#7fd9a2',glow:'#e4fff0',special:{range:'mid'}},earth:{name:'Earth',hp:90,dmg:8,atk:1.0,color:'#b98b5c',glow:'#ffe0b8',special:{range:'close'}},light:{name:'Light',hp:60,dmg:11,atk:.75,color:'#e5d36d',glow:'#fff8c9',special:{range:'midfar'}}};
 function getActiveDeck(){return[{key:'fire'},{key:'ice'},{key:'wind'},{key:'earth'},{key:'light'}]};function findInstance(){return null};function toastGlobal(msg){document.getElementById('toast').textContent=msg};function showScreen(name){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(name+'Screen')?.classList.add('active')};window.TTDGamePresentation={presentOutcome:(kind,opts={})=>{opts.reveal?.();},showFail:()=>{},showClear:()=>{}};
 </script><script src="${stageUrl}"></script><script src="${engineUrl}"></script><script>
@@ -47,6 +48,7 @@ async function run(){
   report.afterSummon=window.TTDMovingScreen?.state;
   report.summoned=report.afterSummon?.players===1;
   await sleep(3500);
+  report.simulationAdvanced=(window.TTDMovingScreen?.state?.sp||0)>60;
   report.aiCrossroadSurvived=report.errors.length===0&&window.TTDMovingScreen?.state?.enemies>=1;
   document.getElementById('ttdMsExitV4')?.click();await sleep(100);
   report.manualReturn=document.getElementById('modeScreen')?.classList.contains('active')===true&&!document.getElementById('ttdMsControlsV4');
@@ -56,11 +58,12 @@ async function run(){
   await sleep(8350);
   const result=document.getElementById('ttdMsResultV4'),resultButton=result?.querySelector('button');
   report.failResultVisible=result?.classList.contains('show')===true&&!!resultButton;
-  resultButton?.click();await sleep(120);
+  if(report.failResultVisible)resultButton.click();
+  await sleep(120);
   report.failReturn=document.getElementById('modeScreen')?.classList.contains('active')===true&&!document.getElementById('ttdMsResultV4');
   report.noRuntimeErrors=report.errors.length===0;
  }catch(error){report.errors.push(String(error?.stack||error));}
- const checks=['card','gameActive','usesGameShell','canvas','legacyBoardHidden','controlsVisible','summonVisible','summonEnabled','battlefieldTall','summoned','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
+ const checks=['card','gameActive','usesGameShell','canvas','legacyBoardHidden','controlsVisible','summonVisible','summonEnabled','battlefieldTall','summoned','simulationAdvanced','aiCrossroadSurvived','manualReturn','secondStart','failResultVisible','failReturn','noRuntimeErrors'];
  report.ok=checks.every(k=>report[k]===true);document.getElementById('testResult').textContent=JSON.stringify(report);
 }
 run();
@@ -68,7 +71,7 @@ run();
 fs.writeFileSync(harness,html);
 let dom='';
 try{
-  dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=14000','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:16*1024*1024,timeout:45000,stdio:['ignore','pipe','pipe']});
+  dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=14500','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:16*1024*1024,timeout:45000,stdio:['ignore','pipe','pipe']});
 }finally{try{fs.unlinkSync(harness);}catch{}}
 const match=dom.match(/<pre id="testResult">([\s\S]*?)<\/pre>/i);must(match,'Headless Chrome did not return Moving Screen smoke results.');
 const decoded=match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
