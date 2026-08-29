@@ -6,8 +6,12 @@ const db=getFirestore();
 const REGION='us-central1';
 const MIN_DECKS=3;
 const MAX_DECKS=5;
-const VALID_MODES=new Set(['survival','bossrush','sudden','adventure','endlesshorde']);
+const VALID_MODES=new Set(['survival','bossrush','sudden','adventure','endlesshorde','moving_screen','king_of_the_hill']);
 const VALID_DIFFS=new Set(['normal','hard','hell']);
+const VALID_MAPS=Object.freeze({
+  moving_screen:new Set(['neon_rooftops_v2']),
+  king_of_the_hill:new Set(['neon_rooftops_koth']),
+});
 const LEGACY_DIE_KEYS=Object.freeze({arrow:'skyhorn'});
 
 function canonicalDieKey(key){return LEGACY_DIE_KEYS[key]||key;}
@@ -128,6 +132,8 @@ exports.beginRun=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
   if(!VALID_MODES.has(modeKey))throw new HttpsError('invalid-argument','Unknown single-player mode.');
   const difficultyKey=modeKey==='adventure'?cleanString(request.data?.difficultyKey,20):null;
   if(modeKey==='adventure'&&!VALID_DIFFS.has(difficultyKey))throw new HttpsError('invalid-argument','Adventure difficulty is invalid.');
+  const mapKey=VALID_MAPS[modeKey]?cleanString(request.data?.mapKey,40):null;
+  if(VALID_MAPS[modeKey]&&!VALID_MAPS[modeKey].has(mapKey))throw new HttpsError('invalid-argument','Arcade map is invalid.');
 
   const {active}=await repairAndReadActiveDeck(auth.uid);
   const support=await sharedSupportSnapshot(auth.uid);
@@ -136,10 +142,11 @@ exports.beginRun=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
     status:'active',
     modeKey,
     difficultyKey,
+    mapKey,
     campaign:!!request.data?.campaign,
     activeDeckIdx:active,
     support:support?{lenderUid:support.lenderUid,lenderName:support.lenderName,key:support.key,rarity:support.rarity,instance:support.instance}:null,
     startedAt:FieldValue.serverTimestamp(),
   });
-  return {ok:true,runId:runRef.id,support};
+  return {ok:true,runId:runRef.id,support,mapKey};
 });
