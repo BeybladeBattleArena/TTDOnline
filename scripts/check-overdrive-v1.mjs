@@ -87,6 +87,13 @@ for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHit
   must(JSON.stringify(catalog).includes(marker),`Overdrive ability data missing: ${marker}`);
 }
 
+// activateSlot receives an OD slot index. The Overdrive runtime's equipped(index) argument is a DECK index,
+// so activation must fetch the current deck pair first and then index into that pair. Calling equipped(index)
+// here silently resolves the wrong deck and produces an array instead of an OD die key.
+must(abilities.includes('const pair = api?.equipped?.();'),'OD activation must read the active deck Overdrive pair before resolving a slot.');
+must(abilities.includes('const entry = Array.isArray(pair) ? pair[index] : null;'),'OD activation must resolve OD 1 / OD 2 from the active pair.');
+must(!abilities.includes('api?.equipped?.(index)'),'OD activation regressed to treating the OD slot index as a deck index.');
+
 for(const marker of [
   'ttdBattleActionRow','ttdOdCast${index+1}','OD ${index+1}','ttdOdCastButton.castable','ttdOdCastable','ttdOdUncastable',
   'abilityApi()?.activateSlot?.(index)','showOdInfo','Nonelemental','ttdOdInfoFlavor','.ttdOverdriveBattleSlot.filled','.ttdOdCard',
@@ -127,4 +134,4 @@ must(loader.includes('/online/overdrive-system-v1.js'),'Game loader does not inj
 must(loader.includes('/online/overdrive-abilities-v1.js'),'Game loader does not inject playable Overdrive abilities.');
 must(shell.includes("import('/online/overdrive-client-v1.js?v=1')"),'Online shell does not load the Overdrive authenticated client.');
 
-console.log('Overdrive/collection action contract verified: explicit OD 1/OD 2 casting, warm-purple readiness, shared inspection, gem-safe cascading Merge All, and authoritative C1-C7 die sales are wired without changing approved assets.');
+console.log('Overdrive/collection action contract verified: explicit OD 1/OD 2 casting resolves the active pair correctly, warm-purple readiness, shared inspection, gem-safe cascading Merge All, and authoritative C1-C7 die sales are wired without changing approved assets.');
