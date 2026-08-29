@@ -16,12 +16,12 @@ const runtimeFiles = [
   'online/interaction-effects-v10.js',
   'online/collection-portrait-fit-v16.js',
   'online/deck-editor-v18.js',
-  // These committed runtime modules were omitted from the native bridge loader during cleanup.
-  // Audit them before restoring ordinary script loading so item art/shop/world behavior cannot
-  // silently depend on inaccessible monolith lexical bindings.
+  // Item/world/avatar authorities are ordinary runtime modules and must stay facade-safe.
   'online/item-assets-v1.js',
   'online/world-items-v1.js',
   'online/avatar-inventory-v22.js',
+  // Moving Screen is loaded as a normal committed runtime module, never injected into the core.
+  'online/moving-screen-engine-v1.js',
   // These files are fetched/evaluated by run-ui-bridge-v21. They must be audited separately;
   // identifiers inside fetched source strings are invisible to a static audit of run-ui itself.
   'online/adventure-platforming-v2.js',
@@ -32,6 +32,13 @@ const runtimeFiles = [
 ];
 
 const intentionallyOptionalLegacy = new Set(['renderCollection']);
+// Moving Screen v1 intentionally falls back to a tiny local prototype monster-stat table when
+// the core's lexical MONSTERS catalog is not exported. The guarded `typeof MONSTERS` read is safe
+// at runtime and is the only allowed unexposed core symbol in this one module. Future canonical
+// monster integration should expose a deliberate read-only core API instead of widening this list.
+const scopedOptionalCore = new Map([
+  ['online/moving-screen-engine-v1.js', new Set(['MONSTERS'])],
+]);
 const browserGlobals = new Set([
   'window','document','location','navigator','console','performance','requestAnimationFrame','cancelAnimationFrame',
   'setTimeout','clearTimeout','setInterval','clearInterval','fetch','URL','URLSearchParams','Blob','Image','Audio','Event','CustomEvent',
@@ -82,7 +89,7 @@ for (const file of runtimeFiles) {
   const manager = analyze(source,file);
   for (const ref of manager.globalScope.through) {
     const name = ref.identifier.name;
-    if (browserGlobals.has(name) || intentionallyOptionalLegacy.has(name)) continue;
+    if (browserGlobals.has(name) || intentionallyOptionalLegacy.has(name) || scopedOptionalCore.get(file)?.has(name)) continue;
     const mode = refMode(ref);
     if (coreBindings.has(name)) {
       if (!exposureLines.has(name)) {
