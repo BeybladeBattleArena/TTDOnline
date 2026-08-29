@@ -20,9 +20,9 @@ const runtimeFiles = [
   'online/item-assets-v1.js',
   'online/world-items-v1.js',
   'online/avatar-inventory-v22.js',
-  // Moving Screen v2 stage data and engine are ordinary committed runtime modules.
+  // Moving Screen playtest stage data and hardened engine are ordinary committed runtime modules.
   'online/moving-screen-neon-rooftops-v2.js',
-  'online/moving-screen-engine-v2.js',
+  'online/moving-screen-engine-v3.js',
   // These files are fetched/evaluated by run-ui-bridge-v21. They must be audited separately;
   // identifiers inside fetched source strings are invisible to a static audit of run-ui itself.
   'online/adventure-platforming-v2.js',
