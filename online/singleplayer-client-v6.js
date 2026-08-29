@@ -9,6 +9,7 @@ import './gacha-atmosphere-v30.js?v=30';
 import './deck-guard-client-v10.js?v=10';
 import './run-client-v21.js?v=21';
 import './merge-client-v6.js?v=6';
+import './collection-actions-client-v1.js?v=1';
 import './run-start-client-v19.js?v=19';
 import './singleplayer-client-v9-core.js?v=9';
 import './message-normalizer-v32.js?v=32';
