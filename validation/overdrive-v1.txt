@@ -1,0 +1,1 @@
+Validation-only marker for the Overdrive Dice v1 foundation. This branch exists solely to run the complete pull-request verification workflow against the current main tree. Do not merge this marker.
