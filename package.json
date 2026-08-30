@@ -18,7 +18,7 @@
     "check:moving-screen": "node scripts/check-moving-screen-v1.mjs",
     "check:moving-screen-browser": "node scripts/check-moving-screen-browser-v1.mjs",
     "check:moving-screen-frame": "node scripts/check-moving-screen-mobile-frame-v1.mjs",
-    "check:arcade-shell": "node scripts/check-arcade-mode-shell-v1.mjs",
+    "check:arcade-shell": "node scripts/check-arcade-mode-shell-v1.mjs && node scripts/check-arcade-submenu-back-v1.mjs",
     "check:deck-social": "node scripts/check-deck-social-v18.mjs",
     "check:overdrive": "node scripts/check-overdrive-v1.mjs",
     "check:run-start": "node scripts/check-run-start-v19.mjs",
