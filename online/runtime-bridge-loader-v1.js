@@ -26,13 +26,15 @@
     // presentation/input authorities load after it and never rewrite/eval engine source.
     // Stage v=4 carries the 30-KO / lower-pressure topology expansion. UI v=1 owns loadout and
     // selected-route emphasis; topology UI v=1 adds physical connector cues plus route tap/swipe.
-    // Arcade shell v2 loads last so it can own phone-safe scrolling, dynamic map landing routes,
-    // authenticated map starts, and canonical results without patching Moving Screen source text.
+    // Arcade shell v2 owns phone-safe scrolling, dynamic map landing routes, authenticated starts,
+    // and canonical results. Mobile frame v1 loads last and owns only the final phone-safe battle
+    // frame plus the single Moving Screen HUD title so later bridge CSS cannot hide the controls.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
     '/online/moving-screen-engine-v4.js?v=6',
     '/online/moving-screen-ui-v1.js?v=1',
     '/online/moving-screen-topology-ui-v1.js?v=1',
     '/online/arcade-mode-shell-v2.js?v=2',
+    '/online/moving-screen-mobile-frame-v1.js?v=1',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
