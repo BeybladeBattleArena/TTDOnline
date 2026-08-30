@@ -1,6 +1,7 @@
 name: Import Moving Screen Loading Master
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - feature/moving-screen-input-nav-loading-v1
@@ -13,31 +14,53 @@ permissions:
 jobs:
   import-master:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out exact feature head
         uses: actions/checkout@v4
         with:
           ref: feature/moving-screen-input-nav-loading-v1
           fetch-depth: 0
-      - name: Reconstitute exact uploaded master
+
+      - name: Reconstitute and verify exact uploaded master
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p assets/ui
-          cat .asset-staging/moving-screen-loading/part-000.b64 .asset-staging/moving-screen-loading/part-001.b64 | tr -d '\r\n' | base64 --decode > assets/ui/loading-moving-screen.jpg
-          echo "decoded-size=$(stat -c%s assets/ui/loading-moving-screen.jpg)"
-          echo "decoded-sha256=$(sha256sum assets/ui/loading-moving-screen.jpg | awk '{print $1}')"
-          file assets/ui/loading-moving-screen.jpg
+          cat .asset-staging/moving-screen-loading/part-000.b64 .asset-staging/moving-screen-loading/part-001.b64 \
+            | tr -d '\r\n' \
+            | base64 --decode \
+            > assets/ui/loading-moving-screen.jpg
           test "$(stat -c%s assets/ui/loading-moving-screen.jpg)" = "449004"
           test "$(sha256sum assets/ui/loading-moving-screen.jpg | awk '{print $1}')" = "2559c53924c2d0f8d5ddc5733f1605b2522e9e7aecaa0208dc0868d9f2b36c57"
+          test "$(git hash-object assets/ui/loading-moving-screen.jpg)" = "423944b51e2226f295db606f0785d7f783bf0d2c"
           file assets/ui/loading-moving-screen.jpg | grep -q 'JPEG image data'
-      - name: Commit immutable master and remove staging chunks
+          grep -Fq "const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg'" online/moving-screen-map-router-v2.js
+
+      - name: Align Moving Screen validator with authoritative loading asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-moving-screen-v1.mjs')
+          source = path.read_text()
+          old = '''for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',"const LOADING_ID='ttdMsLoadingV2'",'const LOADING_MIN_MS=720',"asset('/assets/ui/loading-endless-horde.png')",'MOVING SCREEN','NOW LOADING','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);'''
+          new = '''for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',"const LOADING_ID='ttdMsLoadingV2'",'const LOADING_MIN_MS=720',"const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg'",'img.src=asset(LOADING_ASSET)','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);'''
+          if old not in source:
+              raise SystemExit('Expected stale Moving Screen loading validator marker was not found.')
+          path.write_text(source.replace(old, new))
+          PY
+
+      - name: Commit exact master and remove temporary staging machinery
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "TTD Asset Import"
           git config user.email "actions@users.noreply.github.com"
-          git add assets/ui/loading-moving-screen.jpg
-          git rm .asset-staging/moving-screen-loading/part-000.b64 .asset-staging/moving-screen-loading/part-001.b64
-          git commit -m "Add exact Moving Screen loading master"
+          git add assets/ui/loading-moving-screen.jpg scripts/check-moving-screen-v1.mjs
+          git rm -rf .asset-staging/moving-screen-loading assets/ui/loading-moving-screen
+          git rm -f assets/ui/.moving-screen-loading-upload-placeholder.txt
+          git rm -f .github/workflows/import-moving-screen-loading.yml
+          git commit -m "Finalize Moving Screen loading master and cleanup"
           git push origin HEAD:feature/moving-screen-input-nav-loading-v1
