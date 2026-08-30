@@ -23,9 +23,11 @@ jobs:
           sed -i 's#("/online/singleplayer-run-controls-v1.js?v=1","/online/singleplayer-run-controls-v1.js?v=2")#("/online/singleplayer-run-controls-v1.js?v=2","/online/singleplayer-run-controls-v1.js?v=3")#' scripts/apply-moving-screen-presentation-parity.py
       - name: Apply presentation parity repair
         run: python scripts/apply-moving-screen-presentation-parity.py
-      - name: Align changed controls cache validators
+      - name: Align presentation validators
         shell: bash
-        run: find scripts -name '*.mjs' -exec sed -i 's#/online/singleplayer-run-controls-v1.js?v=2#/online/singleplayer-run-controls-v1.js?v=3#g' {} +
+        run: |
+          python scripts/align-moving-screen-presentation-validators.py
+          find scripts -name '*.mjs' -exec sed -i 's#/online/singleplayer-run-controls-v1.js?v=2#/online/singleplayer-run-controls-v1.js?v=3#g' {} +
       - name: Install dependencies
         run: |
           npm install
