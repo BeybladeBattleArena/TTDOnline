@@ -22,18 +22,21 @@
     // World items deliberately loads after the inventory authorities so its wrappers extend the
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
-    // Moving Screen remains direct committed source. All stage definitions load before the engine.
-    // The v8 engine cache key carries canonical Dice combat cadence/range plus grounded ordinary
-    // knockback, on top of the vertical-only death planes and safe navigation from v7.
+    // Moving Screen stays direct committed source: stages -> engine -> map router -> visual route
+    // UI -> Die-first gesture authority -> topology gestures -> map art -> bottom battle HUD.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
     '/online/moving-screen-construction-climb-v1.js?v=2',
-    '/online/moving-screen-engine-v4.js?v=8',
-    '/online/moving-screen-map-router-v1.js?v=2',
+    '/online/moving-screen-engine-v5.js?v=1',
+    '/online/moving-screen-map-router-v2.js?v=1',
     '/online/moving-screen-ui-v1.js?v=1',
+    '/online/moving-screen-die-input-v1.js?v=1',
     '/online/moving-screen-topology-ui-v1.js?v=1',
     '/online/moving-screen-construction-presentation-v1.js?v=2',
+    '/online/moving-screen-battle-hud-v1.js?v=1',
     '/online/arcade-mode-shell-v2.js?v=4',
-    '/online/moving-screen-mobile-frame-v1.js?v=1',
+    '/online/moving-screen-mobile-frame-v2.js?v=1',
+    // Single-player navigation is loaded last so dynamic mode UIs inherit one Back/End Run rule.
+    '/online/singleplayer-run-controls-v1.js?v=1',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;
