@@ -33,7 +33,7 @@
     '/online/moving-screen-engine-v4.js?v=6',
     '/online/moving-screen-ui-v1.js?v=1',
     '/online/moving-screen-topology-ui-v1.js?v=1',
-    '/online/arcade-mode-shell-v2.js?v=2',
+    '/online/arcade-mode-shell-v2.js?v=3',
     '/online/moving-screen-mobile-frame-v1.js?v=1',
   ];
 
