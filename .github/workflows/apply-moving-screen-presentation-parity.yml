@@ -17,8 +17,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Correct current single-player controls cache anchor
+        shell: bash
+        run: |
+          sed -i 's#("/online/singleplayer-run-controls-v1.js?v=1","/online/singleplayer-run-controls-v1.js?v=2")#("/online/singleplayer-run-controls-v1.js?v=2","/online/singleplayer-run-controls-v1.js?v=3")#' scripts/apply-moving-screen-presentation-parity.py
       - name: Apply presentation parity repair
         run: python scripts/apply-moving-screen-presentation-parity.py
+      - name: Align changed controls cache validators
+        shell: bash
+        run: find scripts -name '*.mjs' -exec sed -i 's#/online/singleplayer-run-controls-v1.js?v=2#/online/singleplayer-run-controls-v1.js?v=3#g' {} +
       - name: Install dependencies
         run: |
           npm install
