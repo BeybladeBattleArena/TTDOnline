@@ -1,0 +1,32 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
+
+const must=(condition,message)=>{if(!condition)throw new Error(message);};
+const modulePath='online/moving-screen-mobile-frame-v1.js';
+const source=fs.readFileSync(modulePath,'utf8');
+for(const marker of [
+  'window.__TTD_MOVING_SCREEN_MOBILE_FRAME_V1 = true',
+  "bottom:max(104px,calc(env(safe-area-inset-bottom) + 84px))!important",
+  ".hud-left>*{",
+  `const TITLE_ID='ttdMsHudTitleFrameV1'`,
+  "title.textContent='Moving Screen · Neon Rooftops'",
+  "pause.textContent='Back'",
+  '#ttdMsSummonV4',
+])must(source.includes(marker),`Moving Screen mobile-frame contract missing: ${marker}`);
+for(const forbidden of [/\beval\s*\(/,/new\s+Function\b/,/document\.write\s*\(/])must(!forbidden.test(source),`Moving Screen mobile-frame authority must remain direct source: ${forbidden}`);
+
+const chrome=['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
+must(chrome,'Moving Screen mobile-frame smoke requires Chrome/Chromium.');
+const moduleUrl=pathToFileURL(path.join(process.cwd(),modulePath)).href;
+const harness=path.join(os.tmpdir(),`ttd-ms-mobile-frame-${process.pid}.html`);
+const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02040b;color:#fff;font-family:Arial}#app{position:fixed;inset:0}.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;background:#050712}.screen.active{display:flex}#gameScreen.ttd-moving-screen-v4{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:flex!important;flex-direction:column!important;min-height:0!important;overflow:hidden!important}#hud{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;padding:10px 14px 8px;min-height:66px;background:#11182f}.hud-left{display:flex;align-items:center;gap:8px}.hud-title{font-weight:700}.hud-stats{display:flex;gap:9px}.hud-stat{display:flex;flex-direction:column}.hud-stat .label{font-size:7px}.hud-stat .value{font-size:13px}#laneWrap{position:relative;min-height:0;flex:1 1 0;background:#09101d;border:1px solid #263e73}#tray{display:block;flex:0 0 auto;min-height:86px;background:#0d1224;border-top:1px solid #273052}#ttdMsControlsV4{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;min-height:86px;padding:8px 9px;align-items:center}#ttdMsButtonsV4{display:flex;gap:6px}#ttdMsExitV4,#ttdMsSummonV4{min-height:52px;border-radius:12px;padding:8px 11px}#ttdMsSummonV4{min-width:110px}
+</style></head><body><div id="app"><div id="gameScreen" class="screen active ttd-moving-screen-v4"><div id="hud"><div class="hud-left"><button id="pauseBtn">‹</button><button id="endRunBtn">End Run</button><div id="modeLabel" class="hud-title">Moving Screen · Neon Rooftops</div><div class="legacyMovingTitle">MOVING SCREEN</div></div><div class="hud-stats"><div class="hud-stat"><span class="label">KO</span><span class="value">0/30</span></div><div class="hud-stat"><span class="label">SP</span><span class="value">75</span></div><div class="hud-stat"><span class="label">Lives</span><span class="value">10</span></div></div></div><div id="laneWrap"><canvas></canvas></div><div id="tray"><div id="ttdMsControlsV4"><div>Tap a Die to select it.</div><div id="ttdMsButtonsV4"><button id="ttdMsExitV4">Exit</button><button id="ttdMsSummonV4">Summon<br><small>10 SP</small></button></div></div></div></div><pre id="result">PENDING</pre></div><script>window.__errs=[];addEventListener('error',e=>__errs.push(String(e.message||e.error)));addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script><script src="${moduleUrl}"></script><script>
+setTimeout(()=>{const game=document.getElementById('gameScreen'),tray=document.getElementById('tray'),summon=document.getElementById('ttdMsSummonV4'),title=document.getElementById('ttdMsHudTitleFrameV1'),mode=document.getElementById('modeLabel'),legacy=document.querySelector('.legacyMovingTitle'),pause=document.getElementById('pauseBtn');const gr=game.getBoundingClientRect(),tr=tray.getBoundingClientRect(),sr=summon.getBoundingClientRect();const visibleMoving=[...document.querySelectorAll('.hud-left>*')].filter(el=>getComputedStyle(el).display!=='none'&&getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().width>0&&/moving screen/i.test(el.textContent||''));const report={innerHeight:innerHeight,gameBottom:gr.bottom,trayBottom:tr.bottom,summonBottom:sr.bottom,gameReserve:innerHeight-gr.bottom,summonReserve:innerHeight-sr.bottom,titleText:title?.textContent||'',singleMovingTitle:visibleMoving.length===1,titleVisible:!!title&&getComputedStyle(title).display!=='none',legacyHidden:getComputedStyle(legacy).display==='none',modeHidden:getComputedStyle(mode).display==='none',pauseBack:pause?.textContent==='Back',gameShortened:innerHeight-gr.bottom>=96,trayInside:tr.bottom<=gr.bottom+1,summonInside:sr.bottom<=gr.bottom-4,summonComfortable:innerHeight-sr.bottom>=100,noErrors:__errs.length===0};report.ok=Object.entries(report).filter(([k])=>['singleMovingTitle','titleVisible','legacyHidden','modeHidden','pauseBack','gameShortened','trayInside','summonInside','summonComfortable','noErrors'].includes(k)).every(([,v])=>v===true);document.getElementById('result').textContent=JSON.stringify(report)},120);
+</script></body></html>`;
+fs.writeFileSync(harness,html);
+let dom='';try{dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=800','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:4*1024*1024,timeout:20000,stdio:['ignore','pipe','pipe']});}finally{try{fs.unlinkSync(harness);}catch{}}
+const match=dom.match(/<pre id="result">([\s\S]*?)<\/pre>/i);must(match,'Headless Chrome did not return Moving Screen mobile-frame results.');const decoded=match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');const report=JSON.parse(decoded);if(!report.ok){console.error('Moving Screen mobile-frame smoke failed:',JSON.stringify(report,null,2));process.exit(1);}console.log('Moving Screen mobile frame verified:',JSON.stringify(report));
