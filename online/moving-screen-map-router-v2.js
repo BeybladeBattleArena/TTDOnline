@@ -6,7 +6,7 @@
   const ENGINE_SLOT='neon_rooftops_v2';
   const LOADING_ID='ttdMsLoadingV2';
   const LOADING_MIN_MS=720;
-  const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg';
+  const LOADING_ASSET='/assets/ui/loading-moving-screen.png';
   const registry=window.TTDMovingScreenStages=window.TTDMovingScreenStages||{};
   const base=window.TTDMovingScreen;
   const defaultStage=registry[ENGINE_SLOT]||null;

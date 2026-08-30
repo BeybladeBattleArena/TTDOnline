@@ -103,7 +103,7 @@ for(const marker of [
 ])must(engine.includes(marker),`Moving Screen tap/power/merge contract missing: ${marker}`);
 must(!engine.includes("a.faction!=='player'||b.faction!=='player'||a.key!==b.key||a.dot!==b.dot"),'Retired same-key-only Moving Screen merge authority must not return.');
 const pickupLine=engine.split('\n').find(line=>line.includes('function pickupFlag(ent)'))||'';
-must(pickupLine&&!pickupLine.includes("ent.type!=='die'"),'Moving Screen enemy flag pickup must not be blocked by a player-Die-only type gate.');
+must(pickupLine.includes("(ent.faction==='player'&&ent.type!=='die')")&&pickupLine.includes("ent.faction!=='player'&&ent.faction!=='enemy'"),'Moving Screen flag pickup must allow enemies while restricting player carriers to Dice.');
 
 for(const marker of [
   'od:{drive:0','passiveDrivePerSecond','dieDamageDrivePerDamage','towerLifeDrivePerLife','function activateOverdriveSlot(index)',
@@ -115,7 +115,7 @@ for(const marker of ['window.__TTD_MOVING_SCREEN_DIE_INPUT_V1=true','hitTestDieC
 for(const marker of ['window.__TTD_MOVING_SCREEN_UI_V1 = true','ttdMsDirectionPromptV1','ttdMsPathHighlightV1','routeDestinationNodes()','inferSource(destinations)','g.setLineDash([13, 8])','drawChevron(g, A, B, .54)'])must(ui.includes(marker),`Moving Screen route/direction UI contract missing: ${marker}`);
 for(const marker of ['window.__TTD_MOVING_SCREEN_TOPOLOGY_UI_V1 = true','ttdMsTopologyCanvasV1','function drawConnector(','function drawTopology(','function nearestRoute(','function onPointerDown(','function onPointerUp(','dot>.12','g.hit.button.click()'])must(topology.includes(marker),`Moving Screen physical-topology/route gesture contract missing: ${marker}`);
 
-for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',"const LOADING_ID='ttdMsLoadingV2'",'const LOADING_MIN_MS=720',"asset('/assets/ui/loading-endless-horde.png')",'MOVING SCREEN','NOW LOADING','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);
+for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',"const LOADING_ID='ttdMsLoadingV2'",'const LOADING_MIN_MS=720',"const LOADING_ASSET='/assets/ui/loading-moving-screen.png'",'img.src=asset(LOADING_ASSET)','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);
 for(const marker of ['window.__TTD_MOVING_SCREEN_BATTLE_HUD_V1=true','#ttdMsLoadoutRailV1{display:none!important}','ttdMsBattleBarV1','showDieDetail','activateOverdriveSlot','ttdMsSummonBottomV1','OD${index+1}'])must(battleHud.includes(marker),`Moving Screen bottom deck/Overdrive HUD contract missing: ${marker}`);
 for(const marker of ['window.__TTD_MOVING_SCREEN_MOBILE_FRAME_V2=true','#ttdMsHudTitleFrameV1{display:none!important}','bottom:max(5px,env(safe-area-inset-bottom))','Moving Screen · ${stage.name}',"'Russo One',sans-serif"] )must(mobileFrame.includes(marker),`Moving Screen single-title phone frame contract missing: ${marker}`);
 must(!mobileFrame.includes("pause.textContent='Back'")&&!mobileFrame.includes("font:700 12px/1.08 'Cinzel'"),'Moving Screen phone frame may not recreate the retired duplicate Cinzel title/Back override.');
