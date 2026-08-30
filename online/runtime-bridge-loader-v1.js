@@ -22,18 +22,17 @@
     // World items deliberately loads after the inventory authorities so its wrappers extend the
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
-    // Moving Screen remains direct committed source. Stage data loads before the engine; the two
-    // presentation/input authorities load after it and never rewrite/eval engine source.
-    // Stage v=4 carries the 30-KO / lower-pressure topology expansion. UI v=1 owns loadout and
-    // selected-route emphasis; topology UI v=1 adds physical connector cues plus route tap/swipe.
-    // Arcade shell v2 owns phone-safe scrolling, dynamic map landing routes, authenticated starts,
-    // and canonical results. Mobile frame v1 loads last and owns only the final phone-safe battle
-    // frame plus the single Moving Screen HUD title so later bridge CSS cannot hide the controls.
+    // Moving Screen remains direct committed source. All stage definitions load before the engine.
+    // The map router points the established v4 engine and its UI authorities at the selected stage
+    // without rewriting engine source. Construction presentation adds only map-specific scenery.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
+    '/online/moving-screen-construction-climb-v1.js?v=1',
     '/online/moving-screen-engine-v4.js?v=6',
+    '/online/moving-screen-map-router-v1.js?v=1',
     '/online/moving-screen-ui-v1.js?v=1',
     '/online/moving-screen-topology-ui-v1.js?v=1',
-    '/online/arcade-mode-shell-v2.js?v=3',
+    '/online/moving-screen-construction-presentation-v1.js?v=1',
+    '/online/arcade-mode-shell-v2.js?v=4',
     '/online/moving-screen-mobile-frame-v1.js?v=1',
   ];
 
@@ -115,8 +114,6 @@
         report(bridge,error);
       }
     }
-    // The run-ui bridge owns a nested async bootstrap for the Test Map and global mission/outcome
-    // presentation. Do not expose the home UI as "bridges ready" until that attempt has settled.
     try{await window.__TTD_RUN_UI_EXTENSIONS_READY;}catch(error){report('/online/run-ui-bridge-v21.js',error);}
     window.__TTD_MARK_BRIDGES_READY?.();
   }
