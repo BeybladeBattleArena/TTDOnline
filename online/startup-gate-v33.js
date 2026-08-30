@@ -14,6 +14,7 @@
   const CRITICAL_ASSETS=Object.freeze([
     '/assets/ui/loading-endless-horde.png',
     '/assets/ui/loading-al-hata.png',
+    '/assets/ui/loading-moving-screen.png',
     '/assets/items/chest-frozen-island-normal.png',
     '/assets/items/chest-frozen-island-hard.png',
     '/assets/items/chest-frozen-island-hell.png',

@@ -147,6 +147,9 @@
       if (message.screen === 'game') setCollapsed(true, false);
       else if (message.screen === 'home') setCollapsed(false, false);
     }
+    if (message.type === 'ttd:moving-screen-active') {
+      setCollapsed(!!message.active, false);
+    }
     if (message.type === 'ttd:mobile-back-result' && pendingBack) {
       pendingBack = false;
       if (message.handled) armBackGuard();
