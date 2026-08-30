@@ -1,5 +1,5 @@
 name: Import Verified Moving Screen PNG
-# Retry after repairing Moving Screen battle HUD syntax.
+# Retry after repairing Moving Screen battle HUD syntax and flag validation.
 
 on:
   push:
@@ -78,6 +78,13 @@ jobs:
               check = check.replace(old, new)
           elif new not in check:
               raise SystemExit('Moving Screen loading validator marker missing.')
+
+          old_flag = "must(pickupLine&&!pickupLine.includes(\"ent.type!=='die'\"),'Moving Screen enemy flag pickup must not be blocked by a player-Die-only type gate.');"
+          new_flag = "must(pickupLine.includes(\"(ent.faction==='player'&&ent.type!=='die')\")&&pickupLine.includes(\"ent.faction!=='player'&&ent.faction!=='enemy'\"),'Moving Screen flag pickup must allow enemies while restricting player carriers to Dice.');"
+          if old_flag in check:
+              check = check.replace(old_flag, new_flag)
+          elif new_flag not in check:
+              raise SystemExit('Moving Screen enemy flag pickup validator marker missing.')
           check_path.write_text(check)
 
           manifest_path = Path('assets/game-assets.json')
