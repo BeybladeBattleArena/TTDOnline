@@ -8,7 +8,7 @@
   function api(){return window.TTDMovingScreen||null;}
   function deck(){try{return typeof getActiveDeck==='function'?getActiveDeck():[];}catch(_){return[];}}
   function dieDef(key){try{return typeof DICE!=='undefined'?DICE?.[key]:null;}catch(_){return null;}}
-  function pair(){try{const p=window.__TTD_OVERDRIVE?.equipped?.();if(Array.isArray(p))return p;}catch(_){}try{const idx=Math.max(0,Number(account?.activeDeckIdx)||0,p=account?.overdriveDecks?.[idx];if(Array.isArray(p))return p;}catch(_){}return[null,null];}
+  function pair(){try{const p=window.__TTD_OVERDRIVE?.equipped?.();if(Array.isArray(p))return p;}catch(_){}try{const idx=Math.max(0,Number(account?.activeDeckIdx)||0),p=account?.overdriveDecks?.[idx];if(Array.isArray(p))return p;}catch(_){}return[null,null];}
   function odCatalog(){try{return window.__TTD_OVERDRIVE?.catalog?.()?.dice||{};}catch(_){return{};}}
   function keyOf(entry){return typeof entry==='string'?entry:entry?.key||null;}
   function glyphMarkup(key){const d=dieDef(key);try{if(d?.glyph&&typeof renderGlyph==='function')return renderGlyph(d.glyph);}catch(_){}return `<span>${String(d?.name||key||'?').slice(0,1)}</span>`;}
