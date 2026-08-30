@@ -26,17 +26,17 @@
     // UI -> Die-first gesture authority -> topology gestures -> map art -> bottom battle HUD.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
     '/online/moving-screen-construction-climb-v1.js?v=2',
-    '/online/moving-screen-engine-v5.js?v=1',
-    '/online/moving-screen-map-router-v2.js?v=2',
+    '/online/moving-screen-engine-v5.js?v=2',
+    '/online/moving-screen-map-router-v2.js?v=3',
     '/online/moving-screen-ui-v1.js?v=1',
     '/online/moving-screen-die-input-v1.js?v=2',
     '/online/moving-screen-topology-ui-v1.js?v=1',
     '/online/moving-screen-construction-presentation-v1.js?v=2',
     '/online/moving-screen-battle-hud-v1.js?v=2',
-    '/online/arcade-mode-shell-v2.js?v=4',
+    '/online/arcade-mode-shell-v2.js?v=5',
     '/online/moving-screen-mobile-frame-v2.js?v=2',
     // Single-player navigation is loaded last so dynamic mode UIs inherit one Back/End Run rule.
-    '/online/singleplayer-run-controls-v1.js?v=2',
+    '/online/singleplayer-run-controls-v1.js?v=3',
   ];
 
   const asset=(path)=>typeof window.__TTD_ASSET_URL==='function' ? window.__TTD_ASSET_URL(path) : path;

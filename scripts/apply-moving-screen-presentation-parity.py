@@ -197,7 +197,7 @@ for old,new in [
   ("/online/moving-screen-engine-v5.js?v=1","/online/moving-screen-engine-v5.js?v=2"),
   ("/online/moving-screen-map-router-v2.js?v=2","/online/moving-screen-map-router-v2.js?v=3"),
   ("/online/arcade-mode-shell-v2.js?v=4","/online/arcade-mode-shell-v2.js?v=5"),
-  ("/online/singleplayer-run-controls-v1.js?v=1","/online/singleplayer-run-controls-v1.js?v=2"),
+  ("/online/singleplayer-run-controls-v1.js?v=2","/online/singleplayer-run-controls-v1.js?v=3"),
 ]:
     if old not in s: raise SystemExit(f'loader key missing {old}')
     s=s.replace(old,new)

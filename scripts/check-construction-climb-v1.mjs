@@ -63,6 +63,6 @@ for(const marker of ["const ENGINE_SLOT='neon_rooftops_v2'",'registry[ENGINE_SLO
 for(const marker of ['constructionDecor','siteContainer','logs','steelFrame','safetyFence','tarpFence','hangingPlatform','ttdMsConstructionCanvasV1'])must(presentation.includes(marker),`Construction presentation contract missing: ${marker}`);
 must(!/craneTower|craneBoom/.test(presentation),'Construction presentation must not redraw the retired invented crane.');
 must(shell.includes("key:'construction_climb'")&&shell.includes("window.TTDMovingScreen.start(mapKey)"),'Arcade shell must launch the selected Moving Screen map.');
-for(const marker of ['/online/moving-screen-construction-climb-v1.js?v=2','/online/moving-screen-map-router-v2.js?v=2','/online/moving-screen-construction-presentation-v1.js?v=2'])must(loader.includes(marker),`Construction rework runtime file missing from loader: ${marker}`);
+for(const marker of ['/online/moving-screen-construction-climb-v1.js?v=2','/online/moving-screen-map-router-v2.js?v=3','/online/moving-screen-construction-presentation-v1.js?v=2'])must(loader.includes(marker),`Construction rework runtime file missing from loader: ${marker}`);
 
 console.log(`Construction Climb verified: ${stage.zones.length} physical surfaces, ${stage.edges.length} readable connections, zero abstract junctions, Demolition palette/props, no crane/neon leakage, and a continuous yard-to-top-floor climb.`);
