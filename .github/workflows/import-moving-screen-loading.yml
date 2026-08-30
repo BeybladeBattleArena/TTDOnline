@@ -1,5 +1,5 @@
 name: Import Verified Moving Screen PNG
-# Retry after repairing Moving Screen battle HUD syntax and flag validation.
+# Retry after repairing Moving Screen validators for v5/v2 runtime authority.
 
 on:
   push:
@@ -54,7 +54,7 @@ jobs:
           file assets/ui/loading-moving-screen.png | grep -q 'PNG image data, 1536 x 1152'
           echo "Verified exact approved Moving Screen PNG: $EXPECTED_SHA256"
 
-      - name: Wire canonical PNG and immutable registry
+      - name: Wire canonical PNG and align validators
         shell: bash
         run: |
           set -euo pipefail
@@ -86,6 +86,16 @@ jobs:
           elif new_flag not in check:
               raise SystemExit('Moving Screen enemy flag pickup validator marker missing.')
           check_path.write_text(check)
+
+          construction_check = Path('scripts/check-construction-climb-v1.mjs')
+          construction = construction_check.read_text()
+          old_router_marker = "'/online/moving-screen-map-router-v1.js?v=2'"
+          new_router_marker = "'/online/moving-screen-map-router-v2.js?v=1'"
+          if old_router_marker in construction:
+              construction = construction.replace(old_router_marker, new_router_marker)
+          elif new_router_marker not in construction:
+              raise SystemExit('Construction loader validator marker missing.')
+          construction_check.write_text(construction)
 
           manifest_path = Path('assets/game-assets.json')
           manifest = json.loads(manifest_path.read_text())
@@ -135,7 +145,7 @@ jobs:
           set -euo pipefail
           git config user.name "TTD Asset Import"
           git config user.email "actions@users.noreply.github.com"
-          git add assets/ui/loading-moving-screen.png assets/game-assets.json assets/immutable-assets.lock.json online/moving-screen-map-router-v2.js scripts/check-moving-screen-v1.mjs
+          git add assets/ui/loading-moving-screen.png assets/game-assets.json assets/immutable-assets.lock.json online/moving-screen-map-router-v2.js scripts/check-moving-screen-v1.mjs scripts/check-construction-climb-v1.mjs
           git rm -rf .asset-staging/moving-screen-loading assets/ui/loading-moving-screen
           git rm -f assets/ui/.moving-screen-loading-upload-placeholder.txt
           git rm -f .github/workflows/import-moving-screen-loading.yml
