@@ -25,6 +25,9 @@ jobs:
           set -euo pipefail
           mkdir -p assets/ui
           cat .asset-staging/moving-screen-loading/part-000.b64 .asset-staging/moving-screen-loading/part-001.b64 | tr -d '\r\n' | base64 --decode > assets/ui/loading-moving-screen.jpg
+          echo "decoded-size=$(stat -c%s assets/ui/loading-moving-screen.jpg)"
+          echo "decoded-sha256=$(sha256sum assets/ui/loading-moving-screen.jpg | awk '{print $1}')"
+          file assets/ui/loading-moving-screen.jpg
           test "$(stat -c%s assets/ui/loading-moving-screen.jpg)" = "449004"
           test "$(sha256sum assets/ui/loading-moving-screen.jpg | awk '{print $1}')" = "2559c53924c2d0f8d5ddc5733f1605b2522e9e7aecaa0208dc0868d9f2b36c57"
           file assets/ui/loading-moving-screen.jpg | grep -q 'JPEG image data'
