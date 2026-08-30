@@ -17,46 +17,52 @@ must(stage,'Construction Climb stage did not register.');
 must(stage.id==='construction_climb'&&stage.name==='Construction Climb','Construction Climb identity regressed.');
 must(stage.direction==='up'&&stage.theme==='construction','Construction Climb direction/theme regressed.');
 must(stage.objective?.startingLives===10&&stage.objective?.killGoal===30,'Construction Climb must use 10 lives / 30 KOs.');
-must(stage.objective?.flag?.homeZone==='crane_crown','Construction Climb flag must live at the crane crown.');
-must(Array.isArray(stage.cameraStops)&&stage.cameraStops.length>=7,'Construction Climb needs a full multi-stop climb.');
+must(stage.objective?.flag?.homeZone==='top_floor','Construction Climb flag must live on the exposed top floor.');
+must(stage.objective?.flag?.label==='Top Floor','Construction Climb objective copy must describe the physical Top Floor, not the retired crane crown.');
+must(Array.isArray(stage.cameraStops)&&stage.cameraStops.length===6,'Demolition-style Construction Climb should use six readable camera bands.');
 must(Array.isArray(stage.tiers)&&stage.tiers.length===4,'Construction Climb must retain four major vertical tiers.');
-must(stage.zones.length>=20,'Construction Climb needs at least 20 standable combat surfaces.');
+must(stage.zones.length>=9&&stage.zones.length<=14,'Construction Climb should stay intentionally simple: 9-14 physical surfaces.');
+must(stage.edges.length>=9&&stage.edges.length<=16,'Construction Climb should stay intentionally simple: 9-16 physical connections.');
+must(stage.junctions.length===0,'Construction Climb must not reintroduce abstract crossroads; route choices belong on physical surfaces.');
 must(stage.zones.every(z=>Number(z.slots)>=1),'Every Construction Climb zone must be standable.');
-must(stage.zones.some(z=>z.id==='yard_main'&&z.summon&&z.enemySpawn),'Ground Work Yard must be the opening summon/combat surface.');
-must(stage.zones.some(z=>z.id==='beam_crossing'&&z.material==='metal'),'Suspended crane-beam footing is missing.');
-must(stage.zones.some(z=>z.id==='crane_crown'&&z.final),'Crane Crown final surface is missing.');
-for(const material of ['concrete','wood','scaffold','metal'])must(stage.zones.some(z=>z.material===material),`Construction material missing: ${material}`);
-for(const id of ['rotten_temp_stair','plywood_partition','lumber_barricade','upper_plywood_wall'])must(stage.destructibles.some(d=>d.id===id),`Construction destructible missing: ${id}`);
-must(stage.destructibles.filter(d=>d.guard).length>=4,'Construction Climb needs raised rails/slab lips for ordinary knockback protection.');
-must(stage.encounters[0].cap<=2&&Math.max(...stage.encounters.map(e=>e.cap))<=5,'Construction enemy pressure must remain novice-friendly.');
-must((stage.constructionDecor||[]).some(d=>d.kind==='craneTower')&&(stage.constructionDecor||[]).some(d=>d.kind==='craneBoom'),'Crane presentation geometry is missing.');
-must((stage.constructionDecor||[]).filter(d=>d.kind==='rebar').length>=3,'Rebar landmarks are missing.');
 
-const nodeIds=new Set([...stage.zones.map(z=>z.id),...stage.junctions.map(j=>j.id)]);
-for(const e of stage.edges){must(nodeIds.has(e.from)&&nodeIds.has(e.to),`Construction edge ${e.id} references an unknown node.`);}
-function reachable(brokenIds=new Set()){
-  const enabled=e=>(!e.requiresBroken||brokenIds.has(e.requiresBroken))&&(!e.requiresIntact||!brokenIds.has(e.requiresIntact));
-  const seen=new Set(['yard_main']),queue=['yard_main'];
-  while(queue.length){const id=queue.shift();for(const e of stage.edges){if(!enabled(e))continue;const next=e.from===id?e.to:e.to===id?e.from:null;if(next&&!seen.has(next)){seen.add(next);queue.push(next);}}}
-  return seen.has('crane_crown');
+for(const id of ['yard_main','container_roof','ground_ramp','lower_frame','diagonal_plank','fenced_platform','mid_floor','hanging_platform','upper_ramp','upper_floor','plywood_step','top_floor'])must(stage.zones.some(z=>z.id===id),`Demolition physical surface missing: ${id}`);
+must(stage.zones.some(z=>z.id==='yard_main'&&z.summon&&z.enemySpawn),'Open Work Yard must be the opening summon/combat surface.');
+must(stage.zones.some(z=>z.id==='fenced_platform'&&z.material==='yellow_platform'),'Distinctive yellow fenced work platform is missing.');
+must(stage.zones.some(z=>z.id==='top_floor'&&z.final&&z.material==='concrete'),'Exposed Top Floor final slab is missing.');
+for(const material of ['construction_ground','container','concrete','wood','yellow_platform'])must(stage.zones.some(z=>z.material===material),`Demolition construction material missing: ${material}`);
+
+must(stage.destructibles.length===0,'Construction Climb should not turn Demolition geometry into route-gating destructible puzzles.');
+must(stage.edges.every(e=>!e.requiresBroken&&!e.requiresIntact),'Construction Climb physical routes must not depend on hidden destructible graph state.');
+must(stage.encounters[0].cap<=2&&stage.encounters[1].cap<=2&&Math.max(...stage.encounters.map(e=>e.cap))<=5,'Construction enemy pressure must remain novice-friendly.');
+must(stage.encounters.every(e=>Number(e.spawnEvery)>=4),'Construction enemy cadence should leave room to read the physical climb.');
+
+const pal=stage.palette||{};
+for(const [key,value] of Object.entries({skyTop:'#4f9fd5',skyBottom:'#d4efff',concrete:'#b9bbb6',steel:'#7e432d',wood:'#a66f47',yellow:'#d0a13b',tarp:'#202327',container:'#6e8793'}))must(pal[key]===value,`Demolition palette value regressed: ${key}`);
+const kinds=new Set((stage.constructionDecor||[]).map(d=>d.kind));
+for(const kind of ['siteContainer','logs','cautionSign','steelFrame','arrowSign','safetyFence','tarpFence','hangingPlatform','rebar','boxStack','greenCrate','barrels','plywoodStack'])must(kinds.has(kind),`Demolition prop language missing: ${kind}`);
+must(!kinds.has('craneTower')&&!kinds.has('craneBoom'),'Retired invented crane geometry must not remain on Construction Climb.');
+must(!(stage.signs||[]).some(s=>/neon|nite|luna|arcade|die/i.test(`${s.id||''} ${s.text||''}`)),'Neon Rooftops signage must not leak into Construction Climb.');
+
+const nodeIds=new Set(stage.zones.map(z=>z.id));
+for(const e of stage.edges){must(nodeIds.has(e.from)&&nodeIds.has(e.to),`Construction edge ${e.id} references an unknown physical surface.`);}
+function reachable(start='yard_main',goal='top_floor'){
+  const seen=new Set([start]),queue=[start];
+  while(queue.length){const id=queue.shift();if(id===goal)return true;for(const e of stage.edges){const next=e.from===id?e.to:e.to===id?e.from:null;if(next&&!seen.has(next)){seen.add(next);queue.push(next);}}}
+  return false;
 }
-must(reachable(),'Construction Climb crown must be reachable with all optional structures intact.');
-must(reachable(new Set(['rotten_temp_stair'])),'Collapsing the rotten stair must not soft-lock the climb.');
-must(reachable(new Set(['plywood_partition'])),'Breaking the plywood partition must leave a valid crown route.');
-must(reachable(new Set(['rotten_temp_stair','plywood_partition','lumber_barricade','upper_plywood_wall'])),'Combined topology changes must still leave a valid crown route.');
-
-const yardEdges=stage.edges.filter(e=>e.from==='yard_main'||e.to==='yard_main');
-must(yardEdges.length>=2,'The opening yard needs multiple immediate traversal choices.');
-const upperFeeds=stage.edges.filter(e=>['upper_slab_west','upper_slab_east'].includes(e.from)&&e.to==='crane_hook_deck'||['upper_slab_west','upper_slab_east'].includes(e.to)&&e.from==='crane_hook_deck');
-must(upperFeeds.length>=2,'Both upper slabs must feed the late crane-deck choke.');
+must(reachable(),'Construction Climb needs a continuous physical route from the open yard to the top slab.');
+must(stage.edges.filter(e=>e.from==='yard_main'||e.to==='yard_main').length===2,'Opening yard should present exactly two visually legible ascent choices.');
+must(stage.edges.filter(e=>e.from==='mid_floor'||e.to==='mid_floor').length===3,'Middle floor should present the ordinary climb plus one hanging-platform alternative and the route back down.');
 
 for(const forbidden of [/\beval\s*\(/,/new\s+Function\b/,/document\.write\s*\(/,/\.replace\s*\([^\n]*moving-screen/i]){
   must(!forbidden.test(router),`Moving Screen map router must stay source-direct: ${forbidden}`);
   must(!forbidden.test(presentation),`Construction presentation must stay source-direct: ${forbidden}`);
 }
-for(const marker of ["const ENGINE_SLOT='neon_rooftops_v2'",'registry[ENGINE_SLOT]=next','window.TTDMovingScreen=Object.freeze','get stageId()','get stage()'])must(router.includes(marker),`Map router contract missing: ${marker}`);
-for(const marker of ['constructionDecor','craneTower','craneBoom','safetyFence','ttdMsConstructionCanvasV1'])must(presentation.includes(marker),`Construction presentation contract missing: ${marker}`);
+for(const marker of ["const ENGINE_SLOT='neon_rooftops_v2'",'registry[ENGINE_SLOT]=next','window.TTDMovingScreen=Object.freeze','get stageId()','get stage()',"flag?.label||''"])must(router.includes(marker),`Map router contract missing: ${marker}`);
+for(const marker of ['constructionDecor','siteContainer','logs','steelFrame','safetyFence','tarpFence','hangingPlatform','ttdMsConstructionCanvasV1'])must(presentation.includes(marker),`Construction presentation contract missing: ${marker}`);
+must(!/craneTower|craneBoom/.test(presentation),'Construction presentation must not redraw the retired invented crane.');
 must(shell.includes("key:'construction_climb'")&&shell.includes("window.TTDMovingScreen.start(mapKey)"),'Arcade shell must launch the selected Moving Screen map.');
-for(const marker of ['/online/moving-screen-construction-climb-v1.js?v=1','/online/moving-screen-map-router-v1.js?v=1','/online/moving-screen-construction-presentation-v1.js?v=1'])must(loader.includes(marker),`Construction runtime file missing from loader: ${marker}`);
+for(const marker of ['/online/moving-screen-construction-climb-v1.js?v=2','/online/moving-screen-map-router-v1.js?v=2','/online/moving-screen-construction-presentation-v1.js?v=2'])must(loader.includes(marker),`Construction rework runtime file missing from loader: ${marker}`);
 
-console.log(`Construction Climb verified: ${stage.zones.length} standable surfaces, ${stage.edges.length} routes, ${stage.destructibles.length} destructibles, novice enemy caps, alternate climbs, crane presentation, and topology-safe destruction.`);
+console.log(`Construction Climb verified: ${stage.zones.length} physical surfaces, ${stage.edges.length} readable connections, zero abstract junctions, Demolition palette/props, no crane/neon leakage, and a continuous yard-to-top-floor climb.`);

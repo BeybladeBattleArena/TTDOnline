@@ -21,7 +21,7 @@ for(const marker of [
   "['neon_rooftops_v2','construction_climb'].includes(mapKey)",'window.TTDMovingScreen.start(mapKey)',
   'function returnToArcade(event)','Choose Map',"send('ttd:v6-run-begin-request'","send('ttd:v6-run-finish-request'",
 ])must(shell.includes(marker),`Arcade shell multi-map contract missing: ${marker}`);
-const shellUrl="'/online/arcade-mode-shell-v2.js?v=4'",constructionUi="'/online/moving-screen-construction-presentation-v1.js?v=1'";
+const shellUrl="'/online/arcade-mode-shell-v2.js?v=4'",constructionUi="'/online/moving-screen-construction-presentation-v1.js?v=2'";
 must(loader.includes(shellUrl)&&loader.includes(constructionUi)&&loader.indexOf(constructionUi)<loader.indexOf(shellUrl),'Arcade shell must load after Construction Climb presentation authority.');
 must(startServer.includes("moving_screen:new Set(['neon_rooftops_v2','construction_climb'])"),'Run-start server must authorize both Moving Screen maps.');
 for(const marker of ["explicit === 'arcade'","'moving_screen'","family === 'arcade'"])must(progression.includes(marker),`Arcade progression family is missing: ${marker}`);
