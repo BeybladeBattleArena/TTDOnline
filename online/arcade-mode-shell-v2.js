@@ -11,8 +11,8 @@
   const MAPS=Object.freeze({
     moving:Object.freeze([
       Object.freeze({key:'neon_rooftops_v2',name:'Neon Rooftops',tag:'AVAILABLE',desc:'Climb the midnight district while the screen advances. 30 KOs, ten lives, and the Sign Crown flag.',playable:true}),
+      Object.freeze({key:'construction_climb',name:'Construction Climb',tag:'AVAILABLE',desc:'Scale an unfinished high-rise across work yards, plank ramps, scaffolds, concrete floors and suspended crane steel.',playable:true}),
       Object.freeze({key:'underground_descent',name:'Underground Descent',tag:'COMING SOON',desc:'Descend through station roofs, maintenance platforms, signs and tunnels while the screen pushes downward.',playable:false}),
-      Object.freeze({key:'construction_climb',name:'Construction Climb',tag:'COMING SOON',desc:'Scale an unfinished high-rise across cranes, scaffold decks and suspended steel.',playable:false}),
     ]),
     koth:Object.freeze([
       Object.freeze({key:'neon_rooftops_koth',name:'Neon Rooftops',tag:'COMING SOON',desc:'Fight over rooftop control zones while the battlefield keeps changing around the hill.',playable:false}),
@@ -139,11 +139,11 @@
   }
 
   function startMovingMap(mapKey){
-    if(mapKey!=='neon_rooftops_v2'){toast('That Moving Screen map is not ready yet.');return;}
+    if(!['neon_rooftops_v2','construction_climb'].includes(mapKey)){toast('That Moving Screen map is not ready yet.');return;}
     if(!window.TTDMovingScreen?.start){toast('Moving Screen is still loading.');return;}
     beginOnlineRun(MOVING_MODE,mapKey,()=>{
       currentRun.startedAt=performance.now();currentRun.kind='moving';currentRun.mapKey=mapKey;
-      window.TTDMovingScreen.start();
+      window.TTDMovingScreen.start(mapKey);
     });
   }
   function startKothMap(mapKey){
