@@ -24,7 +24,8 @@
   function restoreDefault(){registry[ENGINE_SLOT]=defaultStage;activeStageId=ENGINE_SLOT;activeStage=defaultStage;}
   function stageCopy(){
     const construction=activeStageId==='construction_climb';
-    return{goal:Number(activeStage?.objective?.killGoal)||30,crown:construction?'Crane Crown':'Sign Crown'};
+    const label=String(activeStage?.objective?.flag?.label||'').trim();
+    return{goal:Number(activeStage?.objective?.killGoal)||30,crown:label||(construction?'Top Floor':'Sign Crown')};
   }
   function syncPresentation(){
     if(!base.active)return;
@@ -34,7 +35,7 @@
     const game=document.getElementById('gameScreen');if(game){game.dataset.ttdMovingStage=activeStageId;game.classList.toggle('ttd-construction-climb',activeStageId==='construction_climb');}
     const hint=document.getElementById('ttdMsHintV4');if(hint&&/60 KOs reached/.test(hint.textContent||''))hint.textContent=hint.textContent.replace('60 KOs reached',`${copy.goal} KOs reached`);
     const resultText=document.querySelector('#ttdMsResultV4 p');if(resultText){let text=String(resultText.textContent||'');text=text.replace(/60 enemies/g,`${copy.goal} enemies`).replace(/Sign Crown/g,copy.crown);if(resultText.textContent!==text)resultText.textContent=text;}
-    const toast=document.getElementById('toast');if(toast&&activeStageId==='construction_climb'&&/SIGN CROWN/i.test(toast.textContent||''))toast.textContent=toast.textContent.replace(/SIGN CROWN/ig,'CRANE CROWN');
+    const toast=document.getElementById('toast');if(toast&&activeStageId==='construction_climb'&&/SIGN CROWN/i.test(toast.textContent||''))toast.textContent=toast.textContent.replace(/SIGN CROWN/ig,copy.crown.toUpperCase());
   }
   function tick(){
     if(base.active)syncPresentation();
