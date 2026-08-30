@@ -72,12 +72,19 @@
     return true;
   }
 
+  function returnToArcade(event){
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if(activateLanding('modeScreen')){ownArcadeCards();return true;}
+    return showCore('mode');
+  }
+
   function makeScreen(id,title,kind,intro){
     let screen=document.getElementById(id);if(screen)return screen;
     screen=document.createElement('div');screen.id=id;screen.className='screen ttdArcadeLandingScreenV2';
     screen.innerHTML=`<div class="topbar"><button class="backBtn ttdArcadeLandingBackV1" type="button">Back</button><div class="title">${title}</div><div style="width:52px;"></div></div><div class="modeBody"><div class="ttdArcadeLandingIntro">${intro}</div><div class="ttdArcadeMapListV1"></div></div>`;
     (document.getElementById('app')||document.body).appendChild(screen);
-    screen.querySelector('.ttdArcadeLandingBackV1')?.addEventListener('click',()=>showCore('mode'));
+    screen.querySelector('.ttdArcadeLandingBackV1')?.addEventListener('click',returnToArcade);
     renderMaps(screen,kind);
     return screen;
   }
