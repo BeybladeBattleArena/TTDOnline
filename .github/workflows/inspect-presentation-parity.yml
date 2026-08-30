@@ -15,31 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect loading, start, finish, result, and back flows
+      - name: Inspect Moving Screen lifecycle details
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          files=[p for p in Path('.').rglob('*') if p.is_file() and p.suffix in {'.js','.mjs','.html'} and '.git' not in p.parts]
-          pats=[
-            r'loading-endless-horde',r'loading-al-hata',r'NOW LOADING',r'loading screen',
-            r'MISSION START',r'Mission.mp3',r'Finish.mp3',r'Start.mp3',r'playMissionCue',r'playFinishCue',
-            r'showZombieSummary',r'zSummaryOverlay',r'gameOverlay',r'endMatch\(',r'endEndlessHorde\(',r'campaignComplete',
-            r'backBtn',r'data-ttd-back',r'pauseBtn',r'endRunBtn'
-          ]
-          rx=re.compile('|'.join(f'(?:{p})' for p in pats),re.I)
-          for p in files:
-            try: lines=p.read_text(errors='ignore').splitlines()
-            except Exception: continue
-            hits=[i for i,l in enumerate(lines) if rx.search(l)]
-            if not hits: continue
-            print(f'\n===== {p} =====')
-            shown=set()
-            for i in hits:
-              a=max(0,i-5); b=min(len(lines),i+7)
-              if any(j in shown for j in range(a,b)): continue
-              shown.update(range(a,b))
-              print(f'--- lines {a+1}-{b} ---')
-              for j in range(a,b): print(f'{j+1:5}: {lines[j]}')
-          PY
+          echo '=== ENGINE LIFECYCLE ==='
+          grep -nE "function (start|frame|finish|revealResult|exit)|finish\(|requestAnimationFrame\(frame\)|runtime\.finished|lives<=0|empty" online/moving-screen-engine-v5.js || true
+          echo '=== ARCADE MOVING RESULT ==='
+          grep -nE "movingResult|finishOnlineRun|movingMetrics|finalizeManual|overlayBtn|TTDArcadeModeShell" online/arcade-mode-shell-v2.js || true
+          echo '=== PRESENTATION API ==='
+          grep -nE "playMissionCue|playCombatCountdown|playFinishCue|presentOutcome|TTDGamePresentation" online/game-presentation-v1.js || true
+          echo '=== LOAD ROUTER ==='
+          nl -ba online/moving-screen-map-router-v2.js | sed -n '1,130p'
+          echo '=== RUN CONTROLS ==='
+          nl -ba online/singleplayer-run-controls-v1.js
+          echo '=== LOADER KEYS ==='
+          grep -nE "moving-screen-(engine|map-router|arcade-mode-shell|singleplayer-run-controls)|game-presentation" online/runtime-bridge-loader-v1.js || true
