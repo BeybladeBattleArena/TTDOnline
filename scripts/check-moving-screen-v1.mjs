@@ -71,7 +71,7 @@ for(const forbidden of [
   'const left=g.createLinearGradient(0,0,sz,0)',
   'const right=g.createLinearGradient(runtime.w,0,runtime.w-sz,0)',
 ])must(!engine.includes(forbidden),`Horizontal viewport boundaries must not remain Moving Screen death/safety planes: ${forbidden}`);
-must(engine.includes('const fs=safeSummonSpots(z)'),'Player summons must choose only individually validated safe spots.');
+must(engine.includes('safeSummonSpots(z)')&&engine.includes('placeAtZone(ent,z.id,chosen.i)'),'Player summons must choose and occupy only individually validated safe spots.');
 must(engine.includes("runtime.phase!=='transition'||summonSpotSafe(s.p,predictedCameraY(.9))"),'Transition summons must survive a short projected camera look-ahead.');
 must(engine.includes("if(runtime.stage.theme==='construction'){drawConstructionBackground(g);return;}"),'Construction maps must use the daylight construction background rather than Neon scenery.');
 must(engine.includes("function drawForeground(g){if(runtime.stage.theme==='construction')return;"),'Construction must suppress Neon foreground/sign remnants.');
