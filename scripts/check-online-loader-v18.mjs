@@ -30,7 +30,7 @@ const expectedUrls=[
   '/online/merge-bridge-v6.js?v=6','/online/run-ui-bridge-v21.js?v=21','/online/refresh-bridge-v6.js?v=6',
   '/online/mobile-input-bridge-v9.js?v=9','/online/interaction-effects-v10.js?v=10','/online/collection-portrait-fit-v16.js?v=16',
   '/online/deck-editor-v18.js?v=18','/online/item-assets-v1.js?v=4','/online/avatar-inventory-v22.js?v=22','/online/world-items-v1.js?v=1',
-  '/online/moving-screen-neon-rooftops-v2.js?v=4','/online/moving-screen-engine-v4.js?v=6','/online/moving-screen-ui-v1.js?v=1','/online/moving-screen-topology-ui-v1.js?v=1','/online/arcade-mode-shell-v1.js?v=1',
+  '/online/moving-screen-neon-rooftops-v2.js?v=4','/online/moving-screen-engine-v4.js?v=6','/online/moving-screen-ui-v1.js?v=1','/online/moving-screen-topology-ui-v1.js?v=1','/online/arcade-mode-shell-v2.js?v=2',
 ];
 let lastRuntimeIndex=-1;
 for(const url of expectedUrls){const index=runtime.indexOf(url);must(index>=0,`native runtime bridge order is missing ${url}.`);must(index>lastRuntimeIndex,`native runtime authority order regressed at ${url}.`);lastRuntimeIndex=index;}
@@ -38,6 +38,7 @@ for(const retired of ['/online/moving-screen-engine-v1.js?v=1','/online/moving-s
 for(const stale of ['/online/moving-screen-neon-rooftops-v2.js?v=2','/online/moving-screen-neon-rooftops-v2.js?v=3'])must(!runtime.includes(stale),`Moving Screen topology release must not reuse stale stage cache key: ${stale}`);
 must(!runtime.includes('/online/moving-screen-engine-v4.js?v=4'),'Moving Screen hotfix must not reuse the cached v4 query key.');
 must(!runtime.includes('/online/moving-screen-engine-v4.js?v=5'),'Moving Screen full-viewport hotfix must not reuse the previous v5 query key.');
+must(!runtime.includes('/online/arcade-mode-shell-v1.js?v=1'),'Broken Arcade shell v1 must not remain in the production runtime.');
 for(const marker of [
   "link.rel='preload'","link.as='script'",'script.async=false',"window.addEventListener('error',onRuntimeError,true)",
   "event.preventDefault?.()",'failed without blocking later bridges.','bridge-load-error','bridge-runtime-error',
@@ -63,4 +64,4 @@ must(!game.includes("__ttdExposeCore('renderCollection'"),'obsolete renderCollec
 
 for(const marker of ['data-mode="loader-v9"','name="ttd-build" content="release-integrity-v15"','__TTD_BUILD_TOKEN','__TTD_ASSET_URL','__TTD_GAME_ASSETS',"cache:'no-store'",'/assets/game-assets.json',"window.__TTD_ASSET_URL('/online/game-loader.js')"])must(loaderHtml.includes(marker),`loader HTML freshness/asset contract missing: ${marker}`);
 
-console.log('Loader recovery contract verified: bridge readiness stays ordered/source-direct and Moving Screen loads stage -> engine -> route UI -> topology UI -> Arcade map/result shell without runtime source rewriting.');
+console.log('Loader recovery contract verified: bridge readiness stays ordered/source-direct and Moving Screen loads stage -> engine -> route UI -> topology UI -> Arcade shell v2 without runtime source rewriting.');
