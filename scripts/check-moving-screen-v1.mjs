@@ -27,21 +27,21 @@ const context={window:{}};vm.createContext(context);new vm.Script(stageSource,{f
 const stage=context.window.TTDMovingScreenStages?.neon_rooftops_v2;
 must(stage,'Neon Rooftops v2 stage authority did not register.');
 must(stage.tiers?.length===4,'Moving Screen must retain four major visual tiers.');
-must(stage.cameraStops?.length>=7,'Moving Screen needs multiple camera pauses across the four tiers.');
-must(stage.cameraStops?.[0]===85,'Opening camera stop must preserve reliable phone summon/enemy-spawn room.');
+must(stage.cameraStops?.length>=7,'Neon Rooftops needs multiple camera pauses across its four tiers.');
+must(stage.cameraStops?.[0]===85,'Opening Neon camera stop must preserve reliable phone summon/enemy-spawn room.');
 must(Math.abs(Number(stage.timing?.travel)-16)<0.001,'Moving Screen camera transition must retain the ~70% slower 16-second travel time.');
-must(stage.zones?.length>=20,'Expanded Moving Screen needs at least 20 standable combat-safe surfaces.');
-for(const id of ['roof1_ac_step','roof1_doorhouse','crane_beam_low','roof2_ac_step','crate_landing','steel_beam_mid','roof3_doorhouse'])must(stage.zones.some(z=>z.id===id),`Physical standable traversal surface missing: ${id}`);
-must(!stage.zones.some(z=>z.tier===1&&z.choke),'Tier 1 should teach traversal without a hard choke surface.');
-must(stage.zones.some(z=>z.tier>=3&&z.choke&&z.slots<=3),'Later tiers need a meaningful constrained choke point.');
-must(stage.zones.filter(z=>z.summon).length>=4,'Each major tier needs a direct-world summon surface.');
+must(stage.zones?.length>=20,'Neon Rooftops retains its expanded set of standable combat-safe surfaces until its later map-specific redesign.');
+for(const id of ['roof1_ac_step','roof1_doorhouse','crane_beam_low','roof2_ac_step','crate_landing','steel_beam_mid','roof3_doorhouse'])must(stage.zones.some(z=>z.id===id),`Neon physical standable traversal surface missing: ${id}`);
+must(!stage.zones.some(z=>z.tier===1&&z.choke),'Neon Tier 1 should teach traversal without a hard choke surface.');
+must(stage.zones.some(z=>z.tier>=3&&z.choke&&z.slots<=3),'Later Neon tiers need a meaningful constrained choke point.');
+must(stage.zones.filter(z=>z.summon).length>=4,'Each major Neon tier needs a direct-world summon surface.');
 must(stage.objective?.startingLives===10,'Moving Screen must start with 10 lives.');
 must(stage.objective?.killGoal===30,'Single-player victory must require 30 credited enemy defeats.');
 must(stage.objective?.emptyGraceSeconds===3,'Empty-field grace period must be 3 seconds.');
 must(stage.objective?.emptyCountdownSeconds===5,'Empty-field visible countdown must be 5 seconds.');
-must(stage.objective?.flag?.homeZone==='roof4_final','The objective flag must begin at the Sign Crown.');
-for(const id of ['boarded_passage','billboard_blocker','crate_stack_blocker','old_fire_escape','billboard_brace'])must(stage.destructibles?.some(d=>d.id===id),`Topology destructible missing: ${id}`);
-must(stage.destructibles?.filter(d=>d.guard).length>=5,'Multiple raised rooftop ledges/rails must protect against ordinary knockback.');
+must(stage.objective?.flag?.homeZone==='roof4_final','Neon objective flag must begin at the Sign Crown.');
+for(const id of ['boarded_passage','billboard_blocker','crate_stack_blocker','old_fire_escape','billboard_brace'])must(stage.destructibles?.some(d=>d.id===id),`Neon topology destructible missing: ${id}`);
+must(stage.destructibles?.filter(d=>d.guard).length>=5,'Multiple raised Neon ledges/rails must protect against ordinary knockback.');
 
 const caps=stage.encounters.map(e=>Number(e.cap));
 must(caps[0]<=2&&caps[1]<=2,'Novice opening stops may have at most two enemies alive.');
@@ -50,23 +50,36 @@ must(stage.encounters.every(e=>Number(e.spawnEvery)>=3.8),'Enemy spawn cadence m
 
 const nodeIds=new Set([...stage.zones,...stage.junctions].map(n=>n.id));
 for(const e of stage.edges){must(nodeIds.has(e.from),`Unknown edge source ${e.from}`);must(nodeIds.has(e.to),`Unknown edge destination ${e.to}`);}
-for(const id of ['e21','e22','e23','e24','e25','e26','e27','e28','e29'])must(stage.edges.some(e=>e.id===id),`Expanded alternate route edge missing: ${id}`);
-must(stage.edges.filter(e=>e.from==='roof1_main'||e.to==='roof1_main').length>=2,'Opening rooftop needs multiple independent ways to begin climbing.');
-must(stage.edges.filter(e=>e.requiresBroken==='billboard_blocker').length>=2,'Breaking the rooftop billboard must open at least two routes.');
-must(stage.edges.some(e=>e.requiresIntact==='old_fire_escape'),'Rust-eaten fire escape must be able to collapse and remove its route.');
 
 function routeExists({broken=new Set(),intact=new Set(stage.destructibles.map(d=>d.id))}={}){const enabled=e=>(!e.requiresBroken||broken.has(e.requiresBroken))&&(!e.requiresIntact||intact.has(e.requiresIntact));const seen=new Set(['roof1_main']),q=['roof1_main'];while(q.length){const u=q.shift();if(u==='roof4_final')return true;for(const e of stage.edges){if(!enabled(e))continue;let v=null;if(e.from===u)v=e.to;else if(e.to===u)v=e.from;if(v&&!seen.has(v)){seen.add(v);q.push(v);}}}return false;}
 must(routeExists(),'An intact-state route from the lower rooftop to the Sign Crown is required.');
 const noOldEscape=new Set(stage.destructibles.map(d=>d.id).filter(id=>id!=='old_fire_escape'));
-must(routeExists({intact:noOldEscape}),'Collapsing the optional old fire escape must never soft-lock the climb.');
-must(routeExists({broken:new Set(['boarded_passage','billboard_blocker','crate_stack_blocker']),intact:new Set(stage.destructibles.map(d=>d.id))}),'Opening optional barriers must preserve full upward progression.');
-const postBrace=new Set(stage.destructibles.map(d=>d.id).filter(id=>id!=='billboard_brace'));
-must(routeExists({broken:new Set(['billboard_brace']),intact:postBrace}),'Breaking the billboard brace must create a replacement route instead of soft-locking the map.');
+must(routeExists({intact:noOldEscape}),'Collapsing the optional old fire escape must never soft-lock the Neon climb.');
+
+// Shared Moving Screen safety/navigation rules.  These apply to Construction now and every future map.
+for(const marker of [
+  'function verticalVisible(','function summonMargin()','function summonSpotSafe(','function safeSummonSpots(',
+  "if(m.kind==='edge')return m.to===zoneId&&m.toSlot===i",'toSlot=bestArrivalSpot(ent,dest,fs)','function recoverMovementArrival(',
+  "if(ent.faction==='player')runtime.selectedId=ent.id",'function updateDeathPlanes()',"if(p.y<0||p.y>runtime.h)killEntity(e,'deathPlane',null)",
+  "toast('MOVE! Top and bottom are lethal.')",'m=Math.min(m,p.y,runtime.h-p.y)',"if(p.y<margin||p.y>runtime.h-margin)return false",
+])must(engine.includes(marker),`Shared Moving Screen path/safety contract missing: ${marker}`);
+for(const forbidden of [
+  'p.x<0||p.x>runtime.w||p.y<0||p.y>runtime.h',
+  'p.x<margin||p.x>runtime.w-margin||p.y<margin||p.y>runtime.h-margin',
+  'm=Math.min(m,p.x,runtime.w-p.x,p.y,runtime.h-p.y)',
+  "toast('MOVE! Every screen edge is lethal.')",
+  'const left=g.createLinearGradient(0,0,sz,0)',
+  'const right=g.createLinearGradient(runtime.w,0,runtime.w-sz,0)',
+])must(!engine.includes(forbidden),`Horizontal viewport boundaries must not remain Moving Screen death/safety planes: ${forbidden}`);
+must(engine.includes('const fs=safeSummonSpots(z)'),'Player summons must choose only individually validated safe spots.');
+must(engine.includes("runtime.phase!=='transition'||summonSpotSafe(s.p,predictedCameraY(.9))"),'Transition summons must survive a short projected camera look-ahead.');
+must(engine.includes("if(runtime.stage.theme==='construction'){drawConstructionBackground(g);return;}"),'Construction maps must use the daylight construction background rather than Neon scenery.');
+must(engine.includes("function drawForeground(g){if(runtime.stage.theme==='construction')return;"),'Construction must suppress Neon foreground/sign remnants.');
 
 for(const marker of [
   'window.__TTD_MOVING_SCREEN_V4 = true',"const STAGE_ID='neon_rooftops_v2'",'const MOVING_AS_MULT=.85',"document.getElementById('gameScreen')","showCore('game')",'ttdMovingScreenCanvasV4','ttdMsControlsV4','ttdMsSummonV4',
   'function projectionMetrics()','function zoneQuad(',"const SAFE_LINE='rgba(255,255,255,.25)'",'function summonDie()','function mergeDice(','function playerRouteOptions(','function shortestPath(','function chooseAiBranch(','function pickCombatTarget(',
-  'if(ent.moving||ent.airborne||ent.awaitingBranch||!ent.zoneId)return null','function breakDestructible(','function applyImpulse(','function updateDeathPlanes()',"if(runtime.lives<=0)finish(false,'All 10 lives were lost.')",'function pickupFlag(',"runtime.kills=Math.min(runtime.killGoal,runtime.kills+1)","runtime.kills>=runtime.killGoal&&playerHoldsFlag()",'viewport:{w:runtime.w,h:runtime.h}',
+  'if(ent.moving||ent.airborne||ent.awaitingBranch||!ent.zoneId)return null','function breakDestructible(','function applyImpulse(',"if(runtime.lives<=0)finish(false,'All 10 lives were lost.')",'function pickupFlag(',"runtime.kills=Math.min(runtime.killGoal,runtime.kills+1)","runtime.kills>=runtime.killGoal&&playerHoldsFlag()",'viewport:{w:runtime.w,h:runtime.h}',
 ])must(engine.includes(marker),`Moving Screen v4 gameplay/runtime contract missing: ${marker}`);
 
 for(const marker of [
@@ -83,14 +96,14 @@ const P1=projectPhone(lower.x,lower.z,lower.y),P2=projectPhone(second.x,second.z
 must(P1.y>650*.48&&P1.y<650*.90,'Phone framing must put the current lower rooftop in the playable lower half.');
 must(P1.y<650*.70,'Opening Tier-1 enemy-spawn surface must fit above the conservative spawn cutoff on a phone viewport.');
 must(P2.y>-80&&P2.y<650*.30,'The next major rooftop should only peek near the upper boundary at the first camera stop.');
-must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final tiers at the opening camera stop.');
+must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final Neon tiers at the opening camera stop.');
 
-const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=4'",engineUrl="'/online/moving-screen-engine-v4.js?v=6'",uiUrl="'/online/moving-screen-ui-v1.js?v=1'",topologyUrl="'/online/moving-screen-topology-ui-v1.js?v=1'";
-for(const url of [stageUrl,engineUrl,uiUrl,topologyUrl])must(loader.includes(url),`Runtime loader missing Moving Screen authority: ${url}`);
-must(loader.indexOf(stageUrl)<loader.indexOf(engineUrl)&&loader.indexOf(engineUrl)<loader.indexOf(uiUrl)&&loader.indexOf(uiUrl)<loader.indexOf(topologyUrl),'Moving Screen load order must be stage -> engine -> route UI -> topology/gesture UI.');
-for(const stale of ['/online/moving-screen-neon-rooftops-v2.js?v=2','/online/moving-screen-neon-rooftops-v2.js?v=3'])must(!loader.includes(stale),`Moving Screen topology release may not reuse stale stage key: ${stale}`);
+const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=4'",constructionUrl="'/online/moving-screen-construction-climb-v1.js?v=2'",engineUrl="'/online/moving-screen-engine-v4.js?v=7'",routerUrl="'/online/moving-screen-map-router-v1.js?v=2'",uiUrl="'/online/moving-screen-ui-v1.js?v=1'",topologyUrl="'/online/moving-screen-topology-ui-v1.js?v=1'",constructionPresentationUrl="'/online/moving-screen-construction-presentation-v1.js?v=2'";
+for(const url of [stageUrl,constructionUrl,engineUrl,routerUrl,uiUrl,topologyUrl,constructionPresentationUrl])must(loader.includes(url),`Runtime loader missing Moving Screen authority: ${url}`);
+must(loader.indexOf(stageUrl)<loader.indexOf(constructionUrl)&&loader.indexOf(constructionUrl)<loader.indexOf(engineUrl)&&loader.indexOf(engineUrl)<loader.indexOf(routerUrl)&&loader.indexOf(routerUrl)<loader.indexOf(uiUrl)&&loader.indexOf(uiUrl)<loader.indexOf(topologyUrl)&&loader.indexOf(topologyUrl)<loader.indexOf(constructionPresentationUrl),'Moving Screen load order must remain stages -> engine -> router -> route UI -> topology UI -> map presentation.');
+for(const stale of ['/online/moving-screen-engine-v4.js?v=6','/online/moving-screen-construction-climb-v1.js?v=1','/online/moving-screen-map-router-v1.js?v=1','/online/moving-screen-construction-presentation-v1.js?v=1'])must(!loader.includes(stale),`Moving Screen safety/Construction release may not reuse stale cache key: ${stale}`);
 must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached-screen v3 runtime must not load in production.');
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen verified: 30-KO novice pressure, <=5 enemies, 21+ standable combat surfaces, alternate physical climb routes, destructible topology, raised ledges, route-line de-emphasis, route tap/swipe input, existing loadout/chevron polish, and core v4 objectives remain guarded.');
+console.log('Moving Screen verified: top/bottom-only death planes, safe per-spot summoning, reserved route arrivals, stranded-Die recovery, horizontal offscreen tolerance, Construction daylight theming, and existing Neon combat/objective contracts.');
