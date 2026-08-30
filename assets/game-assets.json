@@ -260,6 +260,21 @@
         }
       }
     },
+    "loadingMovingScreen": {
+      "path": "/assets/ui/loading-moving-screen.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 1152,
+      "usage": {
+        "loading": {
+          "box": [
+            1536,
+            1152
+          ],
+          "fit": "contain"
+        }
+      }
+    },
     "itemFrozenIslandChestNormal": {
       "path": "/assets/items/chest-frozen-island-normal.png",
       "format": "image/png",
@@ -752,7 +767,7 @@
           ]
         }
       },
-      "description": "3 2 1 START announcer cue — authoritative original MP3"
+      "description": "3 2 1 START announcer cue \u2014 authoritative original MP3"
     },
     "announcerMissionClear": {
       "path": "/assets/audio/announcer/MissionClear.mp3",
@@ -778,7 +793,7 @@
           ]
         }
       },
-      "description": "FAIL announcer cue — authoritative original MP3"
+      "description": "FAIL announcer cue \u2014 authoritative original MP3"
     },
     "announcerFinish": {
       "path": "/assets/audio/announcer/Finish.mp3",
