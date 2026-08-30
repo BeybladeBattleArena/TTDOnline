@@ -9,7 +9,7 @@ const MAX_DECKS=5;
 const VALID_MODES=new Set(['survival','bossrush','sudden','adventure','endlesshorde','moving_screen','king_of_the_hill']);
 const VALID_DIFFS=new Set(['normal','hard','hell']);
 const VALID_MAPS=Object.freeze({
-  moving_screen:new Set(['neon_rooftops_v2']),
+  moving_screen:new Set(['neon_rooftops_v2','construction_climb']),
   king_of_the_hill:new Set(['neon_rooftops_koth']),
 });
 const LEGACY_DIE_KEYS=Object.freeze({arrow:'skyhorn'});
