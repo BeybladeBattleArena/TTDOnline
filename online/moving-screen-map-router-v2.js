@@ -6,6 +6,7 @@
   const ENGINE_SLOT='neon_rooftops_v2';
   const LOADING_ID='ttdMsLoadingV2';
   const LOADING_MIN_MS=720;
+  const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg';
   const registry=window.TTDMovingScreenStages=window.TTDMovingScreenStages||{};
   const base=window.TTDMovingScreen;
   const defaultStage=registry[ENGINE_SLOT]||null;
@@ -25,20 +26,16 @@
 
   function installLoadingStyle(){if(document.getElementById('ttdMsLoadingStyleV2'))return;const style=document.createElement('style');style.id='ttdMsLoadingStyleV2';style.textContent=`
     #${LOADING_ID}{position:fixed;inset:0;z-index:1300;display:flex;align-items:center;justify-content:center;background:#050711;overflow:hidden;pointer-events:auto;touch-action:none;}
-    #${LOADING_ID} img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.73) saturate(.88);}
-    #${LOADING_ID}::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,17,.12),rgba(5,7,17,.24) 52%,rgba(5,7,17,.86));}
-    #${LOADING_ID} .copy{position:absolute;z-index:2;left:18px;right:18px;bottom:max(28px,calc(env(safe-area-inset-bottom) + 22px));text-align:center;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.65);font-family:'Russo One',sans-serif;}
-    #${LOADING_ID} .mode{font-size:12px;letter-spacing:.12em;color:#f3d491;margin-bottom:5px}#${LOADING_ID} .map{font-size:clamp(24px,7vw,38px);line-height:1.02}#${LOADING_ID} .loading{font-size:10px;letter-spacing:.18em;color:#d4ecfa;margin-top:10px;animation:ttdMsLoadingPulseV2 1s ease-in-out infinite alternate}
-    @keyframes ttdMsLoadingPulseV2{from{opacity:.48}to{opacity:1}}
+    #${LOADING_ID} img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;image-rendering:auto;}
   `;document.head.appendChild(style);}
-  function showLoading(stage){installLoadingStyle();document.getElementById(LOADING_ID)?.remove();const root=document.createElement('div');root.id=LOADING_ID;root.innerHTML=`<img alt="" src="${asset('/assets/ui/loading-endless-horde.png')}"><div class="copy"><div class="mode">MOVING SCREEN</div><div class="map">${String(stage?.name||'Moving Screen')}</div><div class="loading">NOW LOADING</div></div>`;(document.getElementById('app')||document.body).appendChild(root);return root;}
+  function showLoading(){installLoadingStyle();document.getElementById(LOADING_ID)?.remove();const root=document.createElement('div');root.id=LOADING_ID;const img=document.createElement('img');img.alt='Moving Screen loading screen';img.decoding='async';img.src=asset(LOADING_ASSET);root.appendChild(img);(document.getElementById('app')||document.body).appendChild(root);return root;}
   function hideLoading(){const root=document.getElementById(LOADING_ID);if(!root)return;root.style.transition='opacity .22s ease';root.style.opacity='0';setTimeout(()=>root.remove(),240);}
 
   function syncPresentation(){if(!base.active)return;const name=activeStage?.name||'Moving Screen',copy=stageCopy(),label=document.getElementById('modeLabel');if(label&&label.textContent!==`Moving Screen · ${name}`)label.textContent=`Moving Screen · ${name}`;document.getElementById('ttdMsHudTitleFrameV1')?.remove();const game=document.getElementById('gameScreen');if(game){game.dataset.ttdMovingStage=activeStageId;game.classList.toggle('ttd-construction-climb',activeStageId==='construction_climb');}const hint=document.getElementById('ttdMsHintV4');if(hint&&/60 KOs reached/.test(hint.textContent||''))hint.textContent=hint.textContent.replace('60 KOs reached',`${copy.goal} KOs reached`);const resultText=document.querySelector('#ttdMsResultV4 p');if(resultText){let text=String(resultText.textContent||'');text=text.replace(/60 enemies/g,`${copy.goal} enemies`).replace(/Sign Crown/g,copy.crown);if(resultText.textContent!==text)resultText.textContent=text;}const toast=document.getElementById('toast');if(toast&&activeStageId==='construction_climb'&&/SIGN CROWN/i.test(toast.textContent||''))toast.textContent=toast.textContent.replace(/SIGN CROWN/ig,copy.crown.toUpperCase());}
   function tick(){if(base.active)syncPresentation();else if(activeStageId!==ENGINE_SLOT&&!pendingStageId){document.getElementById('gameScreen')?.classList.remove('ttd-construction-climb');restoreDefault();}raf=requestAnimationFrame(tick);}
 
   function beginStage(stageId){const stage=installStage(stageId);try{base.start();}catch(error){restoreDefault();hideLoading();throw error;}if(!base.active){restoreDefault();hideLoading();return false;}activeStage=stage;syncPresentation();try{const copy=stageCopy();window.toastGlobal?.(`10 lives · ${copy.goal} KOs · seize the ${copy.crown.toLowerCase()} flag`);}catch(_){}setTimeout(hideLoading,180);return true;}
-  function start(stageId=ENGINE_SLOT){if(base.active||pendingStageId)return false;const stage=resolve(stageId);if(!stage)throw new Error(`Unknown Moving Screen stage: ${stageId}`);pendingStageId=stage.id;activeStage=stage;showLoading(stage);clearTimeout(startTimer);startTimer=setTimeout(()=>{const id=pendingStageId;pendingStageId=null;if(!id){hideLoading();return;}try{beginStage(id);}catch(error){console.error('Moving Screen delayed start failed',error);hideLoading();}},LOADING_MIN_MS);return true;}
+  function start(stageId=ENGINE_SLOT){if(base.active||pendingStageId)return false;const stage=resolve(stageId);if(!stage)throw new Error(`Unknown Moving Screen stage: ${stageId}`);pendingStageId=stage.id;activeStage=stage;showLoading();clearTimeout(startTimer);startTimer=setTimeout(()=>{const id=pendingStageId;pendingStageId=null;if(!id){hideLoading();return;}try{beginStage(id);}catch(error){console.error('Moving Screen delayed start failed',error);hideLoading();}},LOADING_MIN_MS);return true;}
   function exit(){pendingStageId=null;clearTimeout(startTimer);hideLoading();try{return base.exit();}finally{document.getElementById('gameScreen')?.classList.remove('ttd-construction-climb');restoreDefault();}}
 
   function passthrough(name,...args){const fn=base?.[name];return typeof fn==='function'?fn(...args):false;}
