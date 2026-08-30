@@ -28,7 +28,7 @@ for(const marker of [
   'window.TTDMovingScreen.start()','window.TTDMovingScreen?.exit?.()',
 ])must(shell.includes(marker),`Arcade shell v2 contract missing: ${marker}`);
 
-const shellUrl="'/online/arcade-mode-shell-v2.js?v=2'",topologyUrl="'/online/moving-screen-topology-ui-v1.js?v=1'";
+const shellUrl="'/online/arcade-mode-shell-v2.js?v=3'",topologyUrl="'/online/moving-screen-topology-ui-v1.js?v=1'";
 must(loader.includes(shellUrl)&&loader.indexOf(topologyUrl)<loader.indexOf(shellUrl),'Arcade shell v2 must load after Moving Screen topology/input authority.');
 must(!loader.includes("'/online/arcade-mode-shell-v1.js?v=1'"),'Broken Arcade shell v1 must not load in production.');
 must(startClient.includes('mapKey:message.mapKey||null'),'Run-start client must forward selected Arcade map keys.');
