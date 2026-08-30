@@ -23,15 +23,15 @@
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.
     '/online/world-items-v1.js?v=1',
     // Moving Screen remains direct committed source. All stage definitions load before the engine.
-    // The map router points the established v4 engine and its UI authorities at the selected stage
-    // without rewriting engine source. Construction presentation adds only map-specific scenery.
+    // The v7 engine cache key carries vertical-only death planes, safe summon spots and reserved
+    // route arrivals. Construction v2 is the Demolition-style geometry/palette rebuild.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
-    '/online/moving-screen-construction-climb-v1.js?v=1',
-    '/online/moving-screen-engine-v4.js?v=6',
-    '/online/moving-screen-map-router-v1.js?v=1',
+    '/online/moving-screen-construction-climb-v1.js?v=2',
+    '/online/moving-screen-engine-v4.js?v=7',
+    '/online/moving-screen-map-router-v1.js?v=2',
     '/online/moving-screen-ui-v1.js?v=1',
     '/online/moving-screen-topology-ui-v1.js?v=1',
-    '/online/moving-screen-construction-presentation-v1.js?v=1',
+    '/online/moving-screen-construction-presentation-v1.js?v=2',
     '/online/arcade-mode-shell-v2.js?v=4',
     '/online/moving-screen-mobile-frame-v1.js?v=1',
   ];
