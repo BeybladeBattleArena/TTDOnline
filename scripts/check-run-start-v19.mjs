@@ -21,7 +21,7 @@ if(failSafePos<0||legacyPos<0||failSafePos>legacyPos)throw new Error('Fail-safe 
 
 requireMarkers(server,[
   "const VALID_MODES=new Set(['survival','bossrush','sudden','adventure','endlesshorde','moving_screen','king_of_the_hill'])",
-  "moving_screen:new Set(['neon_rooftops_v2'])",
+  "moving_screen:new Set(['neon_rooftops_v2','construction_climb'])",
   "king_of_the_hill:new Set(['neon_rooftops_koth'])",
   "const LEGACY_DIE_KEYS=Object.freeze({arrow:'skyhorn'})",
   "function canonicalDieKey(key){return LEGACY_DIE_KEYS[key]||key;}",
@@ -45,4 +45,4 @@ if(server.includes("snap.data()?.key!==slots[index].key"))throw new Error('Run-s
 if(server.includes('key:data.key,'))throw new Error('Friend support must not publish a legacy die key.');
 requireMarkers(serverEntry,["const runStart = require('./run-start-v19');",'...deckSocial, ...runStart'],'function entrypoint');
 
-console.log('Run-start verified: Adventure/Zombie plus map-backed Moving Screen/KOTH share the fail-safe ticket path, selected Arcade map keys are server-validated, stale active-deck indices self-repair, and canonical die identity remains enforced.');
+console.log('Run-start verified: Adventure/Zombie plus Neon Rooftops, Construction Climb, and KOTH share the fail-safe ticket path; selected Arcade map keys remain server-validated.');
