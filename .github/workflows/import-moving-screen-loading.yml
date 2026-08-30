@@ -1,7 +1,6 @@
-name: Import Moving Screen Loading Master
+name: Import Verified Moving Screen PNG
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - feature/moving-screen-input-nav-loading-v1
@@ -10,11 +9,12 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   import-master:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out exact feature head
         uses: actions/checkout@v4
@@ -22,49 +22,114 @@ jobs:
           ref: feature/moving-screen-input-nav-loading-v1
           fetch-depth: 0
 
-      - name: Reconstitute and verify exact uploaded master
+      - name: Authenticate for exact Drive download
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ttd-online-b8c0f
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+
+      - name: Download and verify approved PNG
         shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          DRIVE_FILE_ID: 1PGqRnyw7GIXvhBH0NR_1hhMCFwu7tHOd
+          EXPECTED_SIZE: '2440105'
+          EXPECTED_SHA256: e2482acd3aa1cb3bb61c9b530420242bb2431014bf05be9c9de4c7be4dbf1b35
+          EXPECTED_GIT_BLOB: 55d6f2f944dcc06c2ca598d19abea1c5aef50b20
         run: |
           set -euo pipefail
           mkdir -p assets/ui
-          cat .asset-staging/moving-screen-loading/part-*.b64 \
-            | tr -d '\r\n' \
-            | base64 --decode \
-            > assets/ui/loading-moving-screen.jpg
-          echo "decoded-size=$(stat -c%s assets/ui/loading-moving-screen.jpg)"
-          echo "decoded-sha256=$(sha256sum assets/ui/loading-moving-screen.jpg | awk '{print $1}')"
-          echo "decoded-git-blob=$(git hash-object assets/ui/loading-moving-screen.jpg)"
-          file assets/ui/loading-moving-screen.jpg
-          test "$(stat -c%s assets/ui/loading-moving-screen.jpg)" = "449004"
-          test "$(sha256sum assets/ui/loading-moving-screen.jpg | awk '{print $1}')" = "2559c53924c2d0f8d5ddc5733f1605b2522e9e7aecaa0208dc0868d9f2b36c57"
-          test "$(git hash-object assets/ui/loading-moving-screen.jpg)" = "423944b51e2226f295db606f0785d7f783bf0d2c"
-          file assets/ui/loading-moving-screen.jpg | grep -q 'JPEG image data'
-          grep -Fq "const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg'" online/moving-screen-map-router-v2.js
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            "https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media" \
+            --output assets/ui/loading-moving-screen.png
+          test "$(stat -c%s assets/ui/loading-moving-screen.png)" = "$EXPECTED_SIZE"
+          test "$(sha256sum assets/ui/loading-moving-screen.png | awk '{print $1}')" = "$EXPECTED_SHA256"
+          test "$(git hash-object assets/ui/loading-moving-screen.png)" = "$EXPECTED_GIT_BLOB"
+          file assets/ui/loading-moving-screen.png | grep -q 'PNG image data, 1536 x 1152'
+          echo "Verified exact approved Moving Screen PNG: $EXPECTED_SHA256"
 
-      - name: Align Moving Screen validator with authoritative loading asset
+      - name: Wire canonical PNG and immutable registry
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import json
           from pathlib import Path
-          path = Path('scripts/check-moving-screen-v1.mjs')
-          source = path.read_text()
-          old = '''for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',"const LOADING_ID='ttdMsLoadingV2'",'const LOADING_MIN_MS=720',"asset('/assets/ui/loading-endless-horde.png')",'MOVING SCREEN','NOW LOADING','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);'''
-          new = '''for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',"const LOADING_ID='ttdMsLoadingV2'",'const LOADING_MIN_MS=720',"const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg'",'img.src=asset(LOADING_ASSET)','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);'''
-          if old not in source:
-              raise SystemExit('Expected stale Moving Screen loading validator marker was not found.')
-          path.write_text(source.replace(old, new))
+
+          router_path = Path('online/moving-screen-map-router-v2.js')
+          router = router_path.read_text()
+          old_asset = "const LOADING_ASSET='/assets/ui/loading-moving-screen.jpg';"
+          new_asset = "const LOADING_ASSET='/assets/ui/loading-moving-screen.png';"
+          if old_asset not in router and new_asset not in router:
+              raise SystemExit('Moving Screen loading asset authority marker missing.')
+          router_path.write_text(router.replace(old_asset, new_asset))
+
+          check_path = Path('scripts/check-moving-screen-v1.mjs')
+          check = check_path.read_text()
+          old = "for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',\"const LOADING_ID='ttdMsLoadingV2'\",'const LOADING_MIN_MS=720',\"asset('/assets/ui/loading-endless-horde.png')\",'MOVING SCREEN','NOW LOADING','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);"
+          new = "for(const marker of ['window.__TTD_MOVING_SCREEN_MAP_ROUTER_V2=true',\"const LOADING_ID='ttdMsLoadingV2'\",'const LOADING_MIN_MS=720',\"const LOADING_ASSET='/assets/ui/loading-moving-screen.png'\",'img.src=asset(LOADING_ASSET)','base.start()','setTimeout(hideLoading,180)'])must(router.includes(marker),`Moving Screen loading/router contract missing: ${marker}`);"
+          if old in check:
+              check = check.replace(old, new)
+          elif new not in check:
+              raise SystemExit('Moving Screen loading validator marker missing.')
+          check_path.write_text(check)
+
+          manifest_path = Path('assets/game-assets.json')
+          manifest = json.loads(manifest_path.read_text())
+          entry = {
+              'path': '/assets/ui/loading-moving-screen.png',
+              'format': 'image/png',
+              'width': 1536,
+              'height': 1152,
+              'usage': {'loading': {'box': [1536, 1152], 'fit': 'contain'}},
+          }
+          assets = manifest['assets']
+          if 'loadingMovingScreen' in assets and assets['loadingMovingScreen'] != entry:
+              raise SystemExit('Existing loadingMovingScreen registry entry disagrees with approved PNG.')
+          if 'loadingMovingScreen' not in assets:
+              rebuilt = {}
+              inserted = False
+              for key, value in assets.items():
+                  rebuilt[key] = value
+                  if key == 'loadingAlHata':
+                      rebuilt['loadingMovingScreen'] = entry
+                      inserted = True
+              if not inserted:
+                  rebuilt['loadingMovingScreen'] = entry
+              manifest['assets'] = rebuilt
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+
+          lock_path = Path('assets/immutable-assets.lock.json')
+          lock = json.loads(lock_path.read_text())
+          lock['assets']['assets/ui/loading-moving-screen.png'] = '55d6f2f944dcc06c2ca598d19abea1c5aef50b20'
+          lock['assets'] = dict(sorted(lock['assets'].items()))
+          lock_path.write_text(json.dumps(lock, indent=2) + '\n')
           PY
 
-      - name: Commit exact master and remove temporary staging machinery
+      - name: Validate Moving Screen and immutable asset contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install
+          node scripts/check-moving-screen-v1.mjs
+          node scripts/check-online-loader-v18.mjs
+          node scripts/check-immutable-assets.mjs
+          npm run check:hosting
+
+      - name: Commit verified PNG and remove failed staging machinery
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "TTD Asset Import"
           git config user.email "actions@users.noreply.github.com"
-          git add assets/ui/loading-moving-screen.jpg scripts/check-moving-screen-v1.mjs
+          git add assets/ui/loading-moving-screen.png assets/game-assets.json assets/immutable-assets.lock.json online/moving-screen-map-router-v2.js scripts/check-moving-screen-v1.mjs
           git rm -rf .asset-staging/moving-screen-loading assets/ui/loading-moving-screen
           git rm -f assets/ui/.moving-screen-loading-upload-placeholder.txt
           git rm -f .github/workflows/import-moving-screen-loading.yml
-          git commit -m "Finalize Moving Screen loading master and cleanup"
+          git commit -m "Finalize verified Moving Screen loading PNG"
           git push origin HEAD:feature/moving-screen-input-nav-loading-v1
