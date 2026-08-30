@@ -29,5 +29,5 @@
     `;document.head.appendChild(style);
   }
   function sync(){installStyles();document.getElementById('ttdMsHudTitleFrameV1')?.remove();const game=document.getElementById('gameScreen');if(!game?.classList.contains('ttd-moving-screen-v4'))return;const label=document.getElementById('modeLabel'),stage=window.TTDMovingScreen?.stage;if(label&&stage?.name){const text=`Moving Screen · ${stage.name}`;if(label.textContent!==text)label.textContent=text;}}
-  installStyles();sync();const root=document.getElementById('app')||document.documentElement;new MutationObserver(()=>requestAnimationFrame(sync)).observe(root,{subtree:true,attributes:true,attributeFilter:['class'],childList:true});window.addEventListener('resize',()=>requestAnimationFrame(sync));
+  installStyles();sync();const game=document.getElementById('gameScreen');if(game)new MutationObserver(()=>requestAnimationFrame(sync)).observe(game,{attributes:true,attributeFilter:['class']});const queue=()=>requestAnimationFrame(sync);window.addEventListener('resize',queue,{passive:true});window.visualViewport?.addEventListener('resize',queue,{passive:true});
 })();
