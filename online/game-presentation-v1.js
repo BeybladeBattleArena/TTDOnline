@@ -127,6 +127,17 @@
   }
   function bindStart(name,getter,setter){let base;try{base=getter();}catch(_){return;}if(typeof base!=='function'||base.__ttdMissionWrappedV6)return;const wrapped=function(...args){if(missionBusy)return base.apply(this,args);const self=this;playMissionCue(()=>base.apply(self,args));};wrapped.__ttdMissionWrappedV6=true;wrapped.__ttdMissionBaseV6=base;try{setter(wrapped);}catch(err){console.warn(`Could not bind ${name} presentation.`,err);}}
 
+  async function playPreparedMissionStart(onStart){
+    if(missionBusy)return false;missionBusy=true;scanLegacyMissionNodes();installMissionHoldShield();let started=false;
+    try{
+      const{overlay,nodes}=makeSignal(['MISSION','START!']);nodes[0]?.classList.add('in');announce('mission');requestAnimationFrame(()=>overlay.classList.add('show'));
+      await sleep(MISSION_GAP_MS);nodes[1]?.classList.add('in');announce('start');removeMissionHoldShield();try{onStart?.();started=true;}catch(err){console.error('TTD prepared-run start failed.',err);}
+      await sleep(MISSION_START_HOLD_MS);overlay.classList.add('leaving');overlay.classList.remove('show');await sleep(300);overlay.remove();
+      return true;
+    }catch(err){console.error('TTD prepared mission intro failed.',err);document.getElementById(SIGNAL_ID)?.remove();if(!started){try{onStart?.();}catch(_){}}return false;}
+    finally{removeMissionHoldShield();missionBusy=false;}
+  }
+
   async function playCombatCountdown(onStart){
     if(countdownBusy)return false;countdownBusy=true;const{overlay,nodes}=makeSignal(['3','2','1','START!'],'countdown');requestAnimationFrame(()=>overlay.classList.add('show'));
     for(let i=0;i<3;i++){if(i>0)nodes[i-1]?.classList.remove('in');nodes[i]?.classList.add('in');await sleep(COUNT_STEP_MS);}
@@ -166,6 +177,6 @@
   function presentOutcome(kind,{prepare,reveal,delay=RESULT_REVEAL_MS}={}){const outcome=playOutcomeCue(kind);const prepared=typeof prepare==='function'?prepare():undefined;scheduleResultReveal(kind,outcome,()=>{if(typeof reveal==='function')reveal(prepared);},delay);return prepared;}
   function installAll(){if(typeof startGame==='function')bindStart('startGame',()=>startGame,fn=>{startGame=fn;});if(typeof startAdventure==='function')bindStart('startAdventure',()=>startAdventure,fn=>{startAdventure=fn;});if(typeof startAdventureCampaign==='function')bindStart('startAdventureCampaign',()=>startAdventureCampaign,fn=>{startAdventureCampaign=fn;});if(typeof startEndlessHorde==='function')bindStart('startEndlessHorde',()=>startEndlessHorde,fn=>{startEndlessHorde=fn;});decorateAdventureResult();scanLegacyMissionNodes();}
 
-  window.TTDGamePresentation=Object.freeze({version:6,mapPreviewMs:MAP_PREVIEW_MS,missionGapMs:MISSION_GAP_MS,combatCountdownStepMs:COUNT_STEP_MS,clearHideMs:OUTCOME_HIDE_MS,resultRevealMs:RESULT_REVEAL_MS,failPostVoiceMs:FAIL_POST_VOICE_MS,showMissionStart:playMissionCue,playCombatCountdown,showClear:playClearCue,showFail:playFailCue,showFinish:playFinishCue,presentObjectiveClear,presentOutcome,decorateAdventureResult,decorateZombieResult,rebind:installAll});
+  window.TTDGamePresentation=Object.freeze({version:6,mapPreviewMs:MAP_PREVIEW_MS,missionGapMs:MISSION_GAP_MS,combatCountdownStepMs:COUNT_STEP_MS,clearHideMs:OUTCOME_HIDE_MS,resultRevealMs:RESULT_REVEAL_MS,failPostVoiceMs:FAIL_POST_VOICE_MS,showMissionStart:playMissionCue,presentRunStart:playPreparedMissionStart,playCombatCountdown,showClear:playClearCue,showFail:playFailCue,showFinish:playFinishCue,presentObjectiveClear,presentOutcome,decorateAdventureResult,decorateZombieResult,rebind:installAll});
   installAll();let tries=0;const timer=setInterval(()=>{installAll();if(++tries>160)clearInterval(timer);},100);
 })();

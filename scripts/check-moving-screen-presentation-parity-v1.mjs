@@ -1,0 +1,25 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
+const must=(c,m)=>{if(!c)throw new Error(m);};
+const gate=fs.readFileSync('online/startup-gate-v33.js','utf8');
+const router=fs.readFileSync('online/moving-screen-map-router-v2.js','utf8');
+const engine=fs.readFileSync('online/moving-screen-engine-v5.js','utf8');
+const present=fs.readFileSync('online/game-presentation-v1.js','utf8');
+const shell=fs.readFileSync('online/arcade-mode-shell-v2.js','utf8');
+const controls=fs.readFileSync('online/singleplayer-run-controls-v1.js','utf8');
+must(gate.includes("'/assets/ui/loading-moving-screen.png'"),'Moving Screen loading art must remain in the startup critical preload set.');
+for(const m of ['const loadingMaster=new Image()','loadingMaster.decode()','LOADING_BLACK_MS=170','LOADING_GAME_HOLD_MS=520','LOADING_FADE_OUT_MS=220',"root.classList.add('vis')","loading.root.classList.add('art')","root.classList.remove('vis')",'base.start({introHold:true})','presentation?.presentRunStart','base.releaseIntroHold'])must(router.includes(m),`Loading parity missing: ${m}`);
+for(const m of ['introHold:false','runtime.introHold=!!options?.introHold','function releaseIntroHold()','function finishRun(',"finish('fail','All 10 lives were lost.')","finish('clear',`You defeated",'shell?.presentMovingOutcome','p.presentOutcome(outcome'])must(engine.includes(m),`Moving Screen lifecycle parity missing: ${m}`);
+for(const m of ['async function playPreparedMissionStart',"makeSignal(['MISSION','START!'])","announce('mission')","announce('start')",'presentRunStart:playPreparedMissionStart'])must(present.includes(m),`Shared Mission/Start parity missing: ${m}`);
+for(const m of ['function presentMovingOutcome(kind,reason)',"normalized==='clear'?'AREA CLAIMED':normalized==='finish'?'RUN COMPLETE':'RUN FAILED'","finishOnlineRun(movingMetrics(),'moving_screen')",'TTDGamePresentation?.decorateAdventureResult?.()',"overlay.classList.add('show')"])must(shell.includes(m),`Canonical Moving Screen result parity missing: ${m}`);
+must(!shell.includes('resultObserver.observe(document.documentElement'),'Moving Screen result handling must not restore a broad document observer.');
+const chrome=['/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);must(chrome,'Presentation parity browser smoke requires Chrome.');
+const controlsUrl=pathToFileURL(path.join(process.cwd(),'online/singleplayer-run-controls-v1.js')).href;
+const harness=path.join(os.tmpdir(),`ttd-ms-present-${process.pid}.html`);
+const html=`<!doctype html><html><head><style>.screen{display:none}.screen.active{display:block}</style></head><body><div id="gameScreen" class="screen active"><button id="pauseBtn">Back</button><button class="backBtn">Back</button><button id="endRunBtn">End Run</button></div><script>window.calls=[];window.TTDMovingScreen={active:true,finishRun:(...a)=>calls.push(a)};</script><script src="${controlsUrl}"></script><script>setTimeout(()=>{const p=document.getElementById('pauseBtn'),b=document.querySelector('.backBtn'),e=document.getElementById('endRunBtn');e.click();const report={classed:document.getElementById('gameScreen').classList.contains('ttdSingleplayerRunActiveV1'),pauseHidden:getComputedStyle(p).display==='none',backHidden:getComputedStyle(b).display==='none',finishCalled:calls.length===1&&calls[0][0]==='finish'};report.ok=Object.values(report).every(Boolean);document.body.dataset.report=JSON.stringify(report)},80)</script></body></html>`;fs.writeFileSync(harness,html);
+let dom='';try{dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--virtual-time-budget=500','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',timeout:20000});}finally{try{fs.unlinkSync(harness)}catch{}}
+const m=dom.match(/data-report="([^"]+)"/);must(m,'Back suppression smoke produced no report.');const report=JSON.parse(m[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'));must(report.ok,`Back suppression smoke failed: ${JSON.stringify(report)}`);
+console.log('Moving Screen presentation parity verified:',JSON.stringify(report));

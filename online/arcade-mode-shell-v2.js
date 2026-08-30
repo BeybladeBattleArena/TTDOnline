@@ -26,7 +26,6 @@
   let currentRun=null;
   let movingResultActive=false;
   let shellObserver=null;
-  let resultObserver=null;
   const rid=(prefix)=>`${prefix}-${Date.now().toString(36)}-${++requestSerial}`;
   const showCore=(name)=>{try{if(typeof showScreen==='function'){showScreen(name);return true;}}catch(_){}return false;};
   const toast=(message)=>{try{if(typeof toastGlobal==='function'){toastGlobal(message);return;}}catch(_){}const node=document.getElementById('toast');if(node)node.textContent=message;};
@@ -154,26 +153,21 @@
     });
   }
 
-  function presentMovingResult(box,state){
-    if(movingResultActive)return;
+  function presentMovingOutcome(kind,reason){
+    if(movingResultActive)return false;
     movingResultActive=true;
-    const title=String(box.querySelector('h2')?.textContent||'RUN COMPLETE');
-    const reason=String(box.querySelector('p')?.textContent||'The Moving Screen run has ended.');
-    box.classList.remove('show');
+    const state=window.TTDMovingScreen?.state||{};
     finishOnlineRun(movingMetrics(),'moving_screen');
-    const overlay=document.getElementById('gameOverlay');if(!overlay){box.classList.add('show');return;}
+    const overlay=document.getElementById('gameOverlay');if(!overlay)return false;
+    const normalized=['clear','fail','finish'].includes(String(kind))?String(kind):'fail';
+    const title=normalized==='clear'?'AREA CLAIMED':normalized==='finish'?'RUN COMPLETE':'RUN FAILED';
     const overlayTitle=document.getElementById('overlayTitle'),overlayText=document.getElementById('overlayText'),overlayStats=document.getElementById('overlayStats');
     if(overlayTitle)overlayTitle.textContent=title;
-    if(overlayText)overlayText.textContent=reason;
-    if(overlayStats)overlayStats.textContent=`${Math.min(Number(state?.kills)||0,Number(state?.killGoal)||30)} / ${Number(state?.killGoal)||30} enemies defeated · ${Number(state?.lives)||0} lives left · ${String(state?.flag||'Flag unresolved')}`;
+    if(overlayText)overlayText.textContent=String(reason||'The Moving Screen run has ended.');
+    if(overlayStats)overlayStats.textContent=`${Math.min(Number(state.kills)||0,Number(state.killGoal)||30)} / ${Number(state.killGoal)||30} enemies defeated · ${Number(state.lives)||0} lives left · ${String(state.flag||'Flag unresolved')}`;
     const pips=document.getElementById('overlayPipsValue'),exp=document.getElementById('overlayExpValue'),notesP=document.getElementById('overlayPipsNotes'),notesE=document.getElementById('overlayExpNotes'),level=document.getElementById('overlayLevelUp');
     if(pips)pips.textContent='…';if(exp)exp.textContent='…';if(notesP)notesP.textContent='';if(notesE)notesE.textContent='';if(level)level.textContent='';
-    document.getElementById('ttdRunRewardsV26')?.remove();overlay.classList.add('show');
-  }
-  function adoptMovingResultIfReady(){
-    if(!currentRun||currentRun.kind!=='moving'||movingResultActive)return;
-    const box=document.getElementById('ttdMsResultV4');if(!box?.classList.contains('show'))return;
-    presentMovingResult(box,window.TTDMovingScreen?.state||null);
+    document.getElementById('ttdRunRewardsV26')?.remove();window.TTDGamePresentation?.decorateAdventureResult?.();overlay.classList.add('show');return true;
   }
 
   function onMessage(event){
@@ -194,21 +188,14 @@
     movingResultActive=false;pendingStart=null;currentRun=null;
     try{window.TTDMovingScreen?.exit?.();}catch(error){console.error(error);}
   }
-  function finalizeManualMovingExit(){
-    if(!currentRun||currentRun.kind!=='moving'||currentRun.finishing||movingResultActive)return;
-    currentRun.manualExit=true;finishOnlineRun(movingMetrics(),'moving_screen_exit');
-    setTimeout(()=>{if(currentRun?.manualExit)currentRun=null;},2500);
-  }
   function installObservers(){
     const modeBody=document.querySelector('#modeScreen .modeBody');
     if(modeBody&&!shellObserver){shellObserver=new MutationObserver(()=>ownArcadeCards());shellObserver.observe(modeBody,{childList:true,subtree:false});}
-    if(!resultObserver){resultObserver=new MutationObserver(()=>adoptMovingResultIfReady());resultObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});}
   }
 
   installStyles();ensureScreens();ownArcadeCards();installObservers();
   window.addEventListener('message',onMessage,true);
   document.addEventListener('click',(event)=>{
-    if(event.target?.id==='ttdMsExitV4')finalizeManualMovingExit();
     if(event.target?.id==='overlayBtn')cleanupAfterCanonicalContinue();
   },true);
   [50,250,550,950,1500].forEach(ms=>setTimeout(()=>{ensureScreens();ownArcadeCards();installObservers();},ms));
@@ -219,6 +206,7 @@
     openMoving,
     openKoth,
     startMovingMap,
+    presentMovingOutcome,
     startKothMap,
     get currentRun(){return currentRun?{modeKey:currentRun.modeKey,mapKey:currentRun.mapKey,finishing:!!currentRun.finishing}:null;},
   });

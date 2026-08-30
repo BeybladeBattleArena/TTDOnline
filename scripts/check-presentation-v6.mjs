@@ -65,14 +65,14 @@ forbid(continuous,['ensureRewardMetaV1();'],'continuous-world outcome wrappers')
 need(runUi,[
   'window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)',
   'TTD_PRESENTATION_INDEPENDENT_LOAD_V1',
-  "window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=6')",
+  "window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=7')",
   "bridge:'continuous-world-v2 + same-map-battle-v5'",
   "bridge:'presentation-v6'",
   "script.onload=resolve;script.onerror=()=>reject(new Error('Game presentation script could not load.'))",
 ],'run bridge canonical result/presentation forwarding');
 forbid(runUi,[
   'Pips banked!','EXP earned!','zSummaryXpV21',
-  "const presentationResponse=await fetch('/online/game-presentation-v1.js?v=6'",
+  "const presentationResponse=await fetch('/online/game-presentation-v1.js?v=7'",
   "bridge:'continuous-world-v2 + same-map-battle-v5 + presentation-v6'",
 ],'run bridge stale/coupled presentation UI');
 

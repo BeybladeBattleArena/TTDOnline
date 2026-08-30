@@ -17,7 +17,7 @@ must(src.online.includes('height:var(--ttd-visual-vh,100dvh);min-height:0;max-he
 must(!src.online.includes('.shell{height:100dvh;min-height:100vh'),'Layout-viewport min-height regression would hide Moving Screen controls under Android browser chrome.');
 for(const marker of ['window.visualViewport','--ttd-visual-vh','ttdVisualViewportV1'])must(src.online.includes(marker),`Visual viewport contract missing: ${marker}`);
 must(src.gate.includes("'/assets/ui/loading-moving-screen.png'"),'Moving Screen loading art must use the established startup image preload.');
-for(const marker of ['LOADING_DECODE_MAX_MS=2500','img.loading=\'eager\'','img.decode()','Promise.all([sleep(LOADING_MIN_MS)','startPresentationSync()','announceActive(true)'])must(src.router.includes(marker),`Decoded loading transition contract missing: ${marker}`);
+for(const marker of ['LOADING_DECODE_MAX_MS=2500',"const loadingMaster=new Image()","loadingMaster.loading='eager'",'loadingMaster.decode()','LOADING_BLACK_MS=170','LOADING_GAME_HOLD_MS=520',"loading.root.classList.add('art')","root.classList.remove('vis')",'startPresentationSync()','announceActive(true)'])must(src.router.includes(marker),`Decoded loading transition contract missing: ${marker}`);
 must(!src.router.includes('requestAnimationFrame(tick)'),'Moving Screen presentation sync may not run as a permanent animation-frame loop.');
 must(!src.frame.includes('observe(root,{subtree:true'),'Moving Screen mobile frame may not observe the full app subtree.');
 must(!src.hud.includes('setInterval(sync,120)'),'Moving Screen battle HUD may not poll at the retired 120 ms cadence.');

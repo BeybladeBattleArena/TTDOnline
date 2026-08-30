@@ -296,7 +296,7 @@ ${renderMarker}`;
     // Preserve the old sequencing (world patches first, presentation wrappers second), but do
     // not let a Test Map failure suppress mission/outcome presentation for every game mode.
     try{
-      const presentationUrl=window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=6')||'/online/game-presentation-v1.js?v=6';
+      const presentationUrl=window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=7')||'/online/game-presentation-v1.js?v=7';
       await new Promise((resolve,reject)=>{
         if(window.__TTD_GAME_PRESENTATION_V6){resolve();return;}
         const script=document.createElement('script');script.src=presentationUrl;script.async=false;
