@@ -150,14 +150,14 @@
       }
       if(pause){
         if(previousPauseText===null)previousPauseText=pause.textContent;
-        pause.textContent='Back';
-        pause.setAttribute('aria-label','Back to Arcade');
+        if(pause.textContent!=='Back')pause.textContent='Back';
+        if(pause.getAttribute('aria-label')!=='Back to Arcade')pause.setAttribute('aria-label','Back to Arcade');
       }
     }else{
-      title?.remove();
+      if(title)title.remove();
       if(pause&&previousPauseText!==null){
-        pause.textContent=previousPauseText;
-        pause.removeAttribute('aria-label');
+        if(pause.textContent!==previousPauseText)pause.textContent=previousPauseText;
+        if(pause.hasAttribute('aria-label'))pause.removeAttribute('aria-label');
       }
       previousPauseText=null;
     }
