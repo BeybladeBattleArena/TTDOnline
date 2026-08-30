@@ -56,7 +56,7 @@ must(routeExists(),'An intact-state route from the lower rooftop to the Sign Cro
 const noOldEscape=new Set(stage.destructibles.map(d=>d.id).filter(id=>id!=='old_fire_escape'));
 must(routeExists({intact:noOldEscape}),'Collapsing the optional old fire escape must never soft-lock the Neon climb.');
 
-// Shared Moving Screen safety/navigation rules.  These apply to Construction now and every future map.
+// Shared Moving Screen safety/navigation rules. These apply to every map.
 for(const marker of [
   'function verticalVisible(','function summonMargin()','function summonSpotSafe(','function safeSummonSpots(',
   "if(m.kind==='edge')return m.to===zoneId&&m.toSlot===i",'toSlot=bestArrivalSpot(ent,dest,fs)','function recoverMovementArrival(',
@@ -75,6 +75,29 @@ must(engine.includes('safeSummonSpots(z)')&&engine.includes('placeAtZone(ent,z.i
 must(engine.includes("runtime.phase!=='transition'||summonSpotSafe(s.p,predictedCameraY(.9))"),'Transition summons must survive a short projected camera look-ahead.');
 must(engine.includes("if(runtime.stage.theme==='construction'){drawConstructionBackground(g);return;}"),'Construction maps must use the daylight construction background rather than Neon scenery.');
 must(engine.includes("function drawForeground(g){if(runtime.stage.theme==='construction')return;"),'Construction must suppress Neon foreground/sign remnants.');
+
+// Shared combat parity. Dice use their canonical catalog range/class cooldown and pip-speed rule,
+// while Moving Screen adapts TD cadence for self-defense and prevents ordinary taps from becoming launches.
+for(const marker of [
+  'const PLAYER_ATTACK_INTERVAL_MULT=.68','const ENEMY_ATTACK_INTERVAL_MULT=1.30','const PLAYER_KNOCKBACK_MULT=.70','const PLAYER_LAUNCH_MULT=.85',
+  'function rangeFor(def){const r=def?.range||def?.special?.range','function dieBaseAttackInterval(def,cls)',
+  'def?.special?.classCooldownSteps||[]','function combatAttackInterval(ent)',
+  "interval=interval/Math.max(1,ent.dot||1)*PLAYER_ATTACK_INTERVAL_MULT",'interval*=ENEMY_ATTACK_INTERVAL_MULT',
+  'ent.attackT=combatAttackInterval(ent)','damageEntity(target,Math.max(1,ent.damage),ent)',
+  'function groundShove(target,source,knockback)',"if(rawLaunch<=0&&rawKb<20)",
+  "rawKb*(target.faction==='player'?PLAYER_KNOCKBACK_MULT:1)","rawLaunch*(target.faction==='player'?PLAYER_LAUNCH_MULT:1)",
+])must(engine.includes(marker),`Shared Moving Screen combat/defense contract missing: ${marker}`);
+for(const forbidden of [
+  'const r=def?.special?.range;',
+  'attackInterval:Math.max(.18,def.atk||1)',
+  'ent.attackT=ent.attackInterval/(runtime.phase',
+  'damageEntity(target,Math.max(1,ent.damage*(ent.dot||1)),ent)',
+  'Math.max(80,launch)',
+])must(!engine.includes(forbidden),`Retired Moving Screen combat bug remains: ${forbidden}`);
+// Basic numerical sanity: a merged Die must attack faster, but ordinary enemy cadence must still be nonzero and bounded.
+const baseFire=3.6*0.68,fire2=baseFire/2,goblin=1.02*1.30,dog=.78*1.30;
+must(fire2<goblin,'A representative 2-pip Dice attack should be at least competitive with a basic Goblin after cadence correction.');
+must(baseFire>dog&&dog>.8,'One-pip Dice should still benefit from summoning/merging strategy; enemy cadence must not be trivialized.');
 
 for(const marker of [
   'window.__TTD_MOVING_SCREEN_V4 = true',"const STAGE_ID='neon_rooftops_v2'",'const MOVING_AS_MULT=.85',"document.getElementById('gameScreen')","showCore('game')",'ttdMovingScreenCanvasV4','ttdMsControlsV4','ttdMsSummonV4',
@@ -98,12 +121,12 @@ must(P1.y<650*.70,'Opening Tier-1 enemy-spawn surface must fit above the conserv
 must(P2.y>-80&&P2.y<650*.30,'The next major rooftop should only peek near the upper boundary at the first camera stop.');
 must(P3.y<-150&&PF.y<-500,'A phone viewport must not expose the third/final Neon tiers at the opening camera stop.');
 
-const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=4'",constructionUrl="'/online/moving-screen-construction-climb-v1.js?v=2'",engineUrl="'/online/moving-screen-engine-v4.js?v=7'",routerUrl="'/online/moving-screen-map-router-v1.js?v=2'",uiUrl="'/online/moving-screen-ui-v1.js?v=1'",topologyUrl="'/online/moving-screen-topology-ui-v1.js?v=1'",constructionPresentationUrl="'/online/moving-screen-construction-presentation-v1.js?v=2'";
+const stageUrl="'/online/moving-screen-neon-rooftops-v2.js?v=4'",constructionUrl="'/online/moving-screen-construction-climb-v1.js?v=2'",engineUrl="'/online/moving-screen-engine-v4.js?v=8'",routerUrl="'/online/moving-screen-map-router-v1.js?v=2'",uiUrl="'/online/moving-screen-ui-v1.js?v=1'",topologyUrl="'/online/moving-screen-topology-ui-v1.js?v=1'",constructionPresentationUrl="'/online/moving-screen-construction-presentation-v1.js?v=2'";
 for(const url of [stageUrl,constructionUrl,engineUrl,routerUrl,uiUrl,topologyUrl,constructionPresentationUrl])must(loader.includes(url),`Runtime loader missing Moving Screen authority: ${url}`);
 must(loader.indexOf(stageUrl)<loader.indexOf(constructionUrl)&&loader.indexOf(constructionUrl)<loader.indexOf(engineUrl)&&loader.indexOf(engineUrl)<loader.indexOf(routerUrl)&&loader.indexOf(routerUrl)<loader.indexOf(uiUrl)&&loader.indexOf(uiUrl)<loader.indexOf(topologyUrl)&&loader.indexOf(topologyUrl)<loader.indexOf(constructionPresentationUrl),'Moving Screen load order must remain stages -> engine -> router -> route UI -> topology UI -> map presentation.');
-for(const stale of ['/online/moving-screen-engine-v4.js?v=6','/online/moving-screen-construction-climb-v1.js?v=1','/online/moving-screen-map-router-v1.js?v=1','/online/moving-screen-construction-presentation-v1.js?v=1'])must(!loader.includes(stale),`Moving Screen safety/Construction release may not reuse stale cache key: ${stale}`);
+for(const stale of ['/online/moving-screen-engine-v4.js?v=6','/online/moving-screen-engine-v4.js?v=7','/online/moving-screen-construction-climb-v1.js?v=1','/online/moving-screen-map-router-v1.js?v=1','/online/moving-screen-construction-presentation-v1.js?v=1'])must(!loader.includes(stale),`Moving Screen combat/safety release may not reuse stale cache key: ${stale}`);
 must(!loader.includes('/online/moving-screen-engine-v3.js?v=3'),'Broken detached-screen v3 runtime must not load in production.');
 must(!/moving-screen[^\n]*(eval|replace|document\.write)/i.test(loader),'Runtime loader may not patch or eval Moving Screen source.');
 must(audio.includes("'gameScreen'"),'The parent audio router must continue treating gameScreen as a silent gameplay route.');
 
-console.log('Moving Screen verified: top/bottom-only death planes, safe per-spot summoning, reserved route arrivals, stranded-Die recovery, horizontal offscreen tolerance, Construction daylight theming, and existing Neon combat/objective contracts.');
+console.log('Moving Screen verified: canonical Dice cadence/ranges, grounded ordinary knockback, player launch resistance, top/bottom-only death planes, safe summoning/navigation, and existing objective contracts.');
