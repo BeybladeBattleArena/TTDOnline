@@ -4,6 +4,17 @@
   window.__TTD_PIP_VOUCHERS_V1=true;
 
   const ORIGIN=location.origin;
+  try{
+    const parentDoc=window.parent?.document;
+    if(parentDoc&&!parentDoc.getElementById('ttdPipVoucherRedeemClientV1')){
+      const module=parentDoc.createElement('script');
+      module.id='ttdPipVoucherRedeemClientV1';
+      module.type='module';
+      module.src='/online/pip-voucher-redeem-client-v1.js?v=1';
+      parentDoc.head.appendChild(module);
+    }
+  }catch(error){console.warn('Could not attach Pip Voucher redeem client.',error);}
+
   const VOUCHER_ROWS=[1000,5000,10000,20000,40000,60000,80000,100000];
   const VOUCHERS=Object.freeze(Object.fromEntries(VOUCHER_ROWS.map(amount=>[
     `pip_voucher_${amount}`,
