@@ -45,14 +45,31 @@
   const style=document.createElement('style');
   style.id='ttd-enchant-card-art-v4';
   style.textContent=`
-    .ttdEnchantCardArtV4{display:block!important;object-fit:contain!important;object-position:center center!important;image-rendering:auto!important}
-    .shopItemCard.ttdEnchantShopCardV4{grid-template-rows:112px minmax(34px,auto) 24px 32px!important;min-height:228px!important}
-    .shopItemCard.ttdEnchantShopCardV4 .siIcon{width:76px!important;height:112px!important;margin:0 auto!important;display:grid!important;place-items:center!important;overflow:visible!important}
-    .shopItemCard.ttdEnchantShopCardV4 .siIcon>.ttdEnchantCardArtV4{width:64px!important;height:112px!important;max-width:64px!important;max-height:112px!important;margin:auto!important;border-radius:5px!important}
-    .tiItem.ttdEnchantInventoryCardV4{grid-template-rows:102px minmax(30px,auto) 18px 28px!important;min-height:196px!important}
-    .tiItem.ttdEnchantInventoryCardV4 .tiIcon{width:64px!important;height:102px!important;margin:0 auto!important}
-    .tiItem.ttdEnchantInventoryCardV4 .tiIcon>.ttdEnchantCardArtV4{width:58px!important;height:102px!important;max-width:58px!important;max-height:102px!important;margin:auto!important;border-radius:5px!important}
-    .chestCard.cardCard.ttdEnchantInventoryCardV4>.ttdEnchantCardArtV4{width:58px!important;height:102px!important;max-width:58px!important;max-height:102px!important;margin:0 auto 7px!important;border-radius:5px!important}
+    .ttdEnchantCardArtV4{
+      display:block!important;
+      width:auto!important;
+      height:auto!important;
+      object-fit:contain!important;
+      object-position:center center!important;
+      image-rendering:auto!important;
+      border-radius:5px!important;
+    }
+    /* Enchant cards keep their portrait aspect ratio inside the same canonical art wells as every other item. */
+    .shopItemCard.ttdEnchantShopCardV4 .siIcon>.ttdEnchantCardArtV4{
+      max-width:48px!important;
+      max-height:84px!important;
+      margin:auto!important;
+    }
+    .tiItem.ttdEnchantInventoryCardV4 .tiIcon>.ttdEnchantCardArtV4{
+      max-width:44px!important;
+      max-height:78px!important;
+      margin:auto!important;
+    }
+    #invGrid>.chestCard.cardCard.ttdEnchantInventoryCardV4>.ttdEnchantCardArtV4{
+      max-width:44px!important;
+      max-height:78px!important;
+      margin:auto!important;
+    }
   `;
   document.head.appendChild(style);
 
