@@ -24,6 +24,15 @@
       throw new Error('dicefile.json does not contain the Magma Force runtime definition.');
     }
   }
+  function loadPostDocumentScript(path,id){
+    if(document.getElementById(id))return;
+    const script=document.createElement('script');
+    script.id=id;
+    script.src=typeof window.__TTD_ASSET_URL==='function'?window.__TTD_ASSET_URL(path):path;
+    script.async=false;
+    script.onerror=()=>console.error(`Could not load required post-document runtime ${path}.`);
+    document.head.appendChild(script);
+  }
 
   async function boot(){
     send('ttd:bridge-phase',{phase:'loader-started',message:'Preparing complete cloud game…'});
@@ -38,6 +47,10 @@
     document.open();
     document.write(gameHtml);
     document.close();
+
+    // This authority must bind against the native functions created by the document above.
+    // Loading it here avoids depending on later bridge order or a page-specific readiness gate.
+    loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript');
   }
 
   boot().catch((err)=>{
