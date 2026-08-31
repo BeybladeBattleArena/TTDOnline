@@ -8,6 +8,17 @@ const accountProgression = require('./account-progression-v21');
 const db = getFirestore();
 const REGION = 'us-central1';
 const ITEM_SCHEMA = 1;
+const SELL_OPERATIONS=Object.freeze({shop:{operation:'sell_shop_item'},inventory:{operation:'sell_inventory_item'}});
+
+function pipVoucher(amount){
+  return Object.freeze({
+    name:`${amount.toLocaleString('en-US')} Pip Voucher`,
+    category:'rewards',
+    stackable:true,
+    fixedSellValuePips:amount,
+    rewardOnly:true,
+  });
+}
 
 const ITEM_DEFS = Object.freeze({
   epic_summon_ticket:{name:'Epic Summon Ticket',category:'rewards',stackable:true},
@@ -18,6 +29,17 @@ const ITEM_DEFS = Object.freeze({
   legendary_ore:{name:'Legendary Ore',category:'materials',stackable:true,rarityTarget:'legendary'},
   omni_ore:{name:'Omni Ore',category:'materials',stackable:true,rarityTarget:'omni'},
   mystery_chest:{name:'Mystery Chest',category:'rewards',shopCategory:'materials',stackable:true,costPips:3300,requiredKey:'mystery_key'},
+
+  // Reward-only items can opt into the reusable fixed-value resale archetype without
+  // becoming Shop merchandise. Any future item can use fixedSellValuePips the same way.
+  pip_voucher_1000:pipVoucher(1000),
+  pip_voucher_5000:pipVoucher(5000),
+  pip_voucher_10000:pipVoucher(10000),
+  pip_voucher_20000:pipVoucher(20000),
+  pip_voucher_40000:pipVoucher(40000),
+  pip_voucher_60000:pipVoucher(60000),
+  pip_voucher_80000:pipVoucher(80000),
+  pip_voucher_100000:pipVoucher(100000),
 });
 
 function requireAuth(request){
@@ -25,8 +47,21 @@ function requireAuth(request){
   return request.auth;
 }
 function safeCount(value){return Math.max(0,Math.min(999999,Math.floor(Number(value)||0)));}
-function shopSellValuePips(def){
+
+/**
+ * Canonical Inventory-item resale archetype.
+ *
+ * 1) fixedSellValuePips: exact, author-specified Pips value. This is intentionally
+ *    independent of Shop availability and is used by reward/event items such as
+ *    Pip Vouchers.
+ * 2) Shop merchandise without a fixed value keeps the established resale formulas:
+ *    one-third of its Pip cost (floored) or Astra cost x 30 Pips.
+ * 3) nonSellable always wins.
+ */
+function itemSellValuePips(def){
   if(!def||def.nonSellable===true)return null;
+  const fixed=Number(def.fixedSellValuePips);
+  if(Number.isSafeInteger(fixed)&&fixed>=0)return fixed;
   const pips=Number(def.costPips),astras=Number(def.costAstras);
   if(Number.isSafeInteger(pips)&&pips>=0)return Math.floor(pips/3);
   if(Number.isSafeInteger(astras)&&astras>=0)return astras*30;
@@ -49,8 +84,18 @@ function publicGameState(data){
 }
 function publicItem(id,data={}){
   const def=ITEM_DEFS[id];if(!def)return null;
-  const sellValuePips=shopSellValuePips(def);
-  return {id,name:def.name,category:def.category,count:safeCount(data.count),schemaVersion:ITEM_SCHEMA,updatedAtMs:Number(data.updatedAtMs||0),shopPurchased:!!def.shopCategory,sellable:sellValuePips!=null,sellValuePips:sellValuePips??0};
+  const sellValuePips=itemSellValuePips(def);
+  return {
+    id,
+    name:def.name,
+    category:def.category,
+    count:safeCount(data.count),
+    schemaVersion:ITEM_SCHEMA,
+    updatedAtMs:Number(data.updatedAtMs||0),
+    shopPurchased:!!def.shopCategory,
+    sellable:sellValuePips!=null,
+    sellValuePips:sellValuePips??0,
+  };
 }
 async function readItems(uid){
   const snap=await db.collection(`users/${uid}/items`).get();
@@ -81,10 +126,13 @@ exports.purchaseMysteryChestV1=onCall({region:REGION,timeoutSeconds:30},async(re
   return {ok:true,receiptId:receiptRef.id,costPips:cost,gameState:nextState,item:publicItem('mystery_chest',{count:nextCount,updatedAtMs:Date.now()})};
 });
 
+// Legacy callable name retained for existing clients; behavior is now the canonical generic
+// Inventory-item sale path. Shop merchandise and reward-only fixed-value items use this same
+// transaction authority.
 exports.sellShopItemV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
   const auth=requireAuth(request),itemId=String(request.data?.itemId||''),def=ITEM_DEFS[itemId];
-  const sellValuePips=shopSellValuePips(def);
-  if(!def||!def.shopCategory||sellValuePips==null)throw new HttpsError('invalid-argument','That item is not sellable through the Shop resale system.');
+  const sellValuePips=itemSellValuePips(def);
+  if(!def||sellValuePips==null)throw new HttpsError('invalid-argument','That item is not sellable.');
   const gameRef=db.doc(`users/${auth.uid}/game/state`),itemRef=db.doc(`users/${auth.uid}/items/${itemId}`),receiptRef=db.collection(`users/${auth.uid}/transactions`).doc();
   let nextState=null,nextCount=0;
   await db.runTransaction(async tx=>{
@@ -96,7 +144,18 @@ exports.sellShopItemV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>
     nextState={...current,revision:current.revision+1,inventoryVersion:current.inventoryVersion+1,economy:{pips:current.economy.pips+sellValuePips,astras:current.economy.astras}};
     tx.update(gameRef,{economy:nextState.economy,revision:nextState.revision,inventoryVersion:nextState.inventoryVersion,updatedAt:FieldValue.serverTimestamp()});
     tx.set(itemRef,{schemaVersion:ITEM_SCHEMA,itemId,name:def.name,category:def.category,count:nextCount,updatedAt:FieldValue.serverTimestamp(),updatedAtMs:Date.now()},{merge:true});
-    tx.set(receiptRef,{operation:'sell_shop_item',itemId,quantity:1,sellValuePips,balanceBefore:current.economy.pips,balanceAfter:nextState.economy.pips,stateRevisionBefore:current.revision,stateRevisionAfter:nextState.revision,createdAt:FieldValue.serverTimestamp()});
+    tx.set(receiptRef,{
+      operation:def.shopCategory?SELL_OPERATIONS.shop.operation:SELL_OPERATIONS.inventory.operation,
+      sellArchetype:Number.isSafeInteger(Number(def.fixedSellValuePips))?'fixed_pips':'shop_resale',
+      itemId,
+      quantity:1,
+      sellValuePips,
+      balanceBefore:current.economy.pips,
+      balanceAfter:nextState.economy.pips,
+      stateRevisionBefore:current.revision,
+      stateRevisionAfter:nextState.revision,
+      createdAt:FieldValue.serverTimestamp(),
+    });
   });
   return {ok:true,receiptId:receiptRef.id,itemId,sellValuePips,remaining:nextCount,gameState:nextState,item:publicItem(itemId,{count:nextCount,updatedAtMs:Date.now()})};
 });
@@ -126,4 +185,6 @@ exports.useExpTomeV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
 });
 
 exports._ITEM_DEFS=ITEM_DEFS;
-exports._shopSellValuePips=shopSellValuePips;
+exports._itemSellValuePips=itemSellValuePips;
+// Compatibility for older tests/internal callers that referenced the Shop-only helper name.
+exports._shopSellValuePips=itemSellValuePips;
