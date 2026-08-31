@@ -106,16 +106,21 @@ must(manifest.assets?.itemMysteryChest?.usage?.shop?.box?.[0]===64,'Mystery Ches
 
 for(const marker of [
   'window.__TTD_ITEM_ART_POLISH_V4',
-  'grid-template-rows:68px minmax(34px,auto) 24px 32px!important',
-  'grid-template-rows:64px minmax(30px,auto) 18px 28px!important',
+  'height:196px!important;',
+  'grid-template-rows:88px 40px 24px 32px!important;',
+  'height:176px!important;',
+  'grid-template-rows:82px 38px 20px 28px!important;',
+  '#invGrid>.chestCard',
+  '.tiGrid>.tiItem',
   '.shopItemCard .siName{',
   '.tiItem .tiName{',
   'place-items:center!important',
   'text-align:center!important',
+  'object-fit:contain!important',
   'object-position:center center!important',
   'image-rendering:auto!important'
 ])must(artPolish.includes(marker),`item/card alignment presentation missing: ${marker}`);
-must(artPolish.includes('source art remains native-resolution')||artPolish.includes('Source art remains native-resolution'),'item presentation no longer documents the native-resolution source rule');
+must(artPolish.includes('source art remains untouched')||artPolish.includes('Source art remains untouched'),'item presentation no longer documents that approved source art is untouched');
 must(entry.includes("import './item-art-polish-v2.js?v=4';"),'single-player entry does not load item art polish v4 behavior');
 
-console.log('Items/world v7 verified: approved PNG routing and world interactions remain intact; Shop sell-status is hidden, Inventory owns resale, Adventure chests use 250/500/750 Pips, and Pips/Astra Shop purchases use authoritative resale formulas end to end.');
+console.log('Items/world v8 verified: approved PNG routing and world interactions remain intact; Shop and Inventory item shells are uniform while source art remains contain-scaled and untouched.');
