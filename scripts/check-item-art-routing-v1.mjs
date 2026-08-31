@@ -6,6 +6,8 @@ const avatar=read('online/avatar-inventory-v22.js');
 const assets=read('online/item-assets-v1.js');
 const world=read('online/world-items-v1.js');
 const runtime=read('online/runtime-bridge-loader-v1.js');
+const loader=read('online/game-loader.js');
+const enchant=read('online/enchant-card-art-v1.js');
 
 for(const stale of [
   '/assets/ui/epic-summon-ticket.webp',
@@ -29,6 +31,10 @@ for(const marker of [
   "mystery_chest:asset('/assets/items/mystery-chest.png')",
   "const epicTicketArt=asset('/assets/items/epic-summon-ticket.png')",
   "const expTomeArt=asset('/assets/items/exp-tome.png')",
+  "const lesserEnchantCardArt=asset('/assets/items/enchant-card-lesser.png')",
+  "const masterEnchantCardArt=asset('/assets/items/enchant-card-master.png')",
+  'card_lesser:lesserEnchantCardArt',
+  'card_master:masterEnchantCardArt',
   "common_ore:asset('/assets/items/ore-common.png')",
   "rare_ore:asset('/assets/items/ore-rare.png')",
   "unique_ore:asset('/assets/items/ore-unique.png')",
@@ -40,9 +46,22 @@ must(world.includes("card.dataset.ttdMysteryShop='1'"),'Mystery Chest Shop card 
 must(world.includes("iconMarkup('mystery_chest',48)"),'Mystery Chest Shop card is not using approved art authority');
 must(world.includes("item?.type==='ttd_item'&&ITEMS[item.itemId]"),'server items are not retained for Inventory rendering');
 
+for(const marker of [
+  "if(typeof cardSVG==='function')cardSVG=cardArt",
+  "if(typeof renderShopItemCard==='function'&&!renderShopItemCard.__ttdEnchantV4)",
+  "document.querySelectorAll('.shopItemCard')",
+  "document.querySelectorAll('.tiItem')",
+  "asset('/assets/items/enchant-card-lesser.png')",
+  "asset('/assets/items/enchant-card-master.png')",
+])must(enchant.includes(marker),`Enchant-card native artwork authority missing: ${marker}`);
+
+must(loader.includes("loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript')"),'Native game loader does not bind enchant art immediately after document materialization.');
+must(runtime.includes('/online/enchant-card-art-v1.js?v=4'),'Runtime bridge list does not preserve enchant-card V4 authority.');
+
 const itemIndex=runtime.indexOf('/online/item-assets-v1.js?v=4');
+const enchantIndex=runtime.indexOf('/online/enchant-card-art-v1.js?v=4');
 const avatarIndex=runtime.indexOf('/online/avatar-inventory-v22.js?v=22');
 const worldIndex=runtime.indexOf('/online/world-items-v1.js?v=1');
-must(itemIndex>=0&&avatarIndex>itemIndex&&worldIndex>avatarIndex,'Item asset → final Inventory → world wrapper runtime order is not authoritative');
+must(itemIndex>=0&&enchantIndex>itemIndex&&avatarIndex>enchantIndex&&worldIndex>avatarIndex,'Item asset → enchant art → final Inventory → world wrapper runtime order is not authoritative');
 
-console.log('Item art routing v1 verified: Shop and final Inventory resolve server/local item IDs through approved PNG masters; retired item/loading WebP paths are absent.');
+console.log('Item art routing v2 verified: approved PNG masters include Enchant cards; native Shop card creation and final Items inventory are repaired through the V4 art authority.');
