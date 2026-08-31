@@ -17,7 +17,9 @@
     '/online/collection-portrait-fit-v16.js?v=16',
     '/online/deck-editor-v18.js?v=18',
     // Item art is data-only and must exist before either inventory authority renders.
-    '/online/item-assets-v1.js?v=4',
+    '/online/item-assets-v1.js?v=5',
+    // Enchant card art replaces the legacy placeholder icon before shop/inventory renderers run.
+    '/online/enchant-card-art-v1.js?v=1',
     '/online/avatar-inventory-v22.js?v=22',
     // World items deliberately loads after the inventory authorities so its wrappers extend the
     // final Shop/Inventory renderers instead of being overwritten by avatar inventory.

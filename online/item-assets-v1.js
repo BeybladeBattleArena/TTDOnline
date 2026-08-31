@@ -9,6 +9,8 @@
   // Lossless native-resolution official masters. Presentation size belongs to UI/CSS only.
   const epicTicketArt=asset('/assets/items/epic-summon-ticket.png');
   const expTomeArt=asset('/assets/items/exp-tome.png');
+  const lesserEnchantCardArt=asset('/assets/items/enchant-card-lesser.png');
+  const masterEnchantCardArt=asset('/assets/items/enchant-card-master.png');
 
   window.__TTD_ITEM_ASSETS_V4=Object.freeze({
     frozen_island_chest_normal:asset('/assets/items/chest-frozen-island-normal.png'),
@@ -20,6 +22,8 @@
     mystery_chest:asset('/assets/items/mystery-chest.png'),
     epic_summon_ticket:epicTicketArt,
     exp_tome:expTomeArt,
+    card_lesser:lesserEnchantCardArt,
+    card_master:masterEnchantCardArt,
     common_ore:asset('/assets/items/ore-common.png'),
     rare_ore:asset('/assets/items/ore-rare.png'),
     unique_ore:asset('/assets/items/ore-unique.png'),
@@ -30,7 +34,9 @@
 
     // Compatibility names used by the older placeholder-era reward UI.
     epicSummonTicket:epicTicketArt,
-    expTome:expTomeArt
+    expTome:expTomeArt,
+    lesserEnchantCard:lesserEnchantCardArt,
+    masterEnchantCard:masterEnchantCardArt
   });
   window.__TTD_ITEM_ASSETS_V3=window.__TTD_ITEM_ASSETS_V4;
   window.__TTD_ITEM_ASSETS_V2=window.__TTD_ITEM_ASSETS_V4;
