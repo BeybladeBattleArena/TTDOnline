@@ -8,6 +8,7 @@ const world=read('online/world-items-v1.js');
 const runtime=read('online/runtime-bridge-loader-v1.js');
 const loader=read('online/game-loader.js');
 const enchant=read('online/enchant-card-art-v1.js');
+const polish=read('online/item-art-polish-v2.js');
 
 for(const stale of [
   '/assets/ui/epic-summon-ticket.webp',
@@ -55,6 +56,21 @@ for(const marker of [
   "asset('/assets/items/enchant-card-master.png')",
 ])must(enchant.includes(marker),`Enchant-card native artwork authority missing: ${marker}`);
 
+for(const marker of [
+  'height:196px!important;',
+  'grid-template-rows:88px 40px 24px 32px!important;',
+  'height:176px!important;',
+  'grid-template-rows:82px 38px 20px 28px!important;',
+  '#invGrid>.chestCard',
+  '.tiGrid>.tiItem',
+  'object-fit:contain!important;',
+])must(polish.includes(marker),`Uniform item-card presentation contract missing: ${marker}`);
+
+must(!enchant.includes('min-height:228px!important'),'Enchant Shop art must not enlarge the canonical Shop shell.');
+must(!enchant.includes('grid-template-rows:112px'),'Enchant Shop art must not override canonical Shop rows.');
+must(enchant.includes('max-height:84px!important'),'Enchant Shop portrait art is not bounded inside the canonical art well.');
+must(enchant.includes('max-height:78px!important'),'Enchant Inventory portrait art is not bounded inside the canonical art well.');
+
 must(loader.includes("loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript')"),'Native game loader does not bind enchant art immediately after document materialization.');
 must(runtime.includes('/online/enchant-card-art-v1.js?v=4'),'Runtime bridge list does not preserve enchant-card V4 authority.');
 
@@ -64,4 +80,4 @@ const avatarIndex=runtime.indexOf('/online/avatar-inventory-v22.js?v=22');
 const worldIndex=runtime.indexOf('/online/world-items-v1.js?v=1');
 must(itemIndex>=0&&enchantIndex>itemIndex&&avatarIndex>enchantIndex&&worldIndex>avatarIndex,'Item asset → enchant art → final Inventory → world wrapper runtime order is not authoritative');
 
-console.log('Item art routing v2 verified: approved PNG masters include Enchant cards; native Shop card creation and final Items inventory are repaired through the V4 art authority.');
+console.log('Item art routing v3 verified: approved PNG masters keep contain/aspect-ratio presentation while Shop and Inventory use canonical uniform card footprints.');
