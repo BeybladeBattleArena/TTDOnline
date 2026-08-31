@@ -6,7 +6,7 @@
     catch(_){return path;}
   };
 
-  // Lossless native-resolution official masters. Presentation size belongs to UI/CSS only.
+  // Committed PNG item art. Presentation size belongs to UI/CSS only.
   const epicTicketArt=asset('/assets/items/epic-summon-ticket.png');
   const expTomeArt=asset('/assets/items/exp-tome.png');
   const lesserEnchantCardArt=asset('/assets/items/enchant-card-lesser.png');

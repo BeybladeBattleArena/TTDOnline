@@ -230,6 +230,50 @@
         }
       }
     },
+    "itemLesserEnchantCard": {
+      "path": "/assets/items/enchant-card-lesser.png",
+      "format": "image/png",
+      "width": 64,
+      "height": 114,
+      "usage": {
+        "shop": {
+          "box": [
+            64,
+            68
+          ],
+          "fit": "contain"
+        },
+        "inventory": {
+          "box": [
+            54,
+            74
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemMasterEnchantCard": {
+      "path": "/assets/items/enchant-card-master.png",
+      "format": "image/png",
+      "width": 64,
+      "height": 114,
+      "usage": {
+        "shop": {
+          "box": [
+            64,
+            68
+          ],
+          "fit": "contain"
+        },
+        "inventory": {
+          "box": [
+            54,
+            74
+          ],
+          "fit": "contain"
+        }
+      }
+    },
     "loadingEndlessHorde": {
       "path": "/assets/ui/loading-endless-horde.png",
       "format": "image/png",
@@ -767,7 +811,7 @@
           ]
         }
       },
-      "description": "3 2 1 START announcer cue \u2014 authoritative original MP3"
+      "description": "3 2 1 START announcer cue — authoritative original MP3"
     },
     "announcerMissionClear": {
       "path": "/assets/audio/announcer/MissionClear.mp3",
@@ -793,7 +837,7 @@
           ]
         }
       },
-      "description": "FAIL announcer cue \u2014 authoritative original MP3"
+      "description": "FAIL announcer cue — authoritative original MP3"
     },
     "announcerFinish": {
       "path": "/assets/audio/announcer/Finish.mp3",
