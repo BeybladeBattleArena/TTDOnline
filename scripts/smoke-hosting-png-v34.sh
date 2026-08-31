@@ -84,6 +84,8 @@ PY
 check_exact_file /online.html
 check_exact_file /online/startup-gate-v33.js
 check_exact_file /online/item-art-polish-v2.js
+check_exact_file /online/game-loader.js
+check_exact_file /online/enchant-card-art-v1.js
 check_exact_file /assets/game-assets.json
 check_exact_file /assets/audio/announcer/MissionFail.mp3
 check_exact_file /assets/audio/announcer/CombatStart.mp3
@@ -106,5 +108,7 @@ check_png /assets/items/ore-legendary.png 1536 1536 1
 check_png /assets/items/ore-omni.png 1536 1536 1
 check_png /assets/items/gift-box-pink.png 1536 1536 1
 check_png /assets/items/gift-box-icy.png 1536 1499 1
+check_png /assets/items/enchant-card-lesser.png 64 114 0
+check_png /assets/items/enchant-card-master.png 64 114 0
 
-echo 'Production Hosting serves the committed game/audio files and all 18 canonical PNG masters byte-for-byte; PNG dimensions and transparency-capable item masters are verified without external image tooling.'
+echo 'Production Hosting serves the committed game/audio files and all 20 canonical PNG masters byte-for-byte; Enchant card PNG dimensions and runtime authority are verified explicitly.'
