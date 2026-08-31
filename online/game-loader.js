@@ -48,7 +48,7 @@
     document.write(gameHtml);
     document.close();
 
-    // This authority must bind against the native functions created by the document above.
+    // Enchant V4 binds directly to the native cardSVG/renderShopItemCard functions created above.
     // Loading it here avoids depending on later bridge order or a page-specific readiness gate.
     loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript');
   }
