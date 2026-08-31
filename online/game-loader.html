@@ -35,15 +35,22 @@
         return nativeFetch(input,init);
       };
 
-      // Final Collection authority, Overdrive battle abilities and page-entry polish are
+      // Final Collection authority, Enchant card art, Overdrive battle abilities and page-entry polish are
       // injected after the transformed game document exists. They are independent of the
       // synchronous bridge chain so an earlier optional bridge error cannot prevent the
-      // portrait UI, Overdrive content, collection transactions, or page-reset contract.
+      // portrait UI, item artwork, Overdrive content, collection transactions, or page-reset contract.
       let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
         collectionAuthorityAttempts+=1;
         const ready=document.getElementById('deckScreen')&&document.getElementById('collectionGrid');
         if(ready){
+          if(!document.getElementById('ttdEnchantCardArtV3Script')){
+            const enchantArt=document.createElement('script');
+            enchantArt.id='ttdEnchantCardArtV3Script';
+            enchantArt.src=window.__TTD_ASSET_URL('/online/enchant-card-art-v1.js?v=3');
+            enchantArt.async=false;
+            document.head.appendChild(enchantArt);
+          }
           if(!document.getElementById('ttdOverdriveSystemV1Script')){
             const overdrive=document.createElement('script');
             overdrive.id='ttdOverdriveSystemV1Script';
