@@ -45,6 +45,14 @@
     "assets/ui/loading-al-hata.png": "ca5a1745f88e91adcfc8f38de2152900328900fd",
     "assets/ui/loading-endless-horde.png": "c8e3444315fc3951e8fd7bf2141f60bd4462598a",
     "assets/ui/loading-moving-screen.png": "55d6f2f944dcc06c2ca598d19abea1c5aef50b20",
-    "assets/wizard-rod.svg": "2a9a97d182a94002f6616a6de945e37c0dd798b6"
+    "assets/wizard-rod.svg": "2a9a97d182a94002f6616a6de945e37c0dd798b6",
+    "assets/items/pip-voucher-1000.png": "e00b9f0fefcc39d7eb525ebdca555626534e7da1",
+    "assets/items/pip-voucher-5000.png": "e448ba10efe9d121cea51e893d4c410338c663ff",
+    "assets/items/pip-voucher-10000.png": "229efc1571670e743f760c1156041e2d51df5a52",
+    "assets/items/pip-voucher-20000.png": "0a4f3422ba908a2f4ea3329ec0cf09c881c14a8d",
+    "assets/items/pip-voucher-40000.png": "11dcaf35677a27f90e738417f3852c06e899c1ef",
+    "assets/items/pip-voucher-60000.png": "72383d482373782916e4806da1c10b8be902b701",
+    "assets/items/pip-voucher-80000.png": "6eebe4fabae69590a20702bfeb1798f46de1fb86",
+    "assets/items/pip-voucher-100000.png": "231a82a9c5af9d101cfc88f921da7facb7ecc48f"
   }
 }

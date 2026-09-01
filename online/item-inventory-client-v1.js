@@ -4,7 +4,8 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 
 const REGION='us-central1';
 const frame=document.getElementById('gameFrame');
-let auth=null,functions=null,currentUser=null,syncing=false;
+const giftStatus=document.getElementById('onlineGiftStatus');
+let auth=null,functions=null,currentUser=null,syncing=false,lastGiftSuccess='';
 
 const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
 function friendlyError(err){return String(err?.message||'The item server rejected that request.').replace(/^FirebaseError:\s*/i,'');}
@@ -29,8 +30,10 @@ async function purchaseMystery(requestId){
     await syncItems();
   }catch(err){postToGame({type:'ttd:item-purchase-result',requestId,ok:false,message:friendlyError(err)});}
 }
-async function sellShopItem(requestId,itemId){
+async function sellInventoryItem(requestId,itemId){
   try{
+    // The callable keeps its legacy name for compatibility; server behavior is the canonical
+    // generic Inventory-item resale archetype for both Shop and reward-only items.
     const result=await httpsCallable(functions,'sellShopItemV1')({itemId});const data=result.data||{};setCurrencyUi(data.gameState);
     postToGame({type:'ttd:item-sell-result',requestId,ok:true,itemId,sellValuePips:data.sellValuePips,remaining:data.remaining,item:data.item,gameState:data.gameState});
     await syncItems();
@@ -48,9 +51,20 @@ window.addEventListener('message',(event)=>{
   if(m.type==='ttd:item-inventory-ready'){syncItems();return;}
   if(!currentUser||!functions)return;
   if(m.type==='ttd:item-purchase-request'&&m.itemId==='mystery_chest')purchaseMystery(String(m.requestId||''));
-  if(m.type==='ttd:item-sell-request')sellShopItem(String(m.requestId||''),String(m.itemId||''));
+  if(m.type==='ttd:item-sell-request')sellInventoryItem(String(m.requestId||''),String(m.itemId||''));
   if(m.type==='ttd:item-use-request'&&m.itemId==='exp_tome')useExpTome(String(m.requestId||''));
 });
+
+// Gift codes can now grant stackable Inventory items. Keep that path generic: any successful
+// code redemption refreshes this authoritative item stream, rather than special-casing one code.
+if(giftStatus){
+  new MutationObserver(()=>{
+    const text=giftStatus.textContent.trim();
+    if(!/^Redeemed\b/i.test(text)||text===lastGiftSuccess)return;
+    lastGiftSuccess=text;
+    setTimeout(syncItems,0);
+  }).observe(giftStatus,{childList:true,characterData:true,subtree:true});
+}
 
 async function start(){const app=await waitForFirebaseApp();auth=getAuth(app);functions=getFunctions(app,REGION);onAuthStateChanged(auth,user=>{currentUser=user;if(user)setTimeout(syncItems,120);});frame?.addEventListener('load',()=>setTimeout(syncItems,180));}
 start().catch(err=>console.error('Item inventory client failed to start.',err));

@@ -110,5 +110,13 @@ check_png /assets/items/gift-box-pink.png 1536 1536 1
 check_png /assets/items/gift-box-icy.png 1536 1499 1
 check_png /assets/items/enchant-card-lesser.png 64 114 0
 check_png /assets/items/enchant-card-master.png 64 114 0
+check_png /assets/items/pip-voucher-1000.png 1536 658 0
+check_png /assets/items/pip-voucher-5000.png 1536 658 0
+check_png /assets/items/pip-voucher-10000.png 1536 658 0
+check_png /assets/items/pip-voucher-20000.png 1536 658 0
+check_png /assets/items/pip-voucher-40000.png 1536 658 0
+check_png /assets/items/pip-voucher-60000.png 1536 658 0
+check_png /assets/items/pip-voucher-80000.png 1536 658 0
+check_png /assets/items/pip-voucher-100000.png 1536 658 0
 
-echo 'Production Hosting serves the committed game/audio files and all 20 canonical PNG masters byte-for-byte; Enchant card PNG dimensions and runtime authority are verified explicitly.'
+echo 'Production Hosting serves the committed game/audio files and all 28 canonical PNG masters byte-for-byte; Enchant card PNG dimensions and runtime authority are verified explicitly.'
