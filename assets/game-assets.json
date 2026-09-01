@@ -890,6 +890,182 @@
         }
       },
       "description": "Reserved multiplayer Blue Team announcer cue"
+    },
+    "itemPipVoucher1000": {
+      "path": "/assets/items/pip-voucher-1000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher5000": {
+      "path": "/assets/items/pip-voucher-5000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher10000": {
+      "path": "/assets/items/pip-voucher-10000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher20000": {
+      "path": "/assets/items/pip-voucher-20000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher40000": {
+      "path": "/assets/items/pip-voucher-40000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher60000": {
+      "path": "/assets/items/pip-voucher-60000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher80000": {
+      "path": "/assets/items/pip-voucher-80000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
+    },
+    "itemPipVoucher100000": {
+      "path": "/assets/items/pip-voucher-100000.png",
+      "format": "image/png",
+      "width": 1536,
+      "height": 658,
+      "usage": {
+        "inventory": {
+          "box": [
+            132,
+            72
+          ],
+          "fit": "contain"
+        },
+        "detail": {
+          "box": [
+            238,
+            104
+          ],
+          "fit": "contain"
+        }
+      }
     }
   }
 }
