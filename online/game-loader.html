@@ -35,10 +35,11 @@
         return nativeFetch(input,init);
       };
 
-      // Final Collection authority, Enchant card art, Overdrive battle abilities and page-entry polish are
-      // injected after the transformed game document exists. They are independent of the
-      // synchronous bridge chain so an earlier optional bridge error cannot prevent the
-      // portrait UI, item artwork, Overdrive content, collection transactions, or page-reset contract.
+      // Final Collection authority, item presentation authorities, Overdrive battle abilities and
+      // page-entry polish are injected after the transformed game document exists. They are
+      // independent of the synchronous bridge chain so an earlier optional bridge error cannot
+      // prevent item artwork, Rewards inventory, Overdrive content, collection transactions, or
+      // the page-reset contract.
       let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
         collectionAuthorityAttempts+=1;
@@ -50,6 +51,13 @@
             enchantArt.src=window.__TTD_ASSET_URL('/online/enchant-card-art-v1.js?v=3');
             enchantArt.async=false;
             document.head.appendChild(enchantArt);
+          }
+          if(!document.getElementById('ttdPipVouchersV1Script')){
+            const vouchers=document.createElement('script');
+            vouchers.id='ttdPipVouchersV1Script';
+            vouchers.src=window.__TTD_ASSET_URL('/online/pip-vouchers-v1.js?v=1');
+            vouchers.async=false;
+            document.head.appendChild(vouchers);
           }
           if(!document.getElementById('ttdOverdriveSystemV1Script')){
             const overdrive=document.createElement('script');
