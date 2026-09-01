@@ -21,7 +21,8 @@
     catch(_){return path;}
   }
   const itemAssets=window.__TTD_ITEM_ASSETS_V4||window.__TTD_ITEM_ASSETS_V1||{};
-  const artUrl=(amount)=>itemAssets[`pip_voucher_${amount}`]||asset(`/assets/items/pip-voucher-${amount}.png`);
+  const ITEM_ROOT=['','assets','items'].join('/');
+  const artUrl=(amount)=>itemAssets[`pip_voucher_${amount}`]||asset(`${ITEM_ROOT}/pip-voucher-${amount}.png`);
   const send=(type,payload={})=>window.parent.postMessage({type,...payload},ORIGIN);
 
   function imageMarkup(def,detail=false){
