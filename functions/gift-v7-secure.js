@@ -1,5 +1,5 @@
-const { onCall, HttpsError } = require('./node_modules/firebase-functions/v2/https');
-const { getFirestore, FieldValue } = require('./node_modules/firebase-admin/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
 const catalog = require('./dicefile.generated.json');
 const ITEM_DEFS = require('./items-v1')._ITEM_DEFS;
