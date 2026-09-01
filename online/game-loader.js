@@ -51,6 +51,11 @@
     // Enchant V4 binds directly to the native cardSVG/renderShopItemCard functions created above.
     // Loading it here avoids depending on later bridge order or a page-specific readiness gate.
     loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript');
+
+    // Stat jewel art/inventory V1 replaces generated jewel glyphs with approved PNG artwork,
+    // mirrors socketed jewels into the Enchant inventory, decorates collection cards, and
+    // keeps regular/Overdrive collection cards from overlapping adjacent cards.
+    loadPostDocumentScript('/online/jewel-art-inventory-v1.js?v=1','ttdJewelArtInventoryV1Script');
   }
 
   boot().catch((err)=>{
