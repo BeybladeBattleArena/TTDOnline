@@ -19,8 +19,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install Pillow
-        run: python -m pip install --disable-pip-version-check pillow==11.3.0
+      - name: Install image tooling
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0 numpy==2.3.2
       - name: Make voucher exterior background transparent
         run: |
           python - <<'PY'
