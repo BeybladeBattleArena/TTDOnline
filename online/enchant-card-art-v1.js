@@ -170,16 +170,4 @@
   window.__TTD_ENCHANT_CARD_ART_V3=window.__TTD_ENCHANT_CARD_ART_V4;
   window.__TTD_ENCHANT_CARD_ART_V2=window.__TTD_ENCHANT_CARD_ART_V4;
   window.__TTD_ENCHANT_CARD_ART_V1=window.__TTD_ENCHANT_CARD_ART_V4;
-
-  // Pip Vouchers are a Rewards-inventory authority layered after the native document.
-  // It waits for the server item/world bridges before wrapping the Inventory renderer.
-  try{
-    if(!document.getElementById('ttdPipVouchersV1Script')){
-      const vouchers=document.createElement('script');
-      vouchers.id='ttdPipVouchersV1Script';
-      vouchers.src=asset('/online/pip-vouchers-v1.js?v=1');
-      vouchers.async=false;
-      document.head.appendChild(vouchers);
-    }
-  }catch(error){console.warn('Could not load Pip Voucher Inventory authority.',error);}
 })();
