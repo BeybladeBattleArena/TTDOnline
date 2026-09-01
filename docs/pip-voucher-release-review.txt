@@ -1,1 +1,0 @@
-Pip Voucher release validation is enforced by scripts/check-pip-vouchers-v1.mjs and the standard Hosting/backend release gates.
