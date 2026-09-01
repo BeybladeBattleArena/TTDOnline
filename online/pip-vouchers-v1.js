@@ -1,6 +1,7 @@
 (() => {
   'use strict';
-  if(window.__TTD_PIP_VOUCHERS_V1)return;
+  if(window.__TTD_PIP_VOUCHERS_V2)return;
+  window.__TTD_PIP_VOUCHERS_V2=true;
   window.__TTD_PIP_VOUCHERS_V1=true;
 
   const ORIGIN=location.origin;
@@ -14,7 +15,7 @@
     }),
   ])));
   const state=new Map();
-  let installed=false,installAttempts=0,sellPending=false,requestSeq=0;
+  let sellPending=false,requestSeq=0,observer=null,renderQueued=false;
 
   function asset(path){
     try{return typeof window.__TTD_ASSET_URL==='function'?window.__TTD_ASSET_URL(path):path;}
@@ -25,21 +26,18 @@
   const artUrl=(amount)=>itemAssets[`pip_voucher_${amount}`]||asset(`${ITEM_ROOT}/pip-voucher-${amount}.png`);
   const send=(type,payload={})=>window.parent.postMessage({type,...payload},ORIGIN);
 
+  function rewardsActive(){
+    try{if(typeof invActiveTab!=='undefined')return String(invActiveTab)==='rewards';}catch(_){}
+    const current=document.querySelector('#tiRoot .tiIT [data-i="rewards"].on');
+    return !!current;
+  }
+  function activeGrid(){
+    if(!rewardsActive())return null;
+    return document.querySelector('#tiRoot .tiItems .tiGrid')||document.getElementById('invGrid');
+  }
   function imageMarkup(def,detail=false){
     const width=detail?238:132,height=detail?104:72;
-    return `<img class="ttdPipVoucherArtV1" src="${artUrl(def.amount)}" alt="${def.name}" draggable="false" decoding="async" style="width:${width}px;height:${height}px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`;
-  }
-  function applySync(items){
-    state.clear();
-    for(const item of Array.isArray(items)?items:[]){
-      if(!VOUCHERS[item?.id])continue;
-      state.set(item.id,{
-        ...item,
-        count:Math.max(0,Math.floor(Number(item.count)||0)),
-        sellValuePips:Math.max(0,Math.floor(Number(item.sellValuePips)||0)),
-      });
-    }
-    if(installed&&document.getElementById('inventoryScreen')?.classList.contains('active'))renderInventoryScreen();
+    return `<img class="ttdPipVoucherArtV2" src="${artUrl(def.amount)}" alt="${def.name}" draggable="false" decoding="async" style="width:${width}px;height:${height}px;max-width:100%;object-fit:contain;display:block;margin:0 auto;">`;
   }
   function requestSell(itemId){
     const item=state.get(itemId),def=VOUCHERS[itemId];
@@ -62,51 +60,85 @@
       onSell:()=>requestSell(itemId),
     });
   }
-  function appendCards(){
-    const grid=document.getElementById('invGrid');
-    if(!grid||String(invActiveTab||'')!=='rewards')return;
-    grid.querySelectorAll('.ttdPipVoucherCardV1').forEach(node=>node.remove());
+  function createCanonicalCard(itemId,item,def){
+    const card=document.createElement('div');
+    card.className='tiItem ttdPipVoucherCardV2';
+    card.dataset.ttdPipVoucher=itemId;
+    card.innerHTML=`<div class="tiIcon">${imageMarkup(def)}</div><div class="tiName"></div><div class="tiRare">Reward</div><button class="tiAct" type="button">Details</button><span class="tiCount">×${item.count}</span>`;
+    card.querySelector('.tiName').textContent=def.name;
+    const open=(event)=>{event?.preventDefault?.();event?.stopPropagation?.();openVoucher(itemId);};
+    card.addEventListener('click',open);
+    card.querySelector('.tiAct')?.addEventListener('click',open);
+    return card;
+  }
+  function createLegacyCard(itemId,item,def){
+    const card=document.createElement('div');
+    card.className='chestCard ttdPipVoucherCardV2';
+    card.dataset.ttdPipVoucher=itemId;
+    card.innerHTML=`${imageMarkup(def)}<div class="cname">${def.name}</div><div class="cdiff">×${item.count}</div>`;
+    card.addEventListener('click',()=>openVoucher(itemId));
+    return card;
+  }
+  function renderVouchers(){
+    renderQueued=false;
+    const grid=activeGrid();
+    if(!grid)return;
+    const canonical=grid.classList.contains('tiGrid');
+    const live=new Set([...state].filter(([,item])=>item.count>0).map(([itemId])=>itemId));
+    grid.querySelectorAll('[data-ttd-pip-voucher]').forEach(card=>{
+      if(!live.has(card.dataset.ttdPipVoucher))card.remove();
+    });
     for(const [itemId,item] of state){
       if(item.count<1)continue;
       const def=VOUCHERS[itemId];
-      const card=document.createElement('div');
-      card.className='chestCard ttdPipVoucherCardV1';
-      card.dataset.ttdPipVoucher=itemId;
-      card.innerHTML=`${imageMarkup(def)}<div class="cname">${def.name}</div><div class="cdiff">${item.count>1?`×${item.count}`:'×1'}</div>`;
-      card.addEventListener('click',()=>openVoucher(itemId));
-      grid.appendChild(card);
+      let card=grid.querySelector(`[data-ttd-pip-voucher="${itemId}"]`);
+      if(!card){
+        card=canonical?createCanonicalCard(itemId,item,def):createLegacyCard(itemId,item,def);
+        grid.appendChild(card);
+      }
+      const countNode=card.querySelector(canonical?'.tiCount':'.cdiff');
+      const next=`×${item.count}`;
+      if(countNode&&countNode.textContent!==next)countNode.textContent=next;
     }
   }
-  function install(){
-    if(installed)return true;
-    installAttempts+=1;
-    if(typeof renderInventoryScreen!=='function'||typeof showItemDetail!=='function'){
-      if(installAttempts<400)setTimeout(install,25);
-      return false;
+  function queueRender(){
+    if(renderQueued)return;
+    renderQueued=true;
+    requestAnimationFrame(renderVouchers);
+  }
+  function applySync(items){
+    state.clear();
+    for(const item of Array.isArray(items)?items:[]){
+      if(!VOUCHERS[item?.id])continue;
+      state.set(item.id,{
+        ...item,
+        count:Math.max(0,Math.floor(Number(item.count)||0)),
+        sellValuePips:Math.max(0,Math.floor(Number(item.sellValuePips)||0)),
+      });
     }
-    const baseRenderInventoryScreen=renderInventoryScreen;
-    const wrapped=function renderInventoryScreenPipVouchersV1(){
-      const result=baseRenderInventoryScreen();
-      appendCards();
-      return result;
-    };
-    wrapped.__ttdPipVouchersV1=true;
-    renderInventoryScreen=wrapped;
-    try{window.renderInventoryScreen=wrapped;}catch(_){}
-
-    const style=document.createElement('style');
-    style.id='ttdPipVoucherStyleV1';
-    style.textContent=`
-      #invGrid>.ttdPipVoucherCardV1{overflow:hidden!important;cursor:pointer!important;}
-      #invGrid>.ttdPipVoucherCardV1>.ttdPipVoucherArtV1{width:132px!important;height:72px!important;max-width:100%!important;object-fit:contain!important;object-position:center center!important;margin:0 auto!important;image-rendering:auto!important;}
-      #invGrid>.ttdPipVoucherCardV1>.cname{font-size:10.5px!important;line-height:1.22!important;text-align:center!important;}
-    `;
-    document.head.appendChild(style);
-    installed=true;
-    send('ttd:item-inventory-ready');
-    appendCards();
+    queueRender();
+  }
+  function installObserver(){
+    const inventory=document.getElementById('inventoryScreen');
+    if(!inventory||observer)return false;
+    observer=new MutationObserver(queueRender);
+    observer.observe(inventory,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    queueRender();
     return true;
   }
+
+  const style=document.createElement('style');
+  style.id='ttdPipVoucherStyleV2';
+  style.textContent=`
+    .ttdPipVoucherCardV2{overflow:hidden!important;cursor:pointer!important;}
+    .ttdPipVoucherCardV2 .ttdPipVoucherArtV2{max-width:100%!important;object-fit:contain!important;object-position:center center!important;margin:0 auto!important;image-rendering:auto!important;}
+    #tiRoot .tiItems .ttdPipVoucherCardV2>.tiIcon{width:82px!important;height:82px!important;margin:0 auto!important;display:grid!important;place-items:center!important;}
+    #tiRoot .tiItems .ttdPipVoucherCardV2>.tiIcon>.ttdPipVoucherArtV2{width:78px!important;height:58px!important;}
+    #tiRoot .tiItems .ttdPipVoucherCardV2>.tiName{font-size:9.5px!important;line-height:1.2!important;text-align:center!important;}
+    #invGrid>.ttdPipVoucherCardV2>.ttdPipVoucherArtV2{width:132px!important;height:72px!important;}
+    #invGrid>.ttdPipVoucherCardV2>.cname{font-size:10.5px!important;line-height:1.22!important;text-align:center!important;}
+  `;
+  document.head.appendChild(style);
 
   window.addEventListener('message',(event)=>{
     if(event.origin!==ORIGIN||event.source!==window.parent)return;
@@ -119,12 +151,18 @@
         if(message.ok)toastGlobal(`Sold ${def.name} for ${Number(message.sellValuePips||def.amount).toLocaleString('en-US')} Pips.`);
         else toastGlobal(message.message||`Could not sell ${def.name}.`);
       }catch(_){}
+      queueRender();
     }
   });
 
   for(const amount of VOUCHER_ROWS){try{const img=new Image();img.decoding='async';img.src=artUrl(amount);}catch(_){} }
-  install();
-  setTimeout(install,0);
-  setTimeout(install,150);
-  setTimeout(install,600);
+  let attempts=0;
+  const installTimer=setInterval(()=>{
+    attempts+=1;
+    if(installObserver()||attempts>=80)clearInterval(installTimer);
+  },50);
+  setInterval(()=>{
+    if(document.getElementById('inventoryScreen')?.classList.contains('active'))queueRender();
+  },400);
+  send('ttd:item-inventory-ready');
 })();

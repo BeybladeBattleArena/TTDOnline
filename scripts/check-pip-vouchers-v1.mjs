@@ -34,7 +34,10 @@ includes(gift,'reward:{ items:PIP_VOUCHER_TEST_ITEMS }','Test code must grant In
 includes(gift,'itemGrants:reward.items','Gift-code receipts must record item grants.');
 includes(itemClient,"/^Redeemed\\b/i",'Successful gift codes must refresh authoritative item inventory.');
 includes(loader,"/online/pip-vouchers-v1.js?v=1",'Pip Voucher Rewards renderer is not loaded independently.');
-includes(ui,"invActiveTab||'')!=='rewards'",'Pip Vouchers must render only in Rewards.');
+includes(ui,"String(invActiveTab)==='rewards'",'Pip Vouchers must render only in Rewards.');
+includes(ui,"document.querySelector('#tiRoot .tiItems .tiGrid')||document.getElementById('invGrid')",'Pip Vouchers must target the canonical v22 Inventory grid with a legacy fallback.');
+includes(ui,'ttdPipVoucherCardV2','Pip Voucher renderer must use the current canonical card contract.');
+includes(ui,'new MutationObserver(queueRender)','Pip Voucher renderer must survive Inventory redraws.');
 includes(ui,'ttd:item-sell-request','Pip Voucher UI must use generic item selling.');
 includes(ui,'object-fit:contain','Voucher art must be contained without crop/stretch.');
 if(fs.existsSync(new URL('functions/pip-vouchers-v1.js',root)))fail('Parallel Pip Voucher callable must not exist.');
