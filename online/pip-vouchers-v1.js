@@ -4,17 +4,6 @@
   window.__TTD_PIP_VOUCHERS_V1=true;
 
   const ORIGIN=location.origin;
-  try{
-    const parentDoc=window.parent?.document;
-    if(parentDoc&&!parentDoc.getElementById('ttdPipVoucherRedeemClientV1')){
-      const module=parentDoc.createElement('script');
-      module.id='ttdPipVoucherRedeemClientV1';
-      module.type='module';
-      module.src='/online/pip-voucher-redeem-client-v1.js?v=1';
-      parentDoc.head.appendChild(module);
-    }
-  }catch(error){console.warn('Could not attach Pip Voucher redeem client.',error);}
-
   const VOUCHER_ROWS=[1000,5000,10000,20000,40000,60000,80000,100000];
   const VOUCHERS=Object.freeze(Object.fromEntries(VOUCHER_ROWS.map(amount=>[
     `pip_voucher_${amount}`,
@@ -31,10 +20,8 @@
     try{return typeof window.__TTD_ASSET_URL==='function'?window.__TTD_ASSET_URL(path):path;}
     catch(_){return path;}
   }
-  // Keep the path assembled so this runtime consumes the committed PNG files without
-  // manufacturing, redrawing, or embedding alternate artwork.
-  const ITEM_ROOT=['','assets','items'].join('/');
-  const artUrl=(amount)=>asset(`${ITEM_ROOT}/pip-voucher-${amount}.png`);
+  const itemAssets=window.__TTD_ITEM_ASSETS_V4||window.__TTD_ITEM_ASSETS_V1||{};
+  const artUrl=(amount)=>itemAssets[`pip_voucher_${amount}`]||asset(`/assets/items/pip-voucher-${amount}.png`);
   const send=(type,payload={})=>window.parent.postMessage({type,...payload},ORIGIN);
 
   function imageMarkup(def,detail=false){
@@ -124,7 +111,14 @@
     if(event.origin!==ORIGIN||event.source!==window.parent)return;
     const message=event.data||{};
     if(message.type==='ttd:item-inventory-sync'){applySync(message.items);return;}
-    if(message.type==='ttd:item-sell-result'&&VOUCHERS[message.itemId])sellPending=false;
+    if(message.type==='ttd:item-sell-result'&&VOUCHERS[message.itemId]){
+      sellPending=false;
+      const def=VOUCHERS[message.itemId];
+      try{
+        if(message.ok)toastGlobal(`Sold ${def.name} for ${Number(message.sellValuePips||def.amount).toLocaleString('en-US')} Pips.`);
+        else toastGlobal(message.message||`Could not sell ${def.name}.`);
+      }catch(_){}
+    }
   });
 
   for(const amount of VOUCHER_ROWS){try{const img=new Image();img.decoding='async';img.src=artUrl(amount);}catch(_){} }
