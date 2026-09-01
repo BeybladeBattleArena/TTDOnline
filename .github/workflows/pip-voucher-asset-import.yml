@@ -1,3 +1,4 @@
+# Temporary release gate; removed automatically after successful validation.
 name: Pip Voucher Exact Asset Import
 
 on:
