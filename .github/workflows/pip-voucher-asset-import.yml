@@ -8,71 +8,83 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   import-assets:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/pip-voucher-items-v1
           fetch-depth: 0
 
-      - name: Authenticate exact-art transfer
-        id: auth
-        uses: google-github-actions/auth@v3
+      - uses: actions/setup-node@v4
         with:
-          project_id: ttd-online-b8c0f
-          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
-          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
-          token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+          node-version: '22'
 
-      - name: Download and verify exact converted PNG masters
-        shell: bash
-        env:
-          DRIVE_TOKEN: ${{ steps.auth.outputs.access_token }}
-        run: |
-          set -euo pipefail
-          mkdir -p assets/items
-          cat > /tmp/vouchers.tsv <<'EOF'
-          1000	1MWFx-m5BVTCBDC28aacICL_mK9vRWydx	e00b9f0fefcc39d7eb525ebdca555626534e7da1
-          5000	1gmKf-dMZDK-Xoq6G3x1aOQfzVS31E0LH	e448ba10efe9d121cea51e893d4c410338c663ff
-          10000	1z07vzIvvzrn9X9gQWy1k1ynHvm_LhLGE	229efc1571670e743f760c1156041e2d51df5a52
-          20000	1XNjgDynjdpMB5P2BGSpxNdVvpRUbDmjp	0a4f3422ba908a2f4ea3329ec0cf09c881c14a8d
-          40000	1DL4IDD6P4AoBNdVnNhy2ucS0dOKIL6AL	11dcaf35677a27f90e738417f3852c06e899c1ef
-          60000	1UfCyDGP9Cal94NQdnyZQ1cH3dYlBkgRS	72383d482373782916e4806da1c10b8be902b701
-          80000	1Z_V7MnhpiZfHvTWgiRXXjZpPF0xmi7iV	6eebe4fabae69590a20702bfeb1798f46de1fb86
-          100000	1B-ItJ_2airBDIyn-7KdYH7NGEJqkG8a8	231a82a9c5af9d101cfc88f921da7facb7ecc48f
-          EOF
-          while IFS=$'\t' read -r amount drive_id expected; do
-            out="assets/items/pip-voucher-${amount}.png"
-            curl --fail --silent --show-error --location \
-              -H "Authorization: Bearer ${DRIVE_TOKEN}" \
-              "https://www.googleapis.com/drive/v3/files/${drive_id}?alt=media" \
-              --output "$out"
-            actual="$(git hash-object "$out")"
-            [[ "$actual" == "$expected" ]] || { echo "Byte mismatch for $out: $actual != $expected"; exit 1; }
-            python3 - "$out" <<'PY'
-          import struct,sys
-          p=sys.argv[1]
-          b=open(p,'rb').read(24)
-          if b[:8] != b'\x89PNG\r\n\x1a\n': raise SystemExit(f'{p} is not PNG')
-          w,h=struct.unpack('>II',b[16:24])
-          if (w,h)!=(1536,658): raise SystemExit(f'{p} dimensions {w}x{h}, expected 1536x658')
-          print(f'verified {p}: {w}x{h}')
-          PY
-          done < /tmp/vouchers.tsv
-
-      - name: Commit exact PNG masters to feature branch
+      - name: Register exact voucher masters and release gates
         shell: bash
         run: |
           set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const amounts=[1000,5000,10000,20000,40000,60000,80000,100000];
+          const blob={
+            1000:'e00b9f0fefcc39d7eb525ebdca555626534e7da1',
+            5000:'e448ba10efe9d121cea51e893d4c410338c663ff',
+            10000:'229efc1571670e743f760c1156041e2d51df5a52',
+            20000:'0a4f3422ba908a2f4ea3329ec0cf09c881c14a8d',
+            40000:'11dcaf35677a27f90e738417f3852c06e899c1ef',
+            60000:'72383d482373782916e4806da1c10b8be902b701',
+            80000:'6eebe4fabae69590a20702bfeb1798f46de1fb86',
+            100000:'231a82a9c5af9d101cfc88f921da7facb7ecc48f',
+          };
+          const game=JSON.parse(fs.readFileSync('assets/game-assets.json','utf8'));
+          const lock=JSON.parse(fs.readFileSync('assets/immutable-assets.lock.json','utf8'));
+          for(const amount of amounts){
+            const rel=`assets/items/pip-voucher-${amount}.png`;
+            game.assets[`itemPipVoucher${amount}`]={path:`/${rel}`,format:'image/png',width:1536,height:658,usage:{inventory:{box:[132,72],fit:'contain'},detail:{box:[238,104],fit:'contain'}}};
+            lock.assets[rel]=blob[amount];
+          }
+          fs.writeFileSync('assets/game-assets.json',JSON.stringify(game,null,2)+'\n');
+          fs.writeFileSync('assets/immutable-assets.lock.json',JSON.stringify(lock,null,2)+'\n');
+
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          pkg.scripts['check:pip-vouchers']='node scripts/check-pip-vouchers-v1.mjs';
+          for(const key of ['check','check:hosting'])if(!pkg.scripts[key].includes('npm run check:pip-vouchers'))pkg.scripts[key]+=' && npm run check:pip-vouchers';
+          if(!pkg.scripts['check:bridge'].includes('node --check online/pip-vouchers-v1.js'))pkg.scripts['check:bridge']+=' && node --check online/pip-vouchers-v1.js';
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+
+          let smoke=fs.readFileSync('scripts/smoke-hosting-png-v34.sh','utf8');
+          if(!smoke.includes('/assets/items/pip-voucher-1000.png')){
+            const marker="check_png /assets/items/enchant-card-master.png 64 114 0\n";
+            const checks=amounts.map(a=>`check_png /assets/items/pip-voucher-${a}.png 1536 658 0`).join('\n')+'\n';
+            smoke=smoke.replace(marker,marker+checks).replace('all 20 canonical PNG masters','all 28 canonical PNG masters');
+            fs.writeFileSync('scripts/smoke-hosting-png-v34.sh',smoke);
+          }
+          NODE
+
+      - name: Install hosting toolchain
+        run: npm install
+
+      - name: Validate Pip Voucher contract
+        run: npm run check:pip-vouchers
+
+      - name: Validate full Hosting release gate
+        run: npm run check:hosting
+
+      - name: Validate backend release gate
+        run: npm run check:backend
+
+      - name: Commit validated finalization and remove temporary workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/pip-voucher-asset-import.yml .github/workflows/pip-voucher-finalize.yml
           git config user.name 'TTD Release Bot'
           git config user.email 'github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com'
-          git add assets/items/pip-voucher-*.png
-          git diff --cached --quiet && { echo 'No asset changes to commit.'; exit 0; }
-          git commit -m 'Add exact Pip Voucher PNG masters'
+          git add assets/game-assets.json assets/immutable-assets.lock.json package.json scripts/smoke-hosting-png-v34.sh
+          git diff --cached --check
+          git commit -m 'Finalize Pip Voucher release contract'
           git push origin HEAD:feature/pip-voucher-items-v1
