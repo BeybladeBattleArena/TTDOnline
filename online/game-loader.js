@@ -22,6 +22,14 @@
     // mirrors socketed ownership into Enchant inventory, decorates sockets/collection cards, and
     // keeps regular/Overdrive collection cards contained without overlap.
     loadPostDocumentScript('/online/jewel-art-inventory-v1.js?v=2','ttdJewelArtInventoryV2Script');
+    // V3 is a final presentation guard: it watches the live inventory/detail DOM (including nodes
+    // created after boot), replaces any surviving generated gem SVGs with the PNG assets, removes
+    // edge-connected dark matte backgrounds without damaging dark gem interiors, and supersamples
+    // small source art for cleaner mobile rendering.
+    loadPostDocumentScript('/online/jewel-art-inventory-v3.js?v=1','ttdJewelArtInventoryV3Script');
+    // Final collection box authority for both normal and Overdrive cards. It deliberately uses
+    // stronger selectors than legacy portrait rules so no later bridge can reintroduce overlap.
+    loadPostDocumentScript('/online/collection-card-containment-v1.js?v=1','ttdCollectionCardContainmentV1Script');
   }
   boot().catch((err)=>{console.error('Online game loader failed.',err);send('ttd:bridge-sync-error',{message:`Could not start online gameplay: ${err?.message||'unknown loader error'}`});});
 })();
