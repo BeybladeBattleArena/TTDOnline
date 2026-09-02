@@ -73,6 +73,16 @@ const SECURE_PROMOS = Object.freeze([
       cards:{ lesser:15 },
     },
   },
+  {
+    id:'34650fc245b4134efb5d4a91',
+    saltB64:'K8scht/jyFF24pNJrQGEmg==',
+    hashB64:'Qu6rITNHJWkTgTHdfjDm5krRGOZBlX9uR+t02Ju6aRo=',
+    iterations:240000,
+    label:'Chief Triple Jewel Pack',
+    reward:{
+      jewels:[...JEWELS].flatMap((jewelId) => Array.from({length:3}, () => ({jewelId,tier:1}))),
+    },
+  },
 ]);
 
 function authOf(request) {
@@ -113,7 +123,7 @@ function rewardOf(raw = {}) {
     pips:Math.max(0,Math.min(1000000,Number.isSafeInteger(raw.pips)?raw.pips:0)),
     astras:Math.max(0,Math.min(100000,Number.isSafeInteger(raw.astras)?raw.astras:0)),
     dice:Array.isArray(raw.dice)?raw.dice.slice(0,20):[],
-    jewels:Array.isArray(raw.jewels)?raw.jewels.slice(0,50):[],
+    jewels:Array.isArray(raw.jewels)?raw.jewels.slice(0,100):[],
     keys:raw.keys&&typeof raw.keys==='object'?raw.keys:{},
     cards:raw.cards&&typeof raw.cards==='object'?raw.cards:{},
     items:rewardItems(raw.items),
