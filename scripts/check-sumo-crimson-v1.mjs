@@ -28,5 +28,6 @@ must(game.includes("s.dosukoi=c>=6?1:0"),'Sumo C6 Dosukoi retention missing.');
 must(game.includes("const splash=c>=7?.60:c>=6?.45:.30"),'Crimson Flame Splash progression missing.');
 must(game.includes("burn=c>=6?.20:.12"),'Crimson Burn progression missing.');
 must(game.includes("extraCrit=.15"),'Crimson C7 Max Voltage critical bonus missing.');
+must(game.includes("if(c>=2&&!actuate)s.voltage=Math.min(3,stored+1);"),'Crimson Voltage must begin at C2, not C1.');
 must(game.includes("c.crimsonElectroUntil>state.time"),'Crimson Electrocution next-hit amplifier missing.');
 console.log('Sumo Common and Crimson Current Rare verified with complete C1-C7 canonical data and runtime behavior.');
