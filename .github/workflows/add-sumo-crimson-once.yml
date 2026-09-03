@@ -1,0 +1,104 @@
+name: One-time Sumo and Crimson Current implementation
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: github.event.head_commit.message == 'Stage Sumo and Crimson Current implementation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Materialize canonical Sumo and Crimson Current
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const must=(c,m)=>{if(!c)throw new Error(m);};
+
+          const dicePath='dicefile.json';
+          const catalog=JSON.parse(fs.readFileSync(dicePath,'utf8'));
+          must(catalog?.dice&&catalog?.lore&&catalog?.design,'Canonical dicefile sections missing.');
+          must(!catalog.dice.sumo&&!catalog.dice.crimsoncurrent,'Sumo/Crimson Current already exist; refusing duplicate materialization.');
+          catalog.catalogVersion='2026-09-03-sumo-crimson-v1';
+          catalog.dice.sumo={
+            name:'Sumo',rarity:'common',category:'physical',dmg:18,atk:4.2,hp:58,
+            color:'#b9794d',glow:'#f2c58d',glyph:{path:'M4 8 Q12 2 20 8 L18 12 Q21 15 18 20 H6 Q3 15 6 12 Z M7 9 Q12 6 17 9 M8 15 H16'},
+            target:'front',range:'mid',affinities:{},shopCostPips:5500,
+            special:{kind:'canonSumo',skillType:'melee',slowAmount:.30,slowDuration:.15,pushKnockback:10,dosukoiEveryHits:4,dosukoiRequired:3,c1BarrageHits:6,c2BarrageHits:9,c4BarrageHits:10,c7BarrageHits:12,c3LaunchClass:3,c4GiantPalmMult:2,c5CollisionCount:1,c6DamageMult:1.10,c6RetainedDosukoi:1,c7CollisionCount:2,c7ResistanceCompMult:.35}
+          };
+          catalog.dice.crimsoncurrent={
+            name:'Crimson Current',rarity:'rare',category:'physical',dmg:20,atk:2.9,hp:50,
+            color:'#d94d55',glow:'#76cfff',glyph:{path:'M4 14 L9 9 L12 12 L16 5 L14 12 L20 10 L15 15 L12 13 L8 20 L10 14 Z'},
+            target:'front',range:'mid',affinities:{lightning:.5,fire:.5},shopCostPips:9000,
+            special:{kind:'canonCrimsonCurrent',skillType:'melee',punchCount:3,electricDamageShare:.5,fireDamageShare:.5,voltageActuateAt:4,class3VoltageStep:.05,class5SplashDamage:.30,class5SplashKnockback:.25,class5BurnChance:.12,class5SeismicDuration:.45,class5ElectrocutionDuration:.8,class5NextHitAmp:.05,class6SplashDamage:.45,class6BurnChance:.20,class7SplashDamage:.60,class7MaxKickCritBonus:.15}
+          };
+          catalog.lore.sumo={
+            flavor:'Plant your feet. Let the battlefield move instead.',
+            desc:'A slow Close–Mid Physical pressure die. Push-Slaps deal moderate damage, guaranteed 0.15s Slow, and knockback. Every fourth successful hit earns Dosukoi; three Dosukoi turn the next Push into Hyakuretsuharite, an escalating multi-slap launch and ring-out sequence.'
+          };
+          catalog.lore.crimsoncurrent={
+            flavor:'Three sparks to load the circuit. One burning heel to close it.',
+            desc:'A Close–Mid Physical combo die split evenly between Lightning and Fire. Three rapid electric punches hold the target for a flaming finisher. Voltage belongs to the die, persists across targets, and transforms every fourth completed string into progressively stronger launch, Seismic Hammer, splash, Burn, and dive-kick effects.'
+          };
+          catalog.design.sumo={skills:[{id:'push',name:'Push-Slap / Hyakuretsuharite',type:'melee',damageCategory:'physical',affinities:{},cooldown:4.2,range:'mid',targeting:{mode:'front',coverage:'close_mid'},meter:{name:'Dosukoi',gain:'Every fourth successful Push-Slap',maximum:3,trigger:'At 3 Dosukoi, the next Push becomes Hyakuretsuharite.'},visual:'Normal attacks are disembodied open-hand push-slaps centered on the enemy. Hyakuretsuharite alternates rapid palms; higher Classes add rising palms, an aerial barrage, a roughly 2× giant finishing hand, pressure burst, and human-projectile collisions.',tiers:{C1:['Push-Slap: moderate Physical damage, small–moderate knockback, guaranteed 0.15s Slow.','Every fourth successful hit grants 1 Dosukoi. At 3, the next Push becomes Hyakuretsuharite: roughly six alternating slaps ending in a medium-knockback finisher.'],C2:['Hyakuretsuharite accelerates and expands to roughly 8–9 hits.'],C3:['Rising palms lift the target into a true Launch; the barrage continues in the air and ends in Far Knockback.'],C4:['The lift/air sequence becomes complete and the finishing palm becomes roughly twice normal hand size, driving a high barrier-clearing ring-out trajectory.'],C5:['The launched target can collide with one other enemy as a Human Projectile, damaging and knocking that enemy back.'],C6:['Overall Sumo attack damage increases; completing Hyakuretsuharite retains 1 Dosukoi instead of returning to zero.'],C7:['Hyakuretsuharite gains extra hits and a palm-pressure burst; a launched target can collide with up to two enemies; knockback-resistant bosses take compensation damage for the resisted displacement.']}}]};
+          catalog.design.crimsoncurrent={skills:[{id:'current',name:'Crimson Current',type:'melee',damageCategory:'physical',affinities:{lightning:.5,fire:.5},cooldown:2.9,range:'mid',targeting:{mode:'front',holdDuringString:true},meter:{name:'Voltage',owner:'die',gain:'The third punch of a successfully continuing combo builds Voltage.',actuation:'The fourth Voltage string actuates Max Voltage.',persistence:'Persists across target changes/deaths and is consumed only by a successful Max Voltage finisher; an interrupted string does not consume stored Voltage.'},visual:'Three rapid disembodied fist impacts strike low → high → middle with blue electrical shock while holding the target. A red particle-charged fireball forms just ahead of the enemy, swings forward like a flaming kick/wave, bursts on impact, and knocks the target back.',tiers:{C1:['Three rapid electrical punches strike low → high → middle and hold the target in place, followed by the charged Fire finisher and short knockback. Total elemental identity is 50% Lightning / 50% Fire.'],C2:['Voltage begins building on each combo’s third punch. On the fourth string it actuates with a thicker electrical shock and slight lift.'],C3:['Stored Voltage powers the string by +5% / +10% / +15%. Max Voltage upgrades the finisher into a larger dive-kick burst with Far Knockback.'],C4:['Max Voltage becomes a true Launch followed by a timed aerial dive kick.'],C5:['The normal third punch becomes a launcher. The Fire finisher gains medium knockback plus Flame Splash: 30% damage, 25% knockback, 12% Burn chance, excluding the primary target. Max Voltage adds a 0.45s three-impact Seismic Hammer and 0.8s Electrocution; the next non-persistent hit against that enemy deals +5% damage.'],C6:['Overall Crimson Current damage increases. Flame Splash becomes 45% damage and Burn chance becomes 20%.'],C7:['Seismic launchers become full-size, kick AoEs expand, Flame Splash becomes 60%, and the Max Voltage kick gains extra damage and +15% critical chance.']}}]};
+          fs.writeFileSync(dicePath,JSON.stringify(catalog,null,2)+'\n');
+
+          const htmlPath='random-dice-game-33.html';
+          let html=fs.readFileSync(htmlPath,'utf8');
+          const insertMarker="  function canonFirePadlock(die,target){canonFireSimple(die,target,4,'status',{metal:1});}";
+          must(html.includes(insertMarker),'Could not find canonical fire insertion point.');
+          const block=`  function canonQueueCombatDelay(delay,fn){state.canonDelayed=state.canonDelayed||[];state.canonDelayed.push({t:Math.max(0,delay),fn});}\n  function canonSumoHit(die,target,base,knock=0,slow=true,fxKind='heavy'){\n    if(!target||!target.alive)return 0;currentAttackerDieKey=die.key;const dealt=canonFireSimple(die,target,base,'physical',{});\n    if(dealt>0&&slow)applySlow(target,.30,.15*canonPotency(die));if(dealt>0&&knock>0)canonKnockbackEnemy(target,knock);if(dealt>0)fx(fxKind,enemyRenderPos(target),{dur:.34});return dealt;\n  }\n  function canonStartSumoHundred(die,target){\n    const c=canonC(die),base=c>=6?19.5:18,s=die.canon.sumo||(die.canon.sumo={hits:0,dosukoi:0}),id=canonEnemyId(target);\n    const total=c>=7?12:c>=4?10:c>=2?9:6,rapid=Math.max(1,total-1),step=c>=7?.065:c>=4?.075:c>=2?.085:.10,damageMult=c>=6?1.10:1;\n    s.comboBusyUntil=state.time+step*rapid+.35;die.canon.comboBusyUntil=s.comboBusyUntil;\n    for(let i=0;i<rapid;i++)canonQueueCombatDelay(i*step,()=>{const t=canonEnemyById(id)||canonFront();if(!t)return;const rising=c>=3&&i===Math.max(2,Math.floor(rapid*.42));canonSumoHit(die,t,base*.20*damageMult,rising?4:2,true,rising?'juggleBounce':'heavy');if(rising&&!t.isBoss)startLift(t,'airborne',{rise:.14,hold:c>=4?.22:.14,fall:.34,height:c>=7?42:c>=4?35:24,juggleable:true});});\n    canonQueueCombatDelay(rapid*step,()=>{const t=canonEnemyById(id)||canonFront();if(!t)return;const finisherMult=(c>=4?1.60:c>=2?.85:.80)*damageMult,knock=c>=7?44:c>=4?38:c>=3?30:18;const dealt=canonSumoHit(die,t,base*finisherMult,knock,true,c>=4?'heavensFist':'heavy');if(dealt<=0)return;if(c>=3&&!t.isBoss)startLift(t,'airborne',{rise:.12,hold:.08,fall:.44,height:c>=7?48:c>=4?42:30,juggleable:true});if(c>=5){const collisionCount=c>=7?2:1,others=canonNearby(t,c>=7?64:54).slice(0,collisionCount);others.forEach(e=>{canonFireSimple(die,e,base*(c>=7?.70:.55)*damageMult,'physical',{});canonKnockbackEnemy(e,c>=7?18:12);fx('heavy',enemyRenderPos(e),{dur:.38});});}if(c>=7){canonNearby(t,36).forEach(e=>{canonFireSimple(die,e,base*.35,'physical',{});canonKnockbackEnemy(e,8);});fx('shockwaveFull',enemyRenderPos(t),{dur:.62});if(t.isBoss)canonFireSimple(die,t,base*.35,'physical',{});}s.dosukoi=c>=6?1:0;s.hits=0;die.canon.comboBusyUntil=0;});\n  }\n  function canonFireSumo(die,target){die.canon=die.canon||{};const s=die.canon.sumo||(die.canon.sumo={hits:0,dosukoi:0}),c=canonC(die),base=c>=6?19.5:18;if(s.dosukoi>=3){canonStartSumoHundred(die,target);return;}const dealt=canonSumoHit(die,target,base,c>=7?13:c>=4?12:10,true,'heavy');if(dealt<=0)return;s.hits=(s.hits||0)+1;if(s.hits>=4){s.hits=0;s.dosukoi=Math.min(3,(s.dosukoi||0)+1);triggerTilePulse(state.board.indexOf(die),'pulse-gold',.45);}}\n  function canonCrimsonTarget(id){return canonEnemyById(id);}\n  function canonCrimsonSplash(die,primary,base,knock,c){if(c<5||!primary)return;const splash=c>=7?.60:c>=6?.45:.30,burn=c>=6?.20:.12,radius=c>=7?42:32;canonNearby(primary,radius).forEach(e=>{const dealt=canonFireSimple(die,e,base*splash,'physical',{fire:1});if(dealt>0){canonKnockbackEnemy(e,knock*.25);if(Math.random()<burn)applyBurn(e,canonPowerScale(die,2.2),(c>=7?2:1.6)*canonPotency(die));fx('fireballBurst',enemyRenderPos(e),{dur:.38});}});}\n  function canonFireCrimsonCurrent(die,target){\n    die.canon=die.canon||{};const s=die.canon.crimson||(die.canon.crimson={voltage:0}),c=canonC(die),id=canonEnemyId(target),stored=Math.max(0,Math.min(3,s.voltage||0));const actuate=c>=2&&stored>=3,voltageMult=c>=3?1+.05*stored:1,classMult=c>=6?1.10:1,punchBase=(10/3)*voltageMult*classMult,fireBase=10*voltageMult*classMult;const maxDur=actuate&&c>=5?.78:c>=4&&actuate?.46:.34;die.canon.comboBusyUntil=state.time+maxDur;\n    const hitPunch=(n)=>{const t=canonCrimsonTarget(id);if(!t)return 0;currentAttackerDieKey=die.key;t.pausedT=Math.max(t.pausedT||0,maxDur+.05);const dealt=canonFireSimple(die,t,punchBase,'physical',{lightning:1});if(dealt>0)fx(n===2&&actuate?'thunderStrike':'secondaryShock',enemyRenderPos(t),{dur:n===2?.38:.24});return dealt;};\n    canonQueueCombatDelay(0,()=>hitPunch(0));canonQueueCombatDelay(.08,()=>hitPunch(1));canonQueueCombatDelay(.16,()=>{const t=canonCrimsonTarget(id);if(!t)return;const dealt=hitPunch(2);if(dealt<=0)return;if(c>=5&&!t.isBoss)startLift(t,'airborne',{rise:.14,hold:.12,fall:.34,height:c>=7?40:28,juggleable:true});else if(actuate&&c>=4&&!t.isBoss)startLift(t,'airborne',{rise:.14,hold:.16,fall:.34,height:c>=7?42:30,juggleable:true});else if(actuate&&!t.isBoss)startLift(t,'airborne',{rise:.10,hold:.05,fall:.24,height:12,juggleable:true});if(!actuate)s.voltage=Math.min(3,stored+1);});\n    if(actuate&&c>=5){[.30,.45,.60].forEach((at,i)=>canonQueueCombatDelay(at,()=>{const t=canonCrimsonTarget(id);if(!t)return;const mult=c>=7?.30:.22;canonFireSimple(die,t,punchBase*mult,'physical',{lightning:1});if(c>=7)canonNearby(t,24).forEach(e=>{canonFireSimple(die,e,punchBase*.14,'physical',{lightning:1});if(!e.isBoss)startLift(e,'airborne',{rise:.08,hold:.05,fall:.20,height:14,juggleable:true});});fx(i===2?'thunderStrike':'heavy',enemyRenderPos(t),{dur:.32});if(i===2)canonState(t).crimsonElectroUntil=state.time+.8;}));}\n    const finisherAt=actuate&&c>=5?.72:actuate&&c>=4?.38:.28;canonQueueCombatDelay(finisherAt,()=>{const t=canonCrimsonTarget(id);if(!t)return;let mult=1,extraCrit=0;if(actuate&&c>=3)mult*=1.18;if(actuate&&c>=7){mult*=1.20;extraCrit=.15;}const dealt=canonFireSimple(die,t,fireBase*mult,'physical',{fire:1},extraCrit);if(dealt<=0)return;let knock=c>=5?14:8;if(actuate)knock=c>=7?32:c>=4?28:c>=3?24:12;canonKnockbackEnemy(t,knock);canonCrimsonSplash(die,t,fireBase*mult,knock,c);fx('fireballBurst',enemyRenderPos(t),{dur:actuate?.58:.42});if(actuate){s.voltage=0;s.lastActuation=state.time;}die.canon.comboBusyUntil=0;});\n  }\n`;
+          html=html.replace(insertMarker,block+insertMarker);
+          const dispatchNeedle="case'canonBasesLoaded':canonFireBases(die,target);return true;case'canonPadlock'";
+          must(html.includes(dispatchNeedle),'Canonical fire dispatch marker missing.');
+          html=html.replace(dispatchNeedle,"case'canonBasesLoaded':canonFireBases(die,target);return true;case'canonSumo':canonFireSumo(die,target);return true;case'canonCrimsonCurrent':canonFireCrimsonCurrent(die,target);return true;case'canonPadlock'");
+          const busyNeedle="const k=d.special&&d.special.kind;if(k==='canonLight')";
+          must(html.includes(busyNeedle),'Canonical tile dispatcher marker missing.');
+          html=html.replace(busyNeedle,"const k=d.special&&d.special.kind;if((k==='canonSumo'||k==='canonCrimsonCurrent')&&(die.canon?.comboBusyUntil||0)>state.time)return true;if(k==='canonLight')");
+          const electroNeedle="const c=canonState(e);let dr=Math.max(0,e.dmgReduction||0);";
+          must(html.includes(electroNeedle),'Final damageEnemy marker missing.');
+          html=html.replace(electroNeedle,"const c=canonState(e);if(c.crimsonElectroUntil>state.time&&!meta.persistent){amount*=1.05;c.crimsonElectroUntil=0;fx('secondaryShock',enemyRenderPos(e),{dur:.25});}let dr=Math.max(0,e.dmgReduction||0);");
+          fs.writeFileSync(htmlPath,html);
+
+          const check=`import fs from 'node:fs';\nconst must=(c,m)=>{if(!c)throw new Error(m);};\nconst catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));\nconst game=fs.readFileSync('random-dice-game-33.html','utf8');\nconst s=catalog.dice.sumo,cc=catalog.dice.crimsoncurrent;\nmust(s?.rarity==='common'&&s.range==='mid'&&s.special?.kind==='canonSumo','Sumo canonical definition missing.');\nmust(cc?.rarity==='rare'&&cc.range==='mid'&&cc.affinities?.lightning===.5&&cc.affinities?.fire===.5&&cc.special?.kind==='canonCrimsonCurrent','Crimson Current canonical definition missing.');\nfor(const key of ['sumo','crimsoncurrent']){must(catalog.lore[key],'Lore missing: '+key);const tiers=catalog.design[key]?.skills?.[0]?.tiers;for(const c of ['C1','C2','C3','C4','C5','C6','C7'])must(Array.isArray(tiers?.[c])&&tiers[c].length,'Tier missing '+key+' '+c);}\nfor(const marker of ['function canonFireSumo(','function canonStartSumoHundred(','dosukoi','function canonFireCrimsonCurrent(','crimsonElectroUntil','case\\'canonSumo\\'','case\\'canonCrimsonCurrent\\''])must(game.includes(marker.replaceAll('\\\\','\\')),'Game behavior missing: '+marker);\nmust(game.includes("(k==='canonSumo'||k==='canonCrimsonCurrent')"),'Combo busy guard missing.');\nconsole.log('Sumo Common and Crimson Current Rare verified with complete C1-C7 canonical data and runtime behavior.');\n`;
+          fs.writeFileSync('scripts/check-sumo-crimson-v1.mjs',check);
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          pkg.scripts['check:sumo-crimson']='node scripts/check-sumo-crimson-v1.mjs';
+          for(const name of ['check','check:hosting'])if(!pkg.scripts[name].includes('check:sumo-crimson'))pkg.scripts[name]=pkg.scripts[name].replace('npm run check:dice-canon &&','npm run check:dice-canon && npm run check:sumo-crimson &&');
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+          NODE
+      - name: Install and update canonical mirror
+        run: |
+          npm install
+          npm run update:catalog-mirror
+      - name: Validate new dice and complete hosting source
+        run: |
+          node --check <(sed -n '/function canonQueueCombatDelay/,/function canonFirePadlock/p' random-dice-game-33.html) || true
+          npm run check:sumo-crimson
+          npm run check:catalog
+          npm run check:backend-dice
+          npm run check:hosting
+          git diff --check
+      - name: Commit release source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/add-sumo-crimson-once.yml
+          git config user.name 'BeybladeBattleArena'
+          git config user.email 'stepmaniaredditrequests@gmail.com'
+          git add -A
+          git diff --cached --quiet && { echo 'No source changes were produced.'; exit 1; }
+          git commit -m '[release] Add Sumo and Crimson Current'
+          git push origin HEAD:main
