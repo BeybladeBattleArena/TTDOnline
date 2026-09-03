@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "2026-08-28-dice-modernization-master-final-v2",
+  "catalogVersion": "2026-09-03-sumo-crimson-v1",
   "runtime": {
     "description": "Canonical die definitions loaded by the online game. The die key is permanent; display names may change.",
     "source": "dicefile.json"
@@ -1278,6 +1278,82 @@
       "special": {
         "kind": "canonBasesLoaded"
       }
+    },
+    "sumo": {
+      "name": "Sumo",
+      "rarity": "common",
+      "category": "physical",
+      "dmg": 18,
+      "atk": 4.2,
+      "hp": 58,
+      "color": "#b9794d",
+      "glow": "#f2c58d",
+      "glyph": {
+        "path": "M4 8 Q12 2 20 8 L18 12 Q21 15 18 20 H6 Q3 15 6 12 Z M7 9 Q12 6 17 9 M8 15 H16"
+      },
+      "target": "front",
+      "range": "mid",
+      "affinities": {},
+      "shopCostPips": 5500,
+      "special": {
+        "kind": "canonSumo",
+        "skillType": "melee",
+        "slowAmount": 0.3,
+        "slowDuration": 0.15,
+        "pushKnockback": 10,
+        "dosukoiEveryHits": 4,
+        "dosukoiRequired": 3,
+        "c1BarrageHits": 6,
+        "c2BarrageHits": 9,
+        "c4BarrageHits": 10,
+        "c7BarrageHits": 12,
+        "c3LaunchClass": 3,
+        "c4GiantPalmMult": 2,
+        "c5CollisionCount": 1,
+        "c6DamageMult": 1.1,
+        "c6RetainedDosukoi": 1,
+        "c7CollisionCount": 2,
+        "c7ResistanceCompMult": 0.35
+      }
+    },
+    "crimsoncurrent": {
+      "name": "Crimson Current",
+      "rarity": "rare",
+      "category": "physical",
+      "dmg": 20,
+      "atk": 2.9,
+      "hp": 50,
+      "color": "#d94d55",
+      "glow": "#76cfff",
+      "glyph": {
+        "path": "M4 14 L9 9 L12 12 L16 5 L14 12 L20 10 L15 15 L12 13 L8 20 L10 14 Z"
+      },
+      "target": "front",
+      "range": "mid",
+      "affinities": {
+        "lightning": 0.5,
+        "fire": 0.5
+      },
+      "shopCostPips": 9000,
+      "special": {
+        "kind": "canonCrimsonCurrent",
+        "skillType": "melee",
+        "punchCount": 3,
+        "electricDamageShare": 0.5,
+        "fireDamageShare": 0.5,
+        "voltageActuateAt": 4,
+        "class3VoltageStep": 0.05,
+        "class5SplashDamage": 0.3,
+        "class5SplashKnockback": 0.25,
+        "class5BurnChance": 0.12,
+        "class5SeismicDuration": 0.45,
+        "class5ElectrocutionDuration": 0.8,
+        "class5NextHitAmp": 0.05,
+        "class6SplashDamage": 0.45,
+        "class6BurnChance": 0.2,
+        "class7SplashDamage": 0.6,
+        "class7MaxKickCritBonus": 0.15
+      }
     }
   },
   "lore": {
@@ -1308,6 +1384,14 @@
     "magmaforce": {
       "flavor": "The stone is only pretending to be solid.",
       "desc": "Raises spaced volcanic boulders from random battlefield ground. They heat from earth-brown to black and magma-red while their ground pulse warns the exact blast area, then erupt in Physical damage split evenly between Earth and Fire. Higher Classes add pulse damage, Slow, a fifth boulder, larger blasts, and central Launch."
+    },
+    "sumo": {
+      "flavor": "Plant your feet. Let the battlefield move instead.",
+      "desc": "A slow Close–Mid Physical pressure die. Push-Slaps deal moderate damage, guaranteed 0.15s Slow, and knockback. Every fourth successful hit earns Dosukoi; three Dosukoi turn the next Push into Hyakuretsuharite, an escalating multi-slap launch and ring-out sequence."
+    },
+    "crimsoncurrent": {
+      "flavor": "Three sparks to load the circuit. One burning heel to close it.",
+      "desc": "A Close–Mid Physical combo die split evenly between Lightning and Fire. Three rapid electric punches hold the target for a flaming finisher. Voltage belongs to the die, persists across targets, and transforms every fourth completed string into progressively stronger launch, Seismic Hammer, splash, Burn, and dive-kick effects."
     }
   },
   "design": {
@@ -1635,6 +1719,105 @@
             ],
             "C7": [
               "Very slightly increase pulse damage and explosion damage, slightly reduce cooldown again, and shorten the full warning animation by 3%."
+            ]
+          }
+        }
+      ]
+    },
+    "sumo": {
+      "skills": [
+        {
+          "id": "push",
+          "name": "Push-Slap / Hyakuretsuharite",
+          "type": "melee",
+          "damageCategory": "physical",
+          "affinities": {},
+          "cooldown": 4.2,
+          "range": "mid",
+          "targeting": {
+            "mode": "front",
+            "coverage": "close_mid"
+          },
+          "meter": {
+            "name": "Dosukoi",
+            "gain": "Every fourth successful Push-Slap",
+            "maximum": 3,
+            "trigger": "At 3 Dosukoi, the next Push becomes Hyakuretsuharite."
+          },
+          "visual": "Normal attacks are disembodied open-hand push-slaps centered on the enemy. Hyakuretsuharite alternates rapid palms; higher Classes add rising palms, an aerial barrage, a roughly 2× giant finishing hand, pressure burst, and human-projectile collisions.",
+          "tiers": {
+            "C1": [
+              "Push-Slap: moderate Physical damage, small–moderate knockback, guaranteed 0.15s Slow.",
+              "Every fourth successful hit grants 1 Dosukoi. At 3, the next Push becomes Hyakuretsuharite: roughly six alternating slaps ending in a medium-knockback finisher."
+            ],
+            "C2": [
+              "Hyakuretsuharite accelerates and expands to roughly 8–9 hits."
+            ],
+            "C3": [
+              "Rising palms lift the target into a true Launch; the barrage continues in the air and ends in Far Knockback."
+            ],
+            "C4": [
+              "The lift/air sequence becomes complete and the finishing palm becomes roughly twice normal hand size, driving a high barrier-clearing ring-out trajectory."
+            ],
+            "C5": [
+              "The launched target can collide with one other enemy as a Human Projectile, damaging and knocking that enemy back."
+            ],
+            "C6": [
+              "Overall Sumo attack damage increases; completing Hyakuretsuharite retains 1 Dosukoi instead of returning to zero."
+            ],
+            "C7": [
+              "Hyakuretsuharite gains extra hits and a palm-pressure burst; a launched target can collide with up to two enemies; knockback-resistant bosses take compensation damage for the resisted displacement."
+            ]
+          }
+        }
+      ]
+    },
+    "crimsoncurrent": {
+      "skills": [
+        {
+          "id": "current",
+          "name": "Crimson Current",
+          "type": "melee",
+          "damageCategory": "physical",
+          "affinities": {
+            "lightning": 0.5,
+            "fire": 0.5
+          },
+          "cooldown": 2.9,
+          "range": "mid",
+          "targeting": {
+            "mode": "front",
+            "holdDuringString": true
+          },
+          "meter": {
+            "name": "Voltage",
+            "owner": "die",
+            "gain": "The third punch of a successfully continuing combo builds Voltage.",
+            "actuation": "The fourth Voltage string actuates Max Voltage.",
+            "persistence": "Persists across target changes/deaths and is consumed only by a successful Max Voltage finisher; an interrupted string does not consume stored Voltage."
+          },
+          "visual": "Three rapid disembodied fist impacts strike low → high → middle with blue electrical shock while holding the target. A red particle-charged fireball forms just ahead of the enemy, swings forward like a flaming kick/wave, bursts on impact, and knocks the target back.",
+          "tiers": {
+            "C1": [
+              "Three rapid electrical punches strike low → high → middle and hold the target in place, followed by the charged Fire finisher and short knockback. Total elemental identity is 50% Lightning / 50% Fire."
+            ],
+            "C2": [
+              "Voltage begins building on each combo’s third punch. On the fourth string it actuates with a thicker electrical shock and slight lift."
+            ],
+            "C3": [
+              "Stored Voltage powers the string by +5% / +10% / +15%. Max Voltage upgrades the finisher into a larger dive-kick burst with Far Knockback."
+            ],
+            "C4": [
+              "Max Voltage becomes a true Launch followed by a timed aerial dive kick."
+            ],
+            "C5": [
+              "The normal third punch becomes a launcher. The Fire finisher gains medium knockback plus Flame Splash: 30% damage, 25% knockback, 12% Burn chance, excluding the primary target. Max Voltage adds a 0.45s three-impact Seismic Hammer and 0.8s Electrocution; the next non-persistent hit against that enemy deals +5% damage."
+            ],
+            "C6": [
+              "Overall Crimson Current damage increases. Flame Splash becomes 45% damage and Burn chance becomes 20%."
+            ],
+            "C7": [
+              "Seismic launchers become full-size, kick AoEs expand, Flame Splash becomes 60%, and the Max Voltage kick gains extra damage and +15% critical chance."
             ]
           }
         }
