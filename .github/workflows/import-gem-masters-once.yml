@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm ci
+          npm install
           npm run check:hosting
 
       - name: Create reviewed release candidate branch
