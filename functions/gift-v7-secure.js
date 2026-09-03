@@ -49,6 +49,20 @@ const DEV_CODES = Object.freeze({
   'TTD-SLITHER-C5': { label:'Slither Vine C5 Test Grant', reward:{ dice:[{ key:'slithervine', cls:5 }] } },
   'TTD-SLITHER-C6': { label:'Slither Vine C6 Test Grant', reward:{ dice:[{ key:'slithervine', cls:6 }] } },
   'TTD-SLITHER-C7': { label:'Slither Vine C7 Test Grant', reward:{ dice:[{ key:'slithervine', cls:7 }] } },
+  'TTD-SUMO-C1': { label:'Sumo C1 Test Grant', reward:{ dice:[{ key:'sumo', cls:1 }] } },
+  'TTD-SUMO-C2': { label:'Sumo C2 Test Grant', reward:{ dice:[{ key:'sumo', cls:2 }] } },
+  'TTD-SUMO-C3': { label:'Sumo C3 Test Grant', reward:{ dice:[{ key:'sumo', cls:3 }] } },
+  'TTD-SUMO-C4': { label:'Sumo C4 Test Grant', reward:{ dice:[{ key:'sumo', cls:4 }] } },
+  'TTD-SUMO-C5': { label:'Sumo C5 Test Grant', reward:{ dice:[{ key:'sumo', cls:5 }] } },
+  'TTD-SUMO-C6': { label:'Sumo C6 Test Grant', reward:{ dice:[{ key:'sumo', cls:6 }] } },
+  'TTD-SUMO-C7': { label:'Sumo C7 Test Grant', reward:{ dice:[{ key:'sumo', cls:7 }] } },
+  'TTD-CRIMSON-C1': { label:'Crimson Current C1 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:1 }] } },
+  'TTD-CRIMSON-C2': { label:'Crimson Current C2 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:2 }] } },
+  'TTD-CRIMSON-C3': { label:'Crimson Current C3 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:3 }] } },
+  'TTD-CRIMSON-C4': { label:'Crimson Current C4 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:4 }] } },
+  'TTD-CRIMSON-C5': { label:'Crimson Current C5 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:5 }] } },
+  'TTD-CRIMSON-C6': { label:'Crimson Current C6 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:6 }] } },
+  'TTD-CRIMSON-C7': { label:'Crimson Current C7 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:7 }] } },
 });
 
 // Production promo definitions contain no plaintext player-facing code. The incoming
