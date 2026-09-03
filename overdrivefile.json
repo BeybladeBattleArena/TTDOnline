@@ -355,6 +355,50 @@
           }
         }
       }
+    },
+    "hammerthundergod": {
+      "name": "Hammer of Thunder God",
+      "element": "Lightning",
+      "dpCost": 18,
+      "glyph": {
+        "path": "M5 5 H18 V10 H5 Z M10 10 H13 V21 H10 Z M3 6 H5 V9 H3 Z M18 6 H21 V9 H18 Z"
+      },
+      "flavor": "First the sky warns you. Then the hammer answers.",
+      "description": "Choose an impact point, darken the battlefield, and call a metal war hammer down inside a concentrated white-blue lightning strike. The mixed Lightning/Metal impact leaves the charged hammer behind, which discharges a larger field 1.1 seconds later and inflicts Electrocution.",
+      "acquisition": {
+        "kind": "test-code",
+        "testCode": "TTD-HAMMER-THUNDER",
+        "rollout": "playtest"
+      },
+      "special": {
+        "kind": "hammerThunderGod",
+        "placementSeconds": 4,
+        "defaultTarget": "battlefield-center",
+        "tapToActivateEarly": true,
+        "draggable": true,
+        "stormDarkenAlpha": 0.48,
+        "firstSkyFlashDelaySeconds": 0,
+        "secondSkyFlashDelaySeconds": 0.6,
+        "strikeDelayAfterSecondFlashSeconds": 0.4,
+        "impactDelaySeconds": 1.0,
+        "boltDurationSeconds": 0.16,
+        "boltWidth": 14,
+        "damage": 56,
+        "damageTuning": "provisional-moderate-good",
+        "damageCategory": "special",
+        "affinities": {
+          "lightning": 0.5,
+          "metal": 0.5
+        },
+        "impactRadiusFractionOfBattleWidth": 0.15,
+        "impactRadiusMin": 50,
+        "impactRadiusMax": 78,
+        "skyClearSeconds": 0.7,
+        "hammerDischargeDelaySeconds": 1.1,
+        "dischargeRadiusMultiplier": 1.1,
+        "electrocutionSeconds": 1.8,
+        "hammerDissolveSeconds": 0.45
+      }
     }
   }
 }

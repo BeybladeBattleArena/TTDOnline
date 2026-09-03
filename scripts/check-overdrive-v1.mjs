@@ -94,6 +94,14 @@ must(meteor?.special?.affinities?.fire===1,'Meteor Impact damage must remain 100
 must(meteor?.special?.damageTuning==='provisional-potent'&&Number(meteor?.special?.damage)>Number(gaia?.special?.damage),'Meteor first-pass damage must stay explicitly provisional and stronger than Gaia Crash.');
 must(meteor?.special?.impactTargetPve==='battlefield-center'&&meteor?.special?.impactTargetPvp==='opponent-dice-tray','Meteor PvE/PvP targeting contract drifted.');
 
+const hammer=catalog.dice.hammerthundergod;
+must(hammer?.name==='Hammer of Thunder God'&&hammer?.dpCost===18,'Hammer of Thunder God identity/cost drifted.');
+must(hammer?.special?.placementSeconds===4&&hammer?.special?.defaultTarget==='battlefield-center','Hammer targeting must remain four seconds with center fallback.');
+must(hammer?.special?.secondSkyFlashDelaySeconds===0.6&&hammer?.special?.strikeDelayAfterSecondFlashSeconds===0.4&&hammer?.special?.impactDelaySeconds===1.0,'Hammer sky telegraph timing drifted.');
+must(hammer?.special?.affinities?.lightning===0.5&&hammer?.special?.affinities?.metal===0.5,'Hammer impact must remain split Lightning/Metal.');
+must(hammer?.special?.hammerDischargeDelaySeconds===1.1&&hammer?.special?.dischargeRadiusMultiplier===1.1&&hammer?.special?.electrocutionSeconds===1.8,'Hammer delayed Electrocution contract drifted.');
+must(hammer?.special?.damageTuning==='provisional-moderate-good','Hammer first-pass impact damage must remain explicitly provisional.');
+
 const zetsa=catalog.dice.zetsascauldron;
 must(zetsa?.name==="Zetsa's Cauldron"&&zetsa?.dpCost===16,'Zetsa Cauldron identity/cost drifted.');
 must(zetsa?.element==='Poison'&&zetsa?.special?.kind==='zetsasCauldron','Zetsa Cauldron Poison/special identity drifted.');
@@ -117,6 +125,7 @@ for(const marker of [
 ])must(backend.includes(marker),`Overdrive backend contract missing: ${marker}`);
 must(main.includes("require('./overdrive-v1')")&&main.includes('...overdrive'),'Overdrive cloud functions are not exported from main-v6.js.');
 must(fs.readFileSync('functions/gift-v7-secure.js','utf8').includes("'TTD-BLACK-TAURUS'")&&fs.readFileSync('functions/gift-v7-secure.js','utf8').includes("key:'blacktaurus'"),'Black Taurus online playtest ownership grant missing.');
+must(gift.includes("'TTD-HAMMER-THUNDER'")&&gift.includes("key:'hammerthundergod'"),'Hammer of Thunder God online playtest ownership grant missing.');
 
 for(const marker of [
   "'ttd:overdrive-ready'","'ttd:overdrive-state'","'ttd:overdrive-save-request'","'ttd:overdrive-save-result'",
@@ -131,9 +140,13 @@ for(const marker of [
 ])must(runtime.includes(marker),`Overdrive runtime contract missing: ${marker}`);
 
 for(const marker of [
-  'moonwolfsummon','gaiacrash','blacktaurus','summonWolf','summonTaurus','highestHpTarget','startTaurusWinding','startTaurusStamp','startTaurusBullRush','updateTaurus','drawTaurusShape','drawTaurusStampLog','damageBlackTaurus','wolfDashAndSnack','wolfHowl','wolfClaw','wolfRaidKick',
+  'moonwolfsummon','gaiacrash','blacktaurus','hammerthundergod','summonWolf','summonTaurus','highestHpTarget','startTaurusWinding','startTaurusStamp','startTaurusBullRush','updateTaurus','drawTaurusShape','drawTaurusStampLog','damageBlackTaurus','wolfDashAndSnack','wolfHowl','wolfClaw','wolfRaidKick',
   'ttdGaiaCrashTargetV1','commitGaia','resolveGaia','ttdZetsasCauldronTargetV1','commitZetsa','resolveZetsa','resolveZetsaSplash','drawCauldronShape','startLift','damageEnemy','__TTD_OVERDRIVE_ABILITIES',
 ])must(abilities.includes(marker),`Playable Overdrive ability bridge missing: ${marker}`);
+for(const marker of ['applyElectrocutionStatus','isElectrocutionStatusActive','clearElectrocutionStatus','tickElectrocutionStatus','drawElectrocutionStatuses','makeHammerReticle','commitHammerThunderGod','resolveHammerThunderGod','resolveHammerImpact','resolveHammerDischarge','drawThunderHammerShape','ttdHammerThunderGodTargetV1'])must(abilities.includes(marker),`Hammer/Electrocution runtime contract missing: ${marker}`);
+must(abilities.includes("if(targeting.kind==='hammerthundergod') commitHammerThunderGod()"),'Hammer center fallback must resolve through the targeting deadline.');
+must(abilities.includes("applyElectrocutionStatus(e,Number(cfg.electrocutionSeconds||1.8),{exactDuration:true,source:'hammerthundergod'})"),'Hammer discharge must apply exact-duration reusable Electrocution.');
+
 for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHitKnockback','relaunchAirborne']){
   must(JSON.stringify(catalog).includes(marker),`Overdrive ability data missing: ${marker}`);
 }
