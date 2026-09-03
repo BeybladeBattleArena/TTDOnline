@@ -1,4 +1,5 @@
 // Persistent release guard for the canonical Sumo and Crimson Current standard-die implementation.
+// C1-C7 progression, rarity, affinity, Dosukoi, and Voltage gates are release-blocking contracts.
 import fs from 'node:fs';
 const must=(c,m)=>{if(!c)throw new Error(m);};
 const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
