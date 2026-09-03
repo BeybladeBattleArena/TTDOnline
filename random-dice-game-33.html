@@ -3804,7 +3804,7 @@
       // actively changing lanes: real horizontal walk at normal speed, no forward progress meanwhile
       const targetX = zombieColumnX(z.walkingToLane);
       const dir = targetX>z.x ? 1 : -1;
-      z.x += dir*z.speed*dt;
+      z.x += dir*z.speed*frogMovementMult(z)*dt;
       if((dir>0 && z.x>=targetX) || (dir<0 && z.x<=targetX)){
         z.x = targetX; z.lane = z.walkingToLane; z.walkingToLane = null;
       }
@@ -3813,7 +3813,7 @@
     const engageBand = z.def.engageBand || 'close';
     const engageAt = engageBand==='close' ? 0.90 : 0.55; // policeman stops in the mid band, not right at the tray
     if(z.approach < engageAt){
-      z.approach = Math.min(1, z.approach + (z.speed/260)*dt);
+      z.approach = Math.min(1, z.approach + (z.speed/260)*frogMovementMult(z)*dt);
       z.engaged = false;
     } else {
       z.engaged = true;
@@ -4575,7 +4575,19 @@
   function applyDefenseDown(e, mult, dur){ applyStatus(e, 'defDown', {t:dur, mult}); }
   function applySilence(e, dur){ applyStatus(e, 'silence', {t:dur}); }
   function applyParalysis(e, dur){ applyStatus(e, 'paralysis', {t:dur, checkT:0}); }
-  function applyPoisonTicks(e, perTick, dur){ e.poison = {t:statusResistDuration(e,dur), tickT:0, tickInterval:0.6, perTick}; }
+  function applyPoisonTicks(e, perTick, dur, options){
+    const exact=!!(options&&options.exactDuration),seconds=Math.max(0.05,Number(dur)||0.05);
+    e.poison={t:exact?seconds:statusResistDuration(e,seconds),tickT:0,tickInterval:0.6,perTick:Math.max(0,Number(perTick)||0)};
+  }
+  function isFrogStatusActive(e){return !!(e&&e.frogStatus&&e.frogStatus.until>state.time);}
+  function frogMovementMult(e){return isFrogStatusActive(e)?Math.max(0.05,Number(e.frogStatus.moveMult)||0.82):1;}
+  function frogElementalTakenMult(e){return isFrogStatusActive(e)?Math.max(1,Number(e.frogStatus.elementalTakenMult)||1.12):1;}
+  function applyFrogStatus(e,dur,options){
+    if(!e||!e.alive)return false;options=options||{};const t=state.time||0,seconds=Math.max(0.05,Number(dur)||2),restore=Math.max(0.05,Number(options.restoreSeconds)||0.32);
+    e.frogStatus={start:t,until:t+seconds,restoreUntil:t+seconds+restore,moveMult:Math.max(0.05,Number(options.moveMultiplier)||0.82),elementalTakenMult:Math.max(1,Number(options.elementalDamageTakenMultiplier)||1.12),smokeSeconds:Math.max(0.05,Number(options.smokeSeconds)||0.24),source:String(options.source||'unknown'),seed:Math.random()*1000};
+    return true;
+  }
+  function updateFrogStatus(e){const f=e&&e.frogStatus;if(!f)return;if((state.time||0)>=f.restoreUntil)e.frogStatus=null;}
   function enemyOutgoingDmgMult(e){
     return (e.statuses && e.statuses.burn && e.statuses.burn.t>0) ? e.statuses.burn.atkMult : 1;
   }
@@ -5666,7 +5678,7 @@
     amount*=armorMult(e);if(dmgCategory==='physical'&&e.statuses&&e.statuses.defDown&&e.statuses.defDown.t>0)amount*=(1+e.statuses.defDown.mult);
     const c=canonState(e);if(c.crimsonElectroUntil>state.time&&!meta.persistent){amount*=1.05;c.crimsonElectroUntil=0;fx('secondaryShock',enemyRenderPos(e),{dur:.25});}let dr=Math.max(0,e.dmgReduction||0);if(c.decayedT>0)dr*=1-(c.decayedDrSupp||0);if(c.fracture&&c.fracture.stacks>=c.fracture.max)dr*=1-(c.fracture.drSupp||0);if(meta.physicalPen)dr*=1-meta.physicalPen;amount*=1-dr;
     if(c.fracture&&c.fracture.stacks>0){const v=c.fracture.stacks*0.06;amount*=1+v*(meta.persistent?(c.fracture.dotShare||0):1);}
-    let finalAmount=amount;if(affinities){const breakdown=computeElementalSplit(amount,affinities);finalAmount=0;Object.keys(breakdown).forEach(el=>{finalAmount+=breakdown[el]*enemyElementalMult(e,el==='__nonelemental'?null:el);});}
+    let finalAmount=amount;if(affinities){const breakdown=computeElementalSplit(amount,affinities);finalAmount=0;Object.keys(breakdown).forEach(el=>{const frogMult=el==='__nonelemental'?1:frogElementalTakenMult(e);finalAmount+=breakdown[el]*enemyElementalMult(e,el==='__nonelemental'?null:el)*frogMult;});}
     const before=e.hp;e.hp-=finalAmount;e.hitFlash=0.12;const actual=Math.max(0,Math.min(before,finalAmount));if(state.zombieMode&&currentAttackerDieKey){state.zTotalDamageDealt+=actual;state.zDamageByDieKey[currentAttackerDieKey]=(state.zDamageByDieKey[currentAttackerDieKey]||0)+actual;}
     const p=enemyRenderPos(e);spawnDmgNumber(p.x,p.y-8,finalAmount);tryJuggle(e);if(e.hp<=0)killEnemy(e);if(waking&&e.alive)damageEnemy(e,amount*0.5,dmgCategory,{}, {sleepBonus:true});return actual;
   }
@@ -6775,6 +6787,33 @@
     ctx.beginPath(); ctx.moveTo(0, ch*0.96); ctx.lineTo(cw, ch*0.96); ctx.stroke();
   }
 
+
+  function frogOriginalRadius(e){
+    if(state.adventure||state.zombieMode){const m=MONSTERS[e.key]||{r:8};return Number(m.r||8)*(e.tier==='typhoon'?1.5:e.tier==='sub'?1.15:e.tier==='small'?1.05:1);}
+    return e.isBoss?12:e.kind==='small'?5:7.5;
+  }
+  function drawFrogSmokePuffs(cx,cy,r,q,seed){
+    const alpha=Math.max(0,1-q),spread=r*(0.35+q*.9);ctx.save();
+    for(let i=0;i<6;i++){const a=i*1.047+seed*.013,rr=spread*(.35+(i%3)*.28),x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr*.6-q*r*.35;ctx.globalAlpha=alpha*(.28+(i%3)*.12);ctx.fillStyle='#70438d';ctx.beginPath();ctx.arc(x,y,r*(.27+(i%2)*.10),0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<7;i++){const a=i*.91+seed*.021,rr=r*(.2+(i%4)*.17),x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr*.45-q*r*1.15;ctx.globalAlpha=alpha*(.45+(i%2)*.18);ctx.fillStyle=i%2?'#9be34f':'#70c93f';ctx.beginPath();ctx.arc(x,y,Math.max(.7,r*.08),0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+  function drawFrogBody(cx,cy,scale,alpha,stretchX=1,stretchY=1,colorMix=0,e=null){
+    const baseR=8/3,r=baseR*scale;let original='#6fae7d';if(e&&(state.adventure||state.zombieMode))original=(MONSTERS[e.key]||{}).color||original;else if(e)original=e.isBoss?'#e2584f':e.kind==='small'?'#6fae7d':'#c98bd6';
+    ctx.save();ctx.globalAlpha*=alpha;ctx.translate(cx,cy);ctx.scale(stretchX,stretchY);
+    const top=colorMix>0?original:'#8dcc3f';ctx.fillStyle=top;ctx.strokeStyle='rgba(10,20,10,.7)';ctx.lineWidth=Math.max(.6,r*.22);ctx.beginPath();ctx.ellipse(0,-r*.12,r*1.05,r*.82,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.save();ctx.beginPath();ctx.rect(-r*1.2,r*.18,r*2.4,r*.82);ctx.clip();ctx.fillStyle=colorMix>0?original:'#743f8f';ctx.beginPath();ctx.ellipse(0,-r*.12,r*1.05,r*.82,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.fillStyle='#dff6b5';for(const sx of [-1,1]){ctx.beginPath();ctx.arc(sx*r*.48,-r*.68,r*.20,0,Math.PI*2);ctx.fill();ctx.fillStyle='#132013';ctx.beginPath();ctx.arc(sx*r*.48,-r*.70,r*.08,0,Math.PI*2);ctx.fill();ctx.fillStyle='#dff6b5';}
+    ctx.strokeStyle='#5e3379';ctx.lineWidth=Math.max(.7,r*.16);for(const sx of [-1,1]){ctx.beginPath();ctx.moveTo(sx*r*.58,r*.38);ctx.lineTo(sx*r*1.20,r*.78);ctx.lineTo(sx*r*1.45,r*.66);ctx.stroke();}
+    ctx.restore();
+  }
+  function drawFrogStatusEnemy(e,p){
+    const f=e&&e.frogStatus;if(!f)return false;const t=state.time||0;if(t>=f.restoreUntil)return false;const originalR=Math.max(5,frogOriginalRadius(e)),entry=Math.max(.05,Number(f.smokeSeconds)||.24),active=t<f.until,hop=active?Math.abs(Math.sin((t+f.seed)*Math.PI*3.4))*3.2:0;
+    if(active){const entryQ=Math.max(0,Math.min(1,(t-f.start)/entry));if(entryQ<1)drawFrogSmokePuffs(p.x,p.y,originalR,entryQ,f.seed);drawFrogBody(p.x,p.y-hop,1,entryQ<.45?Math.max(0,(entryQ-.15)/.30):1,1,1,0,e);}
+    else {const q=Math.max(0,Math.min(1,(t-f.until)/Math.max(.05,f.restoreUntil-f.until))),targetScale=Math.max(1,originalR/(8/3)),scale=1+(targetScale-1)*q,osc=Math.sin(q*Math.PI*3)*(1-q),sx=1+osc*.20,sy=1-osc*.16;drawFrogBody(p.x,p.y,scale,1-q*.20,sx,sy,q>.72?1:0,e);drawFrogSmokePuffs(p.x,p.y,originalR,Math.min(1,q*1.25),f.seed+17);}
+    const frogR=8/3,barW=Math.max(12,frogR*4.2),pct=Math.max(0,e.hp/e.maxHp);ctx.fillStyle='rgba(0,0,0,.58)';ctx.fillRect(p.x-barW/2,p.y-hop-9,barW,2.4);ctx.fillStyle=pct>.5?'#6fae7d':pct>.25?'#d9b26a':'#e2584f';ctx.fillRect(p.x-barW/2,p.y-hop-9,barW*pct,2.4);return true;
+  }
+
   function drawLane(dt){
     ctx.clearRect(0,0,cw,ch);
 
@@ -6813,6 +6852,7 @@
       const groundP = enemyRenderPos(e);
       const airLift = liftOffset(e);
       const p = airLift ? {x:groundP.x, y:groundP.y-airLift} : groundP;
+      if(drawFrogStatusEnemy(e,p)) continue;
       if(e.shakeT>0){
         const sh = Math.sin(state.time*45)*2.4*(e.shakeT/0.4);
         p.x += sh;
@@ -7489,6 +7529,7 @@
       recomputeSlow(e,dt); recomputeArmor(e,dt);
       updateNewStatuses(e, dt);
       updateCanonEnemyStatus(e, dt);
+      updateFrogStatus(e);
       if(!e.alive) continue;
       if(e.poison){
         e.poison.tickT += dt;
@@ -7523,7 +7564,7 @@
         par.t -= dt; if(par.t<=0) e.statuses.paralysis=null;
       }
       if(canonEnemyHardControlled(e)) continue;
-      const silenced = (e.statuses && e.statuses.silence && e.statuses.silence.t>0) || !!(e.canon && e.canon.sealedT>0);
+      const silenced = (e.statuses && e.statuses.silence && e.statuses.silence.t>0) || !!(e.canon && e.canon.sealedT>0) || isFrogStatusActive(e);
       if(e.isZombie){
         if(e.actionCdT>0) e.actionCdT -= dt;
         if(e.pausedT>0){ e.pausedT -= dt; continue; }
@@ -7532,7 +7573,7 @@
         continue;
       }
       if(state.adventure && !silenced && !e._slitherBlocked) tickMonsterSkills(e, dt);
-      let speedMult = e.slowMult;
+      let speedMult = e.slowMult*frogMovementMult(e);
       if(e.enrageFlag){
         const pct = e.hp/e.maxHp;
         const thresholds = [0.8,0.6,0.4,0.2];
@@ -7868,6 +7909,9 @@
   __ttdExposeCore('aliveEnemies',()=>aliveEnemies);
   __ttdExposeCore('applySilence',()=>applySilence);
   __ttdExposeCore('applySlow',()=>applySlow);
+  __ttdExposeCore('applyPoisonTicks',()=>applyPoisonTicks);
+  __ttdExposeCore('applyFrogStatus',()=>applyFrogStatus);
+  __ttdExposeCore('isFrogStatusActive',()=>isFrogStatusActive);
   __ttdExposeCore('beginDrag',()=>beginDrag);
   __ttdExposeCore('beginInstDrag',()=>beginInstDrag);
   __ttdExposeCore('buildBoardDOM',()=>buildBoardDOM);

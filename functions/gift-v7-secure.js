@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
 const catalog = require('./dicefile.generated.json');
+const overdriveCatalog = require('./overdrivefile.generated.json');
 const ITEM_DEFS = require('./items-v1')._ITEM_DEFS;
 
 const db = getFirestore();
@@ -11,6 +12,7 @@ const JEWELS = new Set([
   'power','cooldown','physDef','specDef','hp','critChance','critBoost','spGen','experience','luck','insight','potency',
   ...ELEMENTS.map((element) => `elem_${element}`),
 ]);
+const OVERDRIVE_DICE = new Set(Object.keys(overdriveCatalog.dice || {}));
 const DICE = new Map(
   Object.entries(catalog.dice || {})
     .filter(([, die]) => die && typeof die.rarity === 'string')
@@ -63,6 +65,7 @@ const DEV_CODES = Object.freeze({
   'TTD-CRIMSON-C5': { label:'Crimson Current C5 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:5 }] } },
   'TTD-CRIMSON-C6': { label:'Crimson Current C6 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:6 }] } },
   'TTD-CRIMSON-C7': { label:'Crimson Current C7 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:7 }] } },
+  'TTD-ZETSA': { label:"Zetsa's Cauldron Overdrive Test Grant", reward:{ overdriveDice:[{ key:'zetsascauldron' }] } },
 });
 
 // Production promo definitions contain no plaintext player-facing code. The incoming
@@ -137,6 +140,7 @@ function rewardOf(raw = {}) {
     pips:Math.max(0,Math.min(1000000,Number.isSafeInteger(raw.pips)?raw.pips:0)),
     astras:Math.max(0,Math.min(100000,Number.isSafeInteger(raw.astras)?raw.astras:0)),
     dice:Array.isArray(raw.dice)?raw.dice.slice(0,20):[],
+    overdriveDice:Array.isArray(raw.overdriveDice)?raw.overdriveDice.slice(0,10):[],
     jewels:Array.isArray(raw.jewels)?raw.jewels.slice(0,100):[],
     keys:raw.keys&&typeof raw.keys==='object'?raw.keys:{},
     cards:raw.cards&&typeof raw.cards==='object'?raw.cards:{},
@@ -204,8 +208,9 @@ exports.redeemOnlineGiftCode = onCall({region:REGION,timeoutSeconds:30},async(re
     if(max>0&&used>=max)throw new HttpsError('resource-exhausted','That gift code has reached its redemption limit.');
     if(!gameSnap.exists)throw new HttpsError('failed-precondition','The online profile is not initialized.');
 
-    const reward=rewardOf(codeData.reward), game=gameSnap.data(), outDice=[], outJewels=[];
+    const reward=rewardOf(codeData.reward), game=gameSnap.data(), outDice=[], outOverdrives=[], outJewels=[];
     for(const spec of reward.dice){const key=String(spec?.key||''),rarity=DICE.get(key);if(!rarity)continue;const cls=Math.max(1,Math.min(10,Number.isSafeInteger(spec.cls)?spec.cls:1)),dieId=id('d');outDice.push({key,rarity,instance:{id:dieId,cls,enchants:[null,null,null,null]}});tx.set(db.doc(`users/${auth.uid}/dice/${dieId}`),{id:dieId,key,rarity,source:secure?'secure_promo':dev?'builtin_test_code':'gift_code',cls,enchants:[null,null,null,null],createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});}
+    for(const spec of reward.overdriveDice){const key=String(spec?.key||'');if(!OVERDRIVE_DICE.has(key))continue;outOverdrives.push({key});tx.set(db.doc(`users/${auth.uid}/overdriveDice/${key}`),{key,source:secure?'secure_promo':dev?'builtin_test_code':'gift_code',starter:false,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()},{merge:true});}
     for(const spec of reward.jewels){const jewelId=String(spec?.jewelId||'');if(!JEWELS.has(jewelId))continue;const tier=Math.max(1,Math.min(5,Number.isSafeInteger(spec.tier)?spec.tier:1)),jewelInstanceId=id('j'),jewel={kind:'jewel',id:jewelInstanceId,jewelId,tier};outJewels.push(jewel);tx.set(db.doc(`users/${auth.uid}/jewels/${jewelInstanceId}`),{...jewel,socketedIn:null,source:secure?'secure_promo':dev?'builtin_test_code':'gift_code',createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});}
     ['normal','hard','hell'].forEach((difficulty,i)=>{const add=Math.max(0,Math.min(99,Number(reward.keys[difficulty]||0)));if(!add)return;tx.set(keyRefs[i],{kind:'key',difficultyKey:difficulty,name:`Chest Key [${difficulty[0].toUpperCase()+difficulty.slice(1)}]`,count:Number(keySnaps[i].data()?.count||0)+add,updatedAt:FieldValue.serverTimestamp()},{merge:true});});
     ['lesser','master'].forEach((cardId,i)=>{const add=Math.max(0,Math.min(99,Number(reward.cards[cardId]||0)));if(!add)return;tx.set(cardRefs[i],{kind:'card',cardId,name:cardId==='lesser'?'Lesser Enchant Card':'Master Enchant Card',count:Number(cardSnaps[i].data()?.count||0)+add,updatedAt:FieldValue.serverTimestamp()},{merge:true});});
@@ -222,8 +227,8 @@ exports.redeemOnlineGiftCode = onCall({region:REGION,timeoutSeconds:30},async(re
     tx.update(gameRef,gamePatch);
     tx.set(redemptionRef,{promoId:secure?secure.id:null,codeHash:secure?null:legacyHash,label:String(codeData.label||'Gift Code').slice(0,80),secure:!!secure,builtin:!!dev,redeemedAt:FieldValue.serverTimestamp()});
     if(!builtin&&max>0)tx.update(codeRef,{redeemedCount:used+1,updatedAt:FieldValue.serverTimestamp()});
-    tx.set(transactionRef,{operation:'gift_code',promoId:secure?secure.id:null,codeHash:secure?null:legacyHash,label:String(codeData.label||'').slice(0,80),secure:!!secure,builtin:!!dev,pips:reward.pips,astras:reward.astras,dieIds:outDice.map((die)=>die.instance.id),jewelIds:outJewels.map((jewel)=>jewel.id),itemGrants:reward.items,createdAt:FieldValue.serverTimestamp()});
-    summary={label:String(codeData.label||'Gift Code').slice(0,80),pips:reward.pips,astras:reward.astras,dice:outDice,jewels:outJewels,cards:{lesser:Number(reward.cards.lesser||0),master:Number(reward.cards.master||0)},items:Object.entries(reward.items).map(([itemId,count])=>({itemId,name:ITEM_DEFS[itemId]?.name||itemId,count}))};
+    tx.set(transactionRef,{operation:'gift_code',promoId:secure?secure.id:null,codeHash:secure?null:legacyHash,label:String(codeData.label||'').slice(0,80),secure:!!secure,builtin:!!dev,pips:reward.pips,astras:reward.astras,dieIds:outDice.map((die)=>die.instance.id),overdriveKeys:outOverdrives.map((die)=>die.key),jewelIds:outJewels.map((jewel)=>jewel.id),itemGrants:reward.items,createdAt:FieldValue.serverTimestamp()});
+    summary={label:String(codeData.label||'Gift Code').slice(0,80),pips:reward.pips,astras:reward.astras,dice:outDice,overdriveDice:outOverdrives,jewels:outJewels,cards:{lesser:Number(reward.cards.lesser||0),master:Number(reward.cards.master||0)},items:Object.entries(reward.items).map(([itemId,count])=>({itemId,name:ITEM_DEFS[itemId]?.name||itemId,count}))};
   });
   return {ok:true,reward:summary,snapshot:await snapshot(auth.uid)};
 });

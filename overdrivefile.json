@@ -42,8 +42,15 @@
         "hp": 210,
         "attack": 24,
         "damageReduction": 0.03,
-        "weak": ["metal", "holy"],
-        "resist": ["shadow", "nature", "fire"],
+        "weak": [
+          "metal",
+          "holy"
+        ],
+        "resist": [
+          "shadow",
+          "nature",
+          "fire"
+        ],
         "weaknessMultiplier": 1.5,
         "resistanceMultiplier": 0.5,
         "deathFadeSeconds": 1.2,
@@ -52,8 +59,14 @@
             "category": "physical",
             "range": "melee",
             "target": "frontmost-single",
-            "weights": [0.85, 1.05],
-            "majorBossWeights": [1.05, 1.1],
+            "weights": [
+              0.85,
+              1.05
+            ],
+            "majorBossWeights": [
+              1.05,
+              1.1
+            ],
             "biteGapSeconds": 0.35,
             "stunSeconds": 0.8,
             "restrainNonMajorBoss": true
@@ -69,7 +82,10 @@
             "category": "physical",
             "range": "melee",
             "target": "frontmost-single",
-            "weights": [1.05, 1.2],
+            "weights": [
+              1.05,
+              1.2
+            ],
             "secondHitKnockback": 15,
             "hitGapSeconds": 0.22
           },
@@ -111,7 +127,9 @@
         "damage": 42,
         "damageTuning": "provisional-moderate",
         "damageCategory": "special",
-        "affinities": {"earth": 1},
+        "affinities": {
+          "earth": 1
+        },
         "areaReference": "3x3-standard-ogres",
         "radiusFractionOfBattleWidth": 0.15,
         "radiusMin": 48,
@@ -161,7 +179,11 @@
         "branchTipWidthScale": 0.5,
         "frontLayerRandom": true,
         "redirectBeginsWhenFullyGrown": true,
-        "redirectTargets": ["player", "tower", "dice"],
+        "redirectTargets": [
+          "player",
+          "tower",
+          "dice"
+        ],
         "elementAffinity": "nature",
         "elementAffinityFraction": 1,
         "currentGameMatchingElementDamageMultiplier": 0.5,
@@ -195,7 +217,9 @@
         "damage": 72,
         "damageTuning": "provisional-potent",
         "damageCategory": "special",
-        "affinities": {"fire": 1},
+        "affinities": {
+          "fire": 1
+        },
         "meteorSizeDieScale": 0.95,
         "impactTargetPve": "battlefield-center",
         "impactTargetPvp": "opponent-dice-tray",
@@ -203,6 +227,52 @@
         "radiusMin": 58,
         "radiusMax": 92,
         "explosionFadeSeconds": 0.8
+      }
+    },
+    "zetsascauldron": {
+      "name": "Zetsa's Cauldron",
+      "element": "Poison",
+      "dpCost": 16,
+      "glyph": {
+        "path": "M5 8 H19 L18 11 C18 17 16 20 12 20 C8 20 6 17 6 11 Z M7 8 C7 5 9 4 12 4 C15 4 17 5 17 8 M4 9 H20 M8 21 H16"
+      },
+      "flavor": "Bubble, boil, hop.",
+      "description": "Place a black iron cauldron that splashes a circular area with cursed green brew. The splash deals no direct damage, but guarantees Poison and briefly transforms every enemy hit into a vulnerable frog.",
+      "acquisition": {
+        "kind": "test-code",
+        "testCode": "TTD-ZETSA",
+        "rollout": "playtest"
+      },
+      "special": {
+        "kind": "zetsasCauldron",
+        "placementSeconds": 4,
+        "defaultTarget": "battlefield-center",
+        "tapToActivateEarly": true,
+        "draggable": true,
+        "fallSeconds": 0.55,
+        "landingShockwaveSeconds": 0.32,
+        "landingShockwaveGameplay": false,
+        "cauldronSizeReference": "2x2-standard-ogres",
+        "cauldronRadiusFractionOfBattleWidth": 0.09,
+        "cauldronRadiusMin": 27,
+        "cauldronRadiusMax": 43,
+        "violentBubbleSeconds": 1.1,
+        "splashRadiusFractionOfBattleWidth": 0.17,
+        "splashRadiusMin": 54,
+        "splashRadiusMax": 84,
+        "directDamage": 0,
+        "poisonChance": 1,
+        "poisonSeconds": 2.2,
+        "poisonPerTick": 3,
+        "frogChance": 1,
+        "frogSeconds": 2,
+        "frogMovementMultiplier": 0.82,
+        "frogElementalDamageTakenMultiplier": 1.12,
+        "frogSizeReference": "one-third-standard-goblin",
+        "frogEnemyActionsSuppressed": true,
+        "transformSmokeSeconds": 0.24,
+        "restoreSeconds": 0.32,
+        "fadeSeconds": 0.6
       }
     }
   }

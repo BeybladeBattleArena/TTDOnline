@@ -19,6 +19,7 @@
   let busy = false;
   let targeting = null;
   let wolf = null;
+  let cauldron = null;
   let lastFrame = performance.now();
   const particles = [];
   const timedFx = [];
@@ -328,7 +329,7 @@
     node.appendChild(style);
     wrap.appendChild(node);
     const start = now();
-    targeting = { node, countdown, def, cfg, point: { x: Number(window.cw || 300) * 0.5, y: Number(window.ch || 200) * 0.5 }, start, armedAt: start + Number(cfg.reticleArmSeconds || 0.45), deadline: start + Number(cfg.reticleArmSeconds || 0.45) + Number(cfg.countdownSeconds || 3), dragging: false, moved: false, downX: 0, downY: 0 };
+    targeting = { kind:'gaiacrash', node, countdown, def, cfg, point: { x: Number(window.cw || 300) * 0.5, y: Number(window.ch || 200) * 0.5 }, start, armedAt: start + Number(cfg.reticleArmSeconds || 0.45), deadline: start + Number(cfg.reticleArmSeconds || 0.45) + Number(cfg.countdownSeconds || 3), dragging: false, moved: false, downX: 0, downY: 0 };
     const updateNode = (clientX, clientY) => {
       if (!targeting) return;
       const rect = wrap.getBoundingClientRect();
@@ -358,6 +359,31 @@
     });
     return true;
   }
+
+  function makeZetsaReticle(def) {
+    const wrap=document.getElementById('laneWrap');if(!wrap||targeting)return false;const cfg=def.special||{},node=document.createElement('div');node.id='ttdZetsasCauldronTargetV1';
+    Object.assign(node.style,{position:'absolute',left:'50%',top:'50%',width:'80px',height:'80px',transform:'translate(-50%,-50%)',border:'3px dashed #91db45',borderRadius:'50%',boxSizing:'border-box',zIndex:'80',pointerEvents:'auto',touchAction:'none',boxShadow:'0 0 0 2px rgba(71,38,91,.74),0 0 16px rgba(132,213,66,.48),inset 0 0 15px rgba(112,62,145,.20)',cursor:'grab'});
+    const center=document.createElement('div');center.style.cssText='position:absolute;left:50%;top:50%;width:13px;height:9px;transform:translate(-50%,-50%);border-radius:3px 3px 7px 7px;background:#101316;border:2px solid #5d6870;box-shadow:0 -3px 0 -1px #91db45;pointer-events:none;';
+    const countdown=document.createElement('div');countdown.style.cssText="position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);font:900 18px 'Space Mono',monospace;color:#d9ffb5;text-shadow:0 2px 4px #000,0 0 8px #73be39;white-space:nowrap;";node.append(center,countdown);wrap.appendChild(node);
+    const start=now(),placement=Math.max(.25,Number(cfg.placementSeconds||4));targeting={kind:'zetsascauldron',node,countdown,def,cfg,point:{x:Number(window.cw||300)*.5,y:Number(window.ch||200)*.5},start,armedAt:start+.15,deadline:start+placement,dragging:false,moved:false,downX:0,downY:0};
+    const updateNode=(clientX,clientY)=>{if(!targeting||targeting.kind!=='zetsascauldron')return;const rect=wrap.getBoundingClientRect(),x=clamp(clientX-rect.left,10,rect.width-10),y=clamp(clientY-rect.top,10,rect.height-10);targeting.point=cssToGame(clientX,clientY);node.style.left=`${x}px`;node.style.top=`${y}px`;};
+    node.addEventListener('pointerdown',event=>{if(!targeting)return;event.preventDefault();event.stopPropagation();targeting.dragging=true;targeting.moved=false;targeting.downX=event.clientX;targeting.downY=event.clientY;node.setPointerCapture?.(event.pointerId);node.style.cursor='grabbing';});
+    node.addEventListener('pointermove',event=>{if(!targeting?.dragging)return;event.preventDefault();event.stopPropagation();if(Math.hypot(event.clientX-targeting.downX,event.clientY-targeting.downY)>5)targeting.moved=true;updateNode(event.clientX,event.clientY);});
+    node.addEventListener('pointerup',event=>{if(!targeting)return;event.preventDefault();event.stopPropagation();const moved=targeting.moved;targeting.dragging=false;node.style.cursor='grab';node.releasePointerCapture?.(event.pointerId);if(!moved&&now()>=targeting.armedAt)commitZetsa();});return true;
+  }
+  function commitZetsa(){
+    if(!targeting||targeting.kind!=='zetsascauldron'||!battleActive()){clearTargeting();return;}const api=od(),def=targeting.def,p={...targeting.point};if(!api?.spendDp?.(Number(def.dpCost||16))){toast("Zetsa's Cauldron needs full Drive and enough DP.");clearTargeting();return;}api.resetDrive?.();clearTargeting();resolveZetsa(def,p);
+  }
+  function resolveZetsa(def,center){
+    const cfg=def.special||{},t=now(),fall=Math.max(.1,Number(cfg.fallSeconds||.55)),bubble=Math.max(.1,Number(cfg.violentBubbleSeconds||1.1));cauldron={def,center:{...center},start:t,impactAt:t+fall,splashAt:t+fall+bubble,fadeEnd:t+fall+bubble+Math.max(.1,Number(cfg.fadeSeconds||.6)),landed:false,resolved:false};toast("Zetsa's Cauldron!");
+  }
+  function resolveZetsaSplash(c){
+    if(!c||c.resolved)return;c.resolved=true;const cfg=c.def.special||{},radius=clamp(Number(window.cw||300)*Number(cfg.splashRadiusFractionOfBattleWidth||.17),Number(cfg.splashRadiusMin||54),Number(cfg.splashRadiusMax||84));ring(c.center.x,c.center.y,radius,'rgba(132,220,72,.74)',.46,3);
+    for(let i=0;i<42;i++){const a=Math.random()*Math.PI*2,s=(35+Math.random()*90),size=1.5+Math.random()*3.6;particles.push({x:c.center.x+Math.cos(a)*6,y:c.center.y-4+Math.sin(a)*4,vx:Math.cos(a)*s,vy:Math.sin(a)*s*.48-30-Math.random()*38,life:.55+Math.random()*.42,max:.97,color:Math.random()<.28?'#b4ef61':Math.random()<.55?'#72c93f':'#4f9d31',size,gravity:115});}
+    for(const e of nearby(c.center,radius)){try{window.applyPoisonTicks?.(e,Number(cfg.poisonPerTick||3),Number(cfg.poisonSeconds||2.2),{exactDuration:true});window.applyFrogStatus?.(e,Number(cfg.frogSeconds||2),{moveMultiplier:Number(cfg.frogMovementMultiplier||.82),elementalDamageTakenMultiplier:Number(cfg.frogElementalDamageTakenMultiplier||1.12),smokeSeconds:Number(cfg.transformSmokeSeconds||.24),restoreSeconds:Number(cfg.restoreSeconds||.32),source:'zetsascauldron'});}catch(error){console.error("Zetsa's Cauldron status application failed",error);}}
+  }
+  function tickCauldron(){if(!cauldron)return;const t=now(),cfg=cauldron.def.special||{};if(!cauldron.landed&&t>=cauldron.impactAt){cauldron.landed=true;ring(cauldron.center.x,cauldron.center.y,32,'rgba(255,255,255,.42)',Number(cfg.landingShockwaveSeconds||.32),1.4);}if(!cauldron.resolved&&t>=cauldron.splashAt)resolveZetsaSplash(cauldron);if(t>=cauldron.fadeEnd)cauldron=null;}
+
   function clearTargeting() {
     targeting?.node?.remove(); targeting = null; busy = false;
   }
@@ -394,7 +420,7 @@
       targeting.countdown.style.display = 'block';
       targeting.countdown.textContent = Math.max(0, targeting.deadline - t).toFixed(1);
     }
-    if (t >= targeting.deadline) commitGaia();
+    if (t >= targeting.deadline) { if(targeting.kind==='zetsascauldron') commitZetsa(); else commitGaia(); }
   }
 
   function activateSlot(index) {
@@ -418,6 +444,11 @@
     if (key === 'gaiacrash') {
       busy = true;
       if (!makeGaiaReticle(def)) busy = false;
+      return;
+    }
+    if (key === 'zetsascauldron') {
+      busy = true;
+      if (!makeZetsaReticle(def)) busy = false;
     }
   }
 
@@ -434,6 +465,18 @@
     ctx.fillStyle = '#c9efff'; ctx.beginPath(); ctx.arc(18, -8, 1.4, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+
+  function drawCauldronShape(ctx,c,t){
+    if(!c)return;const cfg=c.def.special||{},fall=Math.max(.1,c.impactAt-c.start),pre=t<c.impactAt,q=pre?clamp((t-c.start)/fall,0,1):1,fade=t>c.splashAt?1-clamp((t-c.splashAt)/Math.max(.1,c.fadeEnd-c.splashAt),0,1):1,r=clamp(Number(window.cw||300)*Number(cfg.cauldronRadiusFractionOfBattleWidth||.09),Number(cfg.cauldronRadiusMin||27),Number(cfg.cauldronRadiusMax||43)),x=c.center.x,y=pre?c.center.y-(1-q)*75:c.center.y,alpha=fade*(pre?q:.98);
+    ctx.save();ctx.globalAlpha*=alpha;ctx.translate(x,y);const bodyGrad=ctx.createLinearGradient(0,-r*.45,0,r*.75);bodyGrad.addColorStop(0,'#30363a');bodyGrad.addColorStop(.3,'#14181b');bodyGrad.addColorStop(1,'#050607');ctx.fillStyle=bodyGrad;ctx.strokeStyle='#5b6268';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,r*.15,r,r*.72,0,0,Math.PI);ctx.quadraticCurveTo(r*.78,r*.84,0,r*.9);ctx.quadraticCurveTo(-r*.78,r*.84,-r,r*.15);ctx.fill();ctx.stroke();
+    ctx.strokeStyle='#737b80';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,-r*.05,r*1.02,r*.28,0,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#101316';ctx.beginPath();ctx.ellipse(0,-r*.05,r*.91,r*.22,0,0,Math.PI*2);ctx.fill();
+    const liquid=ctx.createRadialGradient(-r*.2,-r*.11,1,0,-r*.04,r*.85);liquid.addColorStop(0,'#c5f25c');liquid.addColorStop(.5,'#70c83a');liquid.addColorStop(1,'#2e711f');ctx.fillStyle=liquid;ctx.beginPath();ctx.ellipse(0,-r*.07,r*.82,r*.17,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#4a5054';ctx.lineWidth=3;for(const sx of [-1,1]){ctx.beginPath();ctx.arc(sx*r*.92,r*.1,r*.31,sx<0?-Math.PI*.5:Math.PI*.5,sx<0?Math.PI*.5:Math.PI*1.5);ctx.stroke();}
+    ctx.fillStyle='#111416';ctx.fillRect(-r*.62,r*.68,r*.18,r*.28);ctx.fillRect(r*.44,r*.68,r*.18,r*.28);
+    if(!pre&&t<c.splashAt){const rage=clamp((t-c.impactAt)/Math.max(.1,Number(cfg.violentBubbleSeconds||1.1)),0,1),count=6+Math.round(rage*8);for(let i=0;i<count;i++){const phase=t*(5+rage*8)+i*1.71,xx=Math.sin(i*7.13)*r*.63,yy=-r*.10-Math.abs(Math.sin(phase))*r*(.06+.16*rage),rr=r*(.035+(i%4)*.015)*(1+rage*.35);ctx.globalAlpha=alpha*(.5+(i%3)*.14);ctx.fillStyle=i%3?'#95dc45':'#c0ef62';ctx.beginPath();ctx.arc(xx,yy,rr,0,Math.PI*2);ctx.fill();}}
+    ctx.restore();
+  }
+
   function drawFx(dt) {
     const canvas = ensureOverlay(); if (!canvas || !overlayCtx) return;
     const ctx = overlayCtx; ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -456,6 +499,7 @@
       ctx.save(); ctx.globalAlpha = clamp(p.life / Math.max(0.01, p.max || p.life), 0, 1); ctx.fillStyle = p.color;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
+    drawCauldronShape(ctx,cauldron,t);
     if (wolf) {
       if (wolf.alive) {
         const p = wolfPoint(); drawWolfShape(ctx, p.x, p.y, 1, false);
@@ -477,6 +521,7 @@
         applyWolfAggro(dt);
         if (wolf?.alive) chooseWolfAttack();
         tickTargeting();
+        tickCauldron();
       } else if (targeting) clearTargeting();
       drawFx(dt);
     } catch (error) { console.error('Overdrive ability frame failed', error); }
@@ -493,13 +538,13 @@
   }, true);
 
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && targeting) { event.preventDefault(); clearTargeting(); toast('Gaia Crash targeting canceled.'); }
+    if (event.key === 'Escape' && targeting) { event.preventDefault(); const name=targeting.kind==='zetsascauldron'?"Zetsa's Cauldron":'Gaia Crash'; clearTargeting(); toast(`${name} targeting canceled.`); }
   });
 
   window.__TTD_OVERDRIVE_ABILITIES = Object.freeze({
     activateSlot,
     get moonWolf() { return wolf ? { alive: wolf.alive, hp: wolf.hp, maxHp: wolf.maxHp } : null; },
-    get targeting() { return targeting ? { key: 'gaiacrash', point: { ...targeting.point }, deadline: targeting.deadline } : null; },
+    get targeting() { return targeting ? { key: targeting.kind || 'gaiacrash', point: { ...targeting.point }, deadline: targeting.deadline } : null; },
     damageMoonWolf(amount, element = null) { return hurtWolf(amount, element, null); },
     cancelTargeting: clearTargeting,
   });

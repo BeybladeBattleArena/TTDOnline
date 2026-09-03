@@ -10,6 +10,8 @@ const client=fs.readFileSync('online/overdrive-client-v1.js','utf8');
 const runtime=fs.readFileSync('online/overdrive-system-v1.js','utf8');
 const abilities=fs.readFileSync('online/overdrive-abilities-v1.js','utf8');
 const starterPack=fs.readFileSync('online/overdrive-starter-pack-v2.js','utf8');
+const game=fs.readFileSync('random-dice-game-33.html','utf8');
+const gift=fs.readFileSync('functions/gift-v7-secure.js','utf8');
 const collectionServer=fs.readFileSync('functions/collection-actions-v1.js','utf8');
 const collectionClient=fs.readFileSync('online/collection-actions-client-v1.js','utf8');
 const collectionUi=fs.readFileSync('online/collection-actions-ui-v1.js','utf8');
@@ -80,6 +82,16 @@ must(meteor?.special?.affinities?.fire===1,'Meteor Impact damage must remain 100
 must(meteor?.special?.damageTuning==='provisional-potent'&&Number(meteor?.special?.damage)>Number(gaia?.special?.damage),'Meteor first-pass damage must stay explicitly provisional and stronger than Gaia Crash.');
 must(meteor?.special?.impactTargetPve==='battlefield-center'&&meteor?.special?.impactTargetPvp==='opponent-dice-tray','Meteor PvE/PvP targeting contract drifted.');
 
+const zetsa=catalog.dice.zetsascauldron;
+must(zetsa?.name==="Zetsa's Cauldron"&&zetsa?.dpCost===16,'Zetsa Cauldron identity/cost drifted.');
+must(zetsa?.element==='Poison'&&zetsa?.special?.kind==='zetsasCauldron','Zetsa Cauldron Poison/special identity drifted.');
+must(zetsa?.special?.placementSeconds===4&&zetsa?.special?.defaultTarget==='battlefield-center','Zetsa placement must remain four seconds with center fallback.');
+must(zetsa?.special?.directDamage===0&&zetsa?.special?.poisonChance===1&&zetsa?.special?.frogChance===1,'Zetsa splash must deal zero direct damage and guarantee both statuses.');
+must(zetsa?.special?.poisonSeconds===2.2&&zetsa?.special?.frogSeconds===2,'Zetsa Poison/Frog durations drifted.');
+must(zetsa?.special?.frogMovementMultiplier===0.82&&zetsa?.special?.frogElementalDamageTakenMultiplier===1.12,'Frog movement/vulnerability contract drifted.');
+must(zetsa?.special?.violentBubbleSeconds===1.1&&zetsa?.special?.fadeSeconds===0.6,'Zetsa bubble/fade timing drifted.');
+must(zetsa?.special?.frogSizeReference==='one-third-standard-goblin'&&zetsa?.special?.cauldronSizeReference==='2x2-standard-ogres','Zetsa visual scale references drifted.');
+
 for(const def of [wolf,gaia,dryad,meteor]){
   must(def?.acquisition?.starterChoiceCount===1&&def?.acquisition?.starterOptionCount===4,'Starter Overdrive acquisition metadata drifted.');
   must(def?.acquisition?.eventualGrantAll===true&&def?.acquisition?.completionByLevel===10,'Starter Overdrive eventual-grant contract drifted.');
@@ -107,11 +119,17 @@ for(const marker of [
 
 for(const marker of [
   'moonwolfsummon','gaiacrash','summonWolf','wolfDashAndSnack','wolfHowl','wolfClaw','wolfRaidKick',
-  'ttdGaiaCrashTargetV1','commitGaia','resolveGaia','startLift','damageEnemy','__TTD_OVERDRIVE_ABILITIES',
+  'ttdGaiaCrashTargetV1','commitGaia','resolveGaia','ttdZetsasCauldronTargetV1','commitZetsa','resolveZetsa','resolveZetsaSplash','drawCauldronShape','startLift','damageEnemy','__TTD_OVERDRIVE_ABILITIES',
 ])must(abilities.includes(marker),`Playable Overdrive ability bridge missing: ${marker}`);
 for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHitKnockback','relaunchAirborne']){
   must(JSON.stringify(catalog).includes(marker),`Overdrive ability data missing: ${marker}`);
 }
+
+
+for(const marker of ['applyFrogStatus','isFrogStatusActive','frogMovementMult','frogElementalTakenMult','drawFrogStatusEnemy','8/3','isFrogStatusActive(e);','applyPoisonTicks(e, perTick, dur, options)'])must(game.includes(marker),`Frog core contract missing: ${marker}`);
+must(game.includes("const frogMult=el==='__nonelemental'?1:frogElementalTakenMult(e)"),'Frog +12% vulnerability must apply to elemental portions only.');
+must(game.includes('z.speed*frogMovementMult(z)*dt')&&game.includes('e.slowMult*frogMovementMult(e)'),'Frog 18% marching slowdown must cover zombie and standard path movement.');
+must(gift.includes("'TTD-ZETSA'")&&gift.includes("overdriveDice/${key}")&&gift.includes('OVERDRIVE_DICE'),'Zetsa online playtest grant is missing.');
 
 // activateSlot receives an OD slot index. The Overdrive runtime's equipped(index) argument is a DECK index,
 // so activation must fetch the current deck pair first and then index into that pair. Calling equipped(index)
