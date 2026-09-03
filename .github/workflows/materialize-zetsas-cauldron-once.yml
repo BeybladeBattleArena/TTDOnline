@@ -1,0 +1,44 @@
+name: One-time Zetsa's Cauldron materialization
+
+on:
+  push:
+    branches:
+      - feature/zetsas-cauldron-v1
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.head_commit.message == 'Run Zetsa materializer'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Materialize canonical Overdrive and Frog status
+        run: python3 scripts/materialize-zetsas-cauldron-v1.py
+      - name: Install validation toolchain
+        run: npm install
+      - name: Validate Zetsa, backend, and deployable client
+        run: |
+          node --check online/overdrive-abilities-v1.js
+          node --check functions/gift-v7-secure.js
+          npm run check:overdrive
+          npm run check:backend
+          npm run check:hosting
+          git diff --check
+      - name: Commit validated release source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm scripts/materialize-zetsas-cauldron-v1.py .github/workflows/materialize-zetsas-cauldron-once.yml
+          git config user.name 'BeybladeBattleArena'
+          git config user.email 'stepmaniaredditrequests@gmail.com'
+          git add -A
+          git diff --cached --quiet && { echo 'No source changes were produced.'; exit 1; }
+          git commit -m "[release] Add Zetsa's Cauldron"
+          git push origin HEAD:feature/zetsas-cauldron-v1
