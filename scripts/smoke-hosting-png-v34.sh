@@ -124,29 +124,29 @@ check_png /assets/items/pip-voucher-100000.png 1536 658 0
 # Canonical jewel masters: all are high-resolution relative to their UI boxes and
 # must be alpha-capable PNGs. This verifies the exact production bytes, not just
 # that a URL returns something.
-check_png /assets/items/jewel-ruby-power.png 224 224 1
-check_png /assets/items/jewel-citrine-cooldown.png 224 224 1
-check_png /assets/items/jewel-onyx-physical-defense.png 224 224 1
-check_png /assets/items/jewel-amethyst-special-defense.png 224 224 1
-check_png /assets/items/jewel-garnet-hp.png 224 224 1
-check_png /assets/items/jewel-spinel-crit-chance.png 224 224 1
-check_png /assets/items/jewel-bloodstone-crit-boost.png 224 224 1
-check_png /assets/items/jewel-aquamarine-sp-gen.png 224 224 1
-check_png /assets/items/jewel-peridot-experience.png 224 224 1
-check_png /assets/items/jewel-moonstone-luck.png 224 224 1
-check_png /assets/items/jewel-opal-insight.png 224 224 1
-check_png /assets/items/jewel-tourmaline-potency.png 224 224 1
-check_png /assets/items/jewel-element-fire.png 224 224 1
-check_png /assets/items/jewel-element-ice.png 224 224 1
-check_png /assets/items/jewel-element-wind.png 224 224 1
-check_png /assets/items/jewel-element-lightning.png 224 224 1
-check_png /assets/items/jewel-element-water.png 224 224 1
-check_png /assets/items/jewel-element-earth.png 224 224 1
-check_png /assets/items/jewel-element-metal.png 224 224 1
-check_png /assets/items/jewel-element-nature.png 224 224 1
-check_png /assets/items/jewel-element-poison.png 224 224 1
-check_png /assets/items/jewel-element-holy.png 224 224 1
-check_png /assets/items/jewel-element-shadow.png 224 224 1
-check_png /assets/items/jewel-element-arcane.png 224 224 1
+check_png /assets/items/jewel-ruby-power.png 128 128 1
+check_png /assets/items/jewel-citrine-cooldown.png 128 128 1
+check_png /assets/items/jewel-onyx-physical-defense.png 128 128 1
+check_png /assets/items/jewel-amethyst-special-defense.png 128 128 1
+check_png /assets/items/jewel-garnet-hp.png 128 128 1
+check_png /assets/items/jewel-spinel-crit-chance.png 128 128 1
+check_png /assets/items/jewel-bloodstone-crit-boost.png 128 128 1
+check_png /assets/items/jewel-aquamarine-sp-gen.png 128 128 1
+check_png /assets/items/jewel-peridot-experience.png 128 128 1
+check_png /assets/items/jewel-moonstone-luck.png 128 128 1
+check_png /assets/items/jewel-opal-insight.png 128 128 1
+check_png /assets/items/jewel-tourmaline-potency.png 128 128 1
+check_png /assets/items/jewel-element-fire.png 128 128 1
+check_png /assets/items/jewel-element-ice.png 128 128 1
+check_png /assets/items/jewel-element-wind.png 128 128 1
+check_png /assets/items/jewel-element-lightning.png 128 128 1
+check_png /assets/items/jewel-element-water.png 128 128 1
+check_png /assets/items/jewel-element-earth.png 128 128 1
+check_png /assets/items/jewel-element-metal.png 128 128 1
+check_png /assets/items/jewel-element-nature.png 128 128 1
+check_png /assets/items/jewel-element-poison.png 128 128 1
+check_png /assets/items/jewel-element-holy.png 128 128 1
+check_png /assets/items/jewel-element-shadow.png 128 128 1
+check_png /assets/items/jewel-element-arcane.png 128 128 1
 
-echo 'Production Hosting serves the committed game/runtime files and canonical PNG masters byte-for-byte; all 24 jewel masters are verified as transparent 224x224 PNGs.'
+echo 'Production Hosting serves the committed game/runtime files and canonical PNG masters byte-for-byte; all 24 jewel masters are verified as transparent 128x128 PNGs.'
