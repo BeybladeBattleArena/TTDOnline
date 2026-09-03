@@ -30,23 +30,14 @@ jobs:
           marker="  'TTD-SLITHER-C7': { label:'Slither Vine C7 Test Grant', reward:{ dice:[{ key:'slithervine', cls:7 }] } },\n"
           if marker not in s:
               raise SystemExit('Could not find DEV_CODES insertion marker.')
-          block="""  'TTD-SUMO-C1': { label:'Sumo C1 Test Grant', reward:{ dice:[{ key:'sumo', cls:1 }] } },
-  'TTD-SUMO-C2': { label:'Sumo C2 Test Grant', reward:{ dice:[{ key:'sumo', cls:2 }] } },
-  'TTD-SUMO-C3': { label:'Sumo C3 Test Grant', reward:{ dice:[{ key:'sumo', cls:3 }] } },
-  'TTD-SUMO-C4': { label:'Sumo C4 Test Grant', reward:{ dice:[{ key:'sumo', cls:4 }] } },
-  'TTD-SUMO-C5': { label:'Sumo C5 Test Grant', reward:{ dice:[{ key:'sumo', cls:5 }] } },
-  'TTD-SUMO-C6': { label:'Sumo C6 Test Grant', reward:{ dice:[{ key:'sumo', cls:6 }] } },
-  'TTD-SUMO-C7': { label:'Sumo C7 Test Grant', reward:{ dice:[{ key:'sumo', cls:7 }] } },
-  'TTD-CRIMSON-C1': { label:'Crimson Current C1 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:1 }] } },
-  'TTD-CRIMSON-C2': { label:'Crimson Current C2 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:2 }] } },
-  'TTD-CRIMSON-C3': { label:'Crimson Current C3 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:3 }] } },
-  'TTD-CRIMSON-C4': { label:'Crimson Current C4 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:4 }] } },
-  'TTD-CRIMSON-C5': { label:'Crimson Current C5 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:5 }] } },
-  'TTD-CRIMSON-C6': { label:'Crimson Current C6 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:6 }] } },
-  'TTD-CRIMSON-C7': { label:'Crimson Current C7 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:7 }] } },
-"""
           if 'TTD-SUMO-C1' in s or 'TTD-CRIMSON-C1' in s:
               raise SystemExit('Codes already present; refusing duplicate insertion.')
+          lines=[]
+          for cls in range(1,8):
+              lines.append(f"  'TTD-SUMO-C{cls}': {{ label:'Sumo C{cls} Test Grant', reward:{{ dice:[{{ key:'sumo', cls:{cls} }}] }} }},")
+          for cls in range(1,8):
+              lines.append(f"  'TTD-CRIMSON-C{cls}': {{ label:'Crimson Current C{cls} Test Grant', reward:{{ dice:[{{ key:'crimsoncurrent', cls:{cls} }}] }} }},")
+          block='\n'.join(lines)+'\n'
           p.write_text(s.replace(marker,marker+block,1))
           PY
       - name: Install and validate backend
@@ -58,11 +49,10 @@ jobs:
           node - <<'NODE'
           const fs=require('fs');
           const s=fs.readFileSync('functions/gift-v7-secure.js','utf8');
-          for (const family of [['TTD-SUMO-C','sumo'],['TTD-CRIMSON-C','crimsoncurrent']]) {
+          for (const [prefix,key] of [['TTD-SUMO-C','sumo'],['TTD-CRIMSON-C','crimsoncurrent']]) {
             for (let cls=1; cls<=7; cls++) {
-              const code=family[0]+cls;
-              if(!s.includes(`'${code}'`)) throw new Error('Missing '+code);
-              if(!s.includes(`key:'${family[1]}', cls:${cls}`)) throw new Error('Missing reward '+family[1]+' C'+cls);
+              if(!s.includes(`'${prefix}${cls}'`)) throw new Error(`Missing ${prefix}${cls}`);
+              if(!s.includes(`key:'${key}', cls:${cls}`)) throw new Error(`Missing ${key} C${cls} reward`);
             }
           }
           const catalog=require('./functions/dicefile.generated.json');
