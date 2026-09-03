@@ -1,3 +1,4 @@
+// Persistent release guard for the canonical Sumo and Crimson Current standard-die implementation.
 import fs from 'node:fs';
 const must=(c,m)=>{if(!c)throw new Error(m);};
 const catalog=JSON.parse(fs.readFileSync('dicefile.json','utf8'));
