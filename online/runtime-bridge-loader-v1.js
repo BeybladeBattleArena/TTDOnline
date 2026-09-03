@@ -14,7 +14,7 @@
     '/online/refresh-bridge-v6.js?v=6',
     '/online/mobile-input-bridge-v9.js?v=9',
     '/online/interaction-effects-v10.js?v=10',
-    '/online/collection-portrait-fit-v16.js?v=16',
+    '/online/collection-portrait-fit-v16.js?v=23',
     '/online/deck-editor-v18.js?v=18',
     // Item art is data-only and must exist before either inventory authority renders.
     '/online/item-assets-v1.js?v=4',
