@@ -41,7 +41,7 @@
     // These are the canonical files for jewel presentation and Collection layout.
     // They are edited directly; no presentation patch/sidecar is required.
     loadPostDocumentScript('/online/jewel-art-inventory-v1.js?v=3','ttdJewelArtInventoryV3NativeScript');
-    loadPostDocumentScript('/online/collection-portrait-fit-v16.js?v=22','ttdCollectionAuthorityV22NativeScript');
+    loadPostDocumentScript('/online/collection-portrait-fit-v16.js?v=23','ttdCollectionAuthorityV23NativeScript');
   }
 
   boot().catch((err)=>{
