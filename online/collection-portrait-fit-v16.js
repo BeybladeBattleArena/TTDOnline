@@ -1,11 +1,11 @@
 (() => {
   'use strict';
 
-  const STATE_KEY='__TTD_COLLECTION_PANEL_AUTHORITY_V20';
+  const STATE_KEY='__TTD_COLLECTION_PANEL_AUTHORITY_V21';
   const state=window[STATE_KEY]||{installed:false,retryToken:0};
   window[STATE_KEY]=state;
 
-  const STYLE_ID='ttd-collection-panel-authority-v20';
+  const STYLE_ID='ttd-collection-panel-authority-v21';
 
   function installStyle(){
     let style=document.getElementById(STYLE_ID);
@@ -54,7 +54,9 @@
         overscroll-behavior:contain!important;
         padding:0!important;display:grid!important;
         grid-template-columns:repeat(2,minmax(0,1fr))!important;
-        grid-auto-rows:auto!important;
+        grid-template-rows:none!important;
+        grid-auto-flow:row!important;
+        grid-auto-rows:minmax(124px,auto)!important;
         gap:12px!important;
         justify-content:stretch!important;align-content:start!important;align-items:stretch!important;
         scrollbar-width:none!important;
@@ -63,16 +65,17 @@
       #collectionGrid.ttdDiePointerActive{overscroll-behavior:none!important;}
 
       /*
-       * Collection cards use normal CSS-grid flow. No fixed row/card height means
-       * neither a standard die nor an Overdrive die can spill into a neighboring cell.
+       * V21 owns both the grid row footprint and the card footprint. This prevents
+       * legacy fixed-row rules or inline rendering code from allowing a card to
+       * spill into the next row. Standard and Overdrive dice use the same box.
        */
       #collectionGrid > .colCard,
       #collectionGrid > .colCard.ttdOdCard{
         position:relative!important;
         inset:auto!important;transform:none!important;
         display:flex!important;flex-direction:column!important;align-items:center!important;
-        width:100%!important;height:auto!important;
-        min-width:0!important;min-height:120px!important;max-height:none!important;
+        width:100%!important;height:124px!important;
+        min-width:0!important;min-height:124px!important;max-height:124px!important;
         margin:0!important;box-sizing:border-box!important;
         padding:10px 8px 8px!important;
         overflow:hidden!important;align-self:stretch!important;isolation:isolate!important;
@@ -145,10 +148,11 @@
           grid-template-columns:minmax(0,1fr) 28px!important;
           gap:5px!important;padding:6px!important;
         }
-        #collectionGrid{gap:8px!important;}
+        #collectionGrid{grid-auto-rows:minmax(116px,auto)!important;gap:8px!important;}
         #collectionGrid > .colCard,
         #collectionGrid > .colCard.ttdOdCard{
-          min-height:112px!important;padding:9px 6px 7px!important;
+          height:116px!important;min-height:116px!important;max-height:116px!important;
+          padding:9px 6px 7px!important;
         }
         #collectionGrid > .colCard .glyphWrap{
           width:38px!important;height:38px!important;max-width:38px!important;max-height:38px!important;
@@ -166,9 +170,11 @@
         #ttdCollectionPanel .deckSearch{padding:5px 7px!important;}
         #ttdCollectionPanel .deckToolSelect,#ttdCollectionPanel .deckToolBtn{padding-top:5px!important;padding-bottom:5px!important;}
         #collectionViewport{padding-top:5px!important;padding-bottom:5px!important;}
-        #collectionGrid{gap:8px!important;}
+        #collectionGrid{grid-auto-rows:minmax(112px,auto)!important;gap:8px!important;}
         #collectionGrid > .colCard,
-        #collectionGrid > .colCard.ttdOdCard{min-height:108px!important;padding-top:8px!important;}
+        #collectionGrid > .colCard.ttdOdCard{
+          height:112px!important;min-height:112px!important;max-height:112px!important;padding-top:8px!important;
+        }
         #collectionGrid > .colCard .glyphWrap{
           width:36px!important;height:36px!important;max-width:36px!important;max-height:36px!important;
           flex-basis:36px!important;
@@ -248,8 +254,8 @@
     };
     window.__TTD_COLLECTION_PANEL_SYNC=()=>requestAnimationFrame(sync);
 
-    if(grid.dataset.ttdPanelAuthorityBound!=='20'){
-      grid.dataset.ttdPanelAuthorityBound='20';
+    if(grid.dataset.ttdPanelAuthorityBound!=='21'){
+      grid.dataset.ttdPanelAuthorityBound='21';
       grid.addEventListener('scroll',sync,{passive:true});
       const setFromY=(clientY)=>{
         const max=Math.max(0,grid.scrollHeight-grid.clientHeight);
