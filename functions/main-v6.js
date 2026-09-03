@@ -1,3 +1,5 @@
+// Firebase Functions bundle the canonical dice catalog at deploy time. Whenever dicefile.generated.json changes,
+// redeploy the backend so catalog-backed services such as deck validation and gift redemption stay in sync.
 const base = require('./index');
 const progression = require('./progression-v5');
 const singleplayer = require('./singleplayer-v6');
