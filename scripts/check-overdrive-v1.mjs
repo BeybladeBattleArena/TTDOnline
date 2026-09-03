@@ -52,6 +52,18 @@ must(wolf?.special?.attacks?.howl?.confusionChance===0.4,'Moon Wolf Howl must re
 must(JSON.stringify(wolf?.special?.attacks?.clawCombo?.weights)==='[1.05,1.2]','Moon Wolf Claw Combo damage sequence drifted.');
 must(wolf?.special?.attacks?.raidKick?.weight===0.95&&wolf?.special?.attacks?.raidKick?.launch?.juggleable===true,'Moon Wolf Raid Kick launch contract drifted.');
 
+const taurus=catalog.dice.blacktaurus;
+must(taurus?.name==='Black Taurus','Black Taurus display name drifted.');
+must(taurus?.dpCost===20&&taurus?.element==='Earth','Black Taurus must cost 20 DP and be Earth aligned.');
+must(taurus?.special?.hp===330&&taurus?.special?.attack===32&&taurus?.special?.damageReduction===0.08,'Black Taurus provisional summon stats drifted.');
+must(taurus?.special?.moveSpeed===51&&taurus?.special?.moveSpeedReference==='standard-goblin-x1.5','Black Taurus must move 50% faster than a standard Goblin.');
+must(taurus?.special?.target==='highest-current-hp','Black Taurus must target the enemy with the highest current HP.');
+must(taurus?.special?.attacks?.windingRush?.reference==='Relentless Mace spinning skill','Winding Rush must retain its Relentless Mace spin reference.');
+must(taurus?.special?.attacks?.impedeStamp?.logAppearLingerSeconds===0.25&&taurus?.special?.attacks?.impedeStamp?.pulledBackLingerSeconds===0.5,'Impede Stamp telegraph timing drifted.');
+must(taurus?.special?.attacks?.impedeStamp?.stunSeconds===3.5&&taurus?.special?.attacks?.impedeStamp?.slowSeconds===0.6,'Impede Stamp Stun/Slow timing drifted.');
+must(taurus?.special?.attacks?.bullRush?.hornDownWindupSeconds===0.4&&taurus?.special?.attacks?.bullRush?.dashSpeedMultiplier===2.2,'Bull Rush windup/speed drifted.');
+must(taurus?.special?.attacks?.bullRush?.goreSeconds===0.4&&taurus?.special?.attacks?.bullRush?.landingStunSeconds===1,'Bull Rush gore/landing Stun timing drifted.');
+
 const gaia=catalog.dice.gaiacrash;
 must(gaia?.name==='Gaia Crash!','Gaia Crash display name drifted.');
 must(gaia?.dpCost===15&&gaia?.element==='Earth','Gaia Crash must remain a 15 DP Earth Overdrive Die.');
@@ -104,6 +116,7 @@ for(const marker of [
   'RELEASED_STARTER_BACKFILL_CUTOFF_MS','ensureReleasedStarterBackfill','legacy-starter-rollout','newlyReleased','priorKeys',
 ])must(backend.includes(marker),`Overdrive backend contract missing: ${marker}`);
 must(main.includes("require('./overdrive-v1')")&&main.includes('...overdrive'),'Overdrive cloud functions are not exported from main-v6.js.');
+must(fs.readFileSync('functions/gift-v7-secure.js','utf8').includes("'TTD-BLACK-TAURUS'")&&fs.readFileSync('functions/gift-v7-secure.js','utf8').includes("key:'blacktaurus'"),'Black Taurus online playtest ownership grant missing.');
 
 for(const marker of [
   "'ttd:overdrive-ready'","'ttd:overdrive-state'","'ttd:overdrive-save-request'","'ttd:overdrive-save-result'",
@@ -118,7 +131,7 @@ for(const marker of [
 ])must(runtime.includes(marker),`Overdrive runtime contract missing: ${marker}`);
 
 for(const marker of [
-  'moonwolfsummon','gaiacrash','summonWolf','wolfDashAndSnack','wolfHowl','wolfClaw','wolfRaidKick',
+  'moonwolfsummon','gaiacrash','blacktaurus','summonWolf','summonTaurus','highestHpTarget','startTaurusWinding','startTaurusStamp','startTaurusBullRush','updateTaurus','drawTaurusShape','drawTaurusStampLog','damageBlackTaurus','wolfDashAndSnack','wolfHowl','wolfClaw','wolfRaidKick',
   'ttdGaiaCrashTargetV1','commitGaia','resolveGaia','ttdZetsasCauldronTargetV1','commitZetsa','resolveZetsa','resolveZetsaSplash','drawCauldronShape','startLift','damageEnemy','__TTD_OVERDRIVE_ABILITIES',
 ])must(abilities.includes(marker),`Playable Overdrive ability bridge missing: ${marker}`);
 for(const marker of ['biteGapSeconds','stunSeconds','confusionChance','secondHitKnockback','relaunchAirborne']){

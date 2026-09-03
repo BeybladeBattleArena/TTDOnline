@@ -274,6 +274,87 @@
         "restoreSeconds": 0.32,
         "fadeSeconds": 0.6
       }
+    },
+    "blacktaurus": {
+      "name": "Black Taurus",
+      "element": "Earth",
+      "dpCost": 20,
+      "glyph": {
+        "path": "M4 6 L8 9 L7 4 L11 7 H13 L17 4 L16 9 L20 6 L18 12 C18 18 15 21 12 21 C9 21 6 18 6 12 Z M9 13 H10 M14 13 H15 M10 17 Q12 19 14 17"
+      },
+      "flavor": "The strongest thing on the field becomes the next thing in his way.",
+      "description": "Summons a huge dark-slate minotaur that hunts the enemy with the highest current HP. Black Taurus travels the battlefield, stops in place to attack, and delivers slow, heavy Earth-aligned pressure through Winding Rush, Impede Stamp, and Bull Rush.",
+      "acquisition": {
+        "kind": "test-code",
+        "testCode": "TTD-BLACK-TAURUS",
+        "rollout": "playtest"
+      },
+      "special": {
+        "kind": "blackTaurusSummon",
+        "oneActivePerPlayer": true,
+        "sizeReference": "1.08x-standard-ogre",
+        "color": "#343c43",
+        "hp": 330,
+        "attack": 32,
+        "damageReduction": 0.08,
+        "combatTuning": "provisional-playtest",
+        "moveSpeed": 51,
+        "moveSpeedReference": "standard-goblin-x1.5",
+        "target": "highest-current-hp",
+        "adjacentDistance": 30,
+        "aggroRadius": 70,
+        "attackIntervalMin": 2.6,
+        "attackIntervalMax": 3.3,
+        "deathFadeSeconds": 1.2,
+        "attacks": {
+          "windingRush": {
+            "category": "physical",
+            "affinities": {
+              "earth": 1
+            },
+            "reference": "Relentless Mace spinning skill",
+            "radius": 38,
+            "weights": [
+              0.28,
+              0.28,
+              0.34,
+              0.9
+            ],
+            "hitGapSeconds": 0.16,
+            "finalRecoverySeconds": 0.22,
+            "damageRole": "primary-heavy"
+          },
+          "impedeStamp": {
+            "category": "status",
+            "target": "single",
+            "logAppearLingerSeconds": 0.25,
+            "pullbackTravelSeconds": 0.15,
+            "pulledBackLingerSeconds": 0.5,
+            "slamTravelSeconds": 0.14,
+            "stunSeconds": 3.5,
+            "slowAmount": 0.3,
+            "slowSeconds": 0.6,
+            "sameTargetWindingFollowupChance": 0.75,
+            "directDamage": 0
+          },
+          "bullRush": {
+            "category": "physical",
+            "affinities": {
+              "earth": 1
+            },
+            "triggerDistance": 115,
+            "hornDownWindupSeconds": 0.4,
+            "dashSpeedMultiplier": 2.2,
+            "dashSpeed": 112.2,
+            "overlapDamageWeight": 0.65,
+            "overlapRadius": 24,
+            "goreSeconds": 0.4,
+            "goreHeight": 38,
+            "landingStunSeconds": 1,
+            "retrackTargetDuringRush": true
+          }
+        }
+      }
     }
   }
 }

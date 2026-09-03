@@ -66,6 +66,7 @@ const DEV_CODES = Object.freeze({
   'TTD-CRIMSON-C6': { label:'Crimson Current C6 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:6 }] } },
   'TTD-CRIMSON-C7': { label:'Crimson Current C7 Test Grant', reward:{ dice:[{ key:'crimsoncurrent', cls:7 }] } },
   'TTD-ZETSA': { label:"Zetsa's Cauldron Overdrive Test Grant", reward:{ overdriveDice:[{ key:'zetsascauldron' }] } },
+  'TTD-BLACK-TAURUS': { label:'Black Taurus Overdrive Test Grant', reward:{ overdriveDice:[{ key:'blacktaurus' }] } },
 });
 
 // Production promo definitions contain no plaintext player-facing code. The incoming
