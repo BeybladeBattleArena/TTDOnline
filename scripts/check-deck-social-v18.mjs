@@ -19,22 +19,22 @@ const requireMarkers=(text,markers,label)=>{for(const marker of markers)if(!text
 
 if(nativeBridgeRuntime){
   requireMarkers(runtime,[
-    "'/online/collection-portrait-fit-v16.js?v=16'",
+    "'/online/collection-portrait-fit-v16.js?v=23'",
     "'/online/deck-editor-v18.js?v=18'",
     'failed without blocking later bridges.',
     'bridge-runtime-error',
     'bridge-load-error',
     'script.async=false',
   ],'native bridge isolation');
-  if(runtime.indexOf("'/online/deck-editor-v18.js?v=18'")<runtime.indexOf("'/online/collection-portrait-fit-v16.js?v=16'"))throw new Error('Deck editor must load after Collection authority.');
+  if(runtime.indexOf("'/online/deck-editor-v18.js?v=18'")<runtime.indexOf("'/online/collection-portrait-fit-v16.js?v=23'"))throw new Error('Deck editor must load after Collection authority.');
   if(/isolatedSources|battleHookSubsystem|IIFE_END_MARKER/.test(loader))throw new Error('Deck/social validation found retired bridge-source assembly in online/game-loader.js.');
 }else{
-  requireMarkers(loader,["'/online/collection-portrait-fit-v16.js?v=16'","'/online/deck-editor-v18.js?v=18'"],'loader');
+  requireMarkers(loader,["'/online/collection-portrait-fit-v16.js?v=23'","'/online/deck-editor-v18.js?v=18'"],'loader');
   requireMarkers(loader,['const isolatedSources=sources.slice(3).map','TTD_BATTLE_HOOK_SCOPE_V20','failed without blocking later bridges.','bridge-runtime-error'],'legacy bridge isolation');
   const genericIsolationStart=loader.indexOf('const isolatedSources=sources.slice(3).map');
   const genericIsolationEnd=loader.indexOf('const battleHookSubsystem=',genericIsolationStart);
   if(loader.slice(genericIsolationStart,genericIsolationEnd).includes("send('ttd:bridge-phase'"))throw new Error('Bridge isolation catch may not depend on the loader-scope send() helper.');
-  if(loader.indexOf("'/online/deck-editor-v18.js?v=18'")<loader.indexOf("'/online/collection-portrait-fit-v16.js?v=16'"))throw new Error('Deck editor must load after Collection authority.');
+  if(loader.indexOf("'/online/deck-editor-v18.js?v=18'")<loader.indexOf("'/online/collection-portrait-fit-v16.js?v=23'"))throw new Error('Deck editor must load after Collection authority.');
 
   const isolationStart=loader.indexOf('    const isolatedSources=sources.slice(3).map((source,offset)=>{');
   const isolationEnd=loader.indexOf('    const battleHookSubsystem=',isolationStart);
