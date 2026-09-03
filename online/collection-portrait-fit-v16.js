@@ -1,11 +1,11 @@
 (() => {
   'use strict';
 
-  const STATE_KEY='__TTD_COLLECTION_PANEL_AUTHORITY_V19';
+  const STATE_KEY='__TTD_COLLECTION_PANEL_AUTHORITY_V20';
   const state=window[STATE_KEY]||{installed:false,retryToken:0};
   window[STATE_KEY]=state;
 
-  const STYLE_ID='ttd-collection-panel-authority-v19';
+  const STYLE_ID='ttd-collection-panel-authority-v20';
 
   function installStyle(){
     let style=document.getElementById(STYLE_ID);
@@ -45,57 +45,66 @@
       #collectionViewport{
         grid-row:2!important;min-height:0!important;height:auto!important;overflow:hidden!important;
         display:grid!important;grid-template-columns:minmax(0,1fr) 30px!important;
-        gap:6px!important;padding:6px 8px!important;align-items:stretch!important;
+        gap:6px!important;padding:8px!important;align-items:stretch!important;
         background:var(--ink-950)!important;
       }
       #collectionGrid{
-        width:100%!important;height:100%!important;min-height:0!important;
+        width:100%!important;height:100%!important;min-height:0!important;min-width:0!important;
         overflow-y:auto!important;overflow-x:hidden!important;
         overscroll-behavior:contain!important;
         padding:0!important;display:grid!important;
-        grid-template-columns:repeat(3,minmax(0,1fr))!important;
-        grid-auto-rows:94px!important;
-        row-gap:9px!important;column-gap:7px!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        grid-auto-rows:auto!important;
+        gap:12px!important;
         justify-content:stretch!important;align-content:start!important;align-items:stretch!important;
         scrollbar-width:none!important;
       }
       #collectionGrid::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}
       #collectionGrid.ttdDiePointerActive{overscroll-behavior:none!important;}
 
-      /* One grid row owns exactly one card. This applies equally to normal and Overdrive cards. */
+      /*
+       * Collection cards use normal CSS-grid flow. No fixed row/card height means
+       * neither a standard die nor an Overdrive die can spill into a neighboring cell.
+       */
       #collectionGrid > .colCard,
       #collectionGrid > .colCard.ttdOdCard{
         position:relative!important;
-        width:100%!important;height:94px!important;
-        min-width:0!important;min-height:94px!important;max-height:94px!important;
+        inset:auto!important;transform:none!important;
+        display:flex!important;flex-direction:column!important;align-items:center!important;
+        width:100%!important;height:auto!important;
+        min-width:0!important;min-height:120px!important;max-height:none!important;
         margin:0!important;box-sizing:border-box!important;
-        padding:8px 4px 6px!important;
+        padding:10px 8px 8px!important;
         overflow:hidden!important;align-self:stretch!important;isolation:isolate!important;
       }
       #collectionGrid > .colCard .glyphWrap{
-        width:30px!important;height:30px!important;max-width:30px!important;max-height:30px!important;
-        flex:0 0 30px!important;
+        width:42px!important;height:42px!important;max-width:42px!important;max-height:42px!important;
+        flex:0 0 42px!important;margin:0 auto!important;
       }
       #collectionGrid > .colCard .cname{
-        max-width:100%!important;min-height:0!important;
-        font-size:8.2px!important;line-height:1.15!important;margin-top:3px!important;
+        width:100%!important;max-width:100%!important;min-height:0!important;
+        font-size:9px!important;line-height:1.2!important;margin-top:5px!important;
         overflow:hidden!important;text-overflow:ellipsis!important;
         display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
+        overflow-wrap:anywhere!important;text-align:center!important;
       }
       #collectionGrid > .colCard .ccls{
-        max-width:100%!important;
-        font-size:7.8px!important;line-height:1.1!important;margin-top:1px!important;
+        width:100%!important;max-width:100%!important;
+        font-size:8px!important;line-height:1.15!important;margin-top:2px!important;
         overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+        text-align:center!important;
       }
       #collectionGrid > .colCard .favBtn{
-        width:23px!important;height:23px!important;font-size:15px!important;
-        top:3px!important;right:3px!important;
+        width:24px!important;height:24px!important;font-size:15px!important;
+        top:4px!important;right:4px!important;
       }
-      #collectionGrid > .colCard .clsBadge{top:3px!important;left:3px!important;}
-      #collectionGrid > .colCard .deckMark{right:4px!important;bottom:4px!important;}
-      #collectionGrid > .colCard .holdSpinner{top:3px!important;right:29px!important;height:24px!important;}
-      #collectionGrid > .colCard.ttdOdCard{padding-left:5px!important;padding-right:5px!important;}
-      #collectionGrid > .colCard.ttdOdCard .ttdOdCostBadge{right:3px!important;bottom:3px!important;}
+      #collectionGrid > .colCard .clsBadge{top:4px!important;left:4px!important;}
+      #collectionGrid > .colCard .deckMark{right:5px!important;bottom:5px!important;}
+      #collectionGrid > .colCard .holdSpinner{top:4px!important;right:32px!important;height:24px!important;}
+      #collectionGrid > .colCard.ttdOdCard{padding-left:8px!important;padding-right:8px!important;}
+      #collectionGrid > .colCard.ttdOdCard .ttdOdCostBadge{
+        right:5px!important;bottom:5px!important;max-width:calc(100% - 10px)!important;
+      }
 
       #collectionScrollRail{
         position:relative!important;display:block!important;width:30px!important;height:100%!important;
@@ -131,19 +140,22 @@
         visibility:visible!important;margin:0!important;
       }
 
-      @media (min-width:700px){
-        #collectionGrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
-      }
       @media (max-width:360px){
-        #collectionViewport{grid-template-columns:minmax(0,1fr) 28px!important;gap:5px!important;padding-left:6px!important;padding-right:6px!important;}
-        #collectionGrid{grid-auto-rows:90px!important;row-gap:8px!important;column-gap:6px!important;}
+        #collectionViewport{
+          grid-template-columns:minmax(0,1fr) 28px!important;
+          gap:5px!important;padding:6px!important;
+        }
+        #collectionGrid{gap:8px!important;}
         #collectionGrid > .colCard,
         #collectionGrid > .colCard.ttdOdCard{
-          height:90px!important;min-height:90px!important;max-height:90px!important;padding:7px 3px 5px!important;
+          min-height:112px!important;padding:9px 6px 7px!important;
         }
-        #collectionGrid > .colCard .glyphWrap{width:28px!important;height:28px!important;max-width:28px!important;max-height:28px!important;flex-basis:28px!important;}
-        #collectionGrid > .colCard .cname{font-size:7.8px!important;}
-        #collectionGrid > .colCard .ccls{font-size:7.4px!important;}
+        #collectionGrid > .colCard .glyphWrap{
+          width:38px!important;height:38px!important;max-width:38px!important;max-height:38px!important;
+          flex-basis:38px!important;
+        }
+        #collectionGrid > .colCard .cname{font-size:8.4px!important;}
+        #collectionGrid > .colCard .ccls{font-size:7.6px!important;}
         #collectionScrollRail{width:28px!important;}
       }
       @media (max-height:650px) and (orientation:portrait){
@@ -153,13 +165,14 @@
         #ttdCollectionPanel .deckTools{padding:4px 8px!important;gap:3px!important;}
         #ttdCollectionPanel .deckSearch{padding:5px 7px!important;}
         #ttdCollectionPanel .deckToolSelect,#ttdCollectionPanel .deckToolBtn{padding-top:5px!important;padding-bottom:5px!important;}
-        #collectionViewport{padding-top:4px!important;padding-bottom:4px!important;}
-        #collectionGrid{grid-auto-rows:88px!important;row-gap:7px!important;}
+        #collectionViewport{padding-top:5px!important;padding-bottom:5px!important;}
+        #collectionGrid{gap:8px!important;}
         #collectionGrid > .colCard,
-        #collectionGrid > .colCard.ttdOdCard{
-          height:88px!important;min-height:88px!important;max-height:88px!important;padding-top:6px!important;
+        #collectionGrid > .colCard.ttdOdCard{min-height:108px!important;padding-top:8px!important;}
+        #collectionGrid > .colCard .glyphWrap{
+          width:36px!important;height:36px!important;max-width:36px!important;max-height:36px!important;
+          flex-basis:36px!important;
         }
-        #collectionGrid > .colCard .glyphWrap{width:27px!important;height:27px!important;max-width:27px!important;max-height:27px!important;flex-basis:27px!important;}
         #ttdCollectionPanel #deckFooter{padding-top:5px!important;padding-bottom:calc(5px + env(safe-area-inset-bottom))!important;}
         #ttdCollectionPanel #saveDeckBtn{min-height:36px!important;padding:7px!important;}
       }
@@ -235,8 +248,8 @@
     };
     window.__TTD_COLLECTION_PANEL_SYNC=()=>requestAnimationFrame(sync);
 
-    if(grid.dataset.ttdPanelAuthorityBound!=='19'){
-      grid.dataset.ttdPanelAuthorityBound='19';
+    if(grid.dataset.ttdPanelAuthorityBound!=='20'){
+      grid.dataset.ttdPanelAuthorityBound='20';
       grid.addEventListener('scroll',sync,{passive:true});
       const setFromY=(clientY)=>{
         const max=Math.max(0,grid.scrollHeight-grid.clientHeight);
