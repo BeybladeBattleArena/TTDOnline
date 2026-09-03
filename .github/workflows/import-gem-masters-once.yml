@@ -1,0 +1,90 @@
+name: One-time original jewel import
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/import-gem-masters-once.yml
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  import-jewels:
+    if: github.event.head_commit.message == 'Stage one-time original jewel import'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out staging commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read prepared text changes from staging branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/gem-import-20260902
+          mkdir -p /tmp/ttd-staged
+          git show origin/automation/gem-import-20260902:assets/game-assets.json > /tmp/ttd-staged/game-assets.json
+          git show origin/automation/gem-import-20260902:assets/immutable-assets.lock.json > /tmp/ttd-staged/immutable-assets.lock.json
+          git show origin/automation/gem-import-20260902:online/collection-portrait-fit-v16.js > /tmp/ttd-staged/collection-portrait-fit-v16.js
+          git show origin/automation/gem-import-20260902:scripts/smoke-hosting-png-v34.sh > /tmp/ttd-staged/smoke-hosting-png-v34.sh
+
+      - name: Authenticate jewel transfer reader
+        id: gcp_auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ttd-online-b8c0f
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/drive.readonly
+
+      - name: Download exact validated jewel bundle
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.gcp_auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            'https://www.googleapis.com/drive/v3/files/1Dyx1RJjX7XobsWzVIxjU-oi0HB3btLgs?alt=media' \
+            -o /tmp/ttd-jewel-masters-1536.zip
+          echo '5f61c4c7964f154bf61cc512c9b2b6259e5525b7235c6ca18290ad5186c185fb  /tmp/ttd-jewel-masters-1536.zip' | sha256sum -c -
+
+      - name: Apply original-size jewel masters and Collection fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/ttd-staged/game-assets.json assets/game-assets.json
+          cp /tmp/ttd-staged/immutable-assets.lock.json assets/immutable-assets.lock.json
+          cp /tmp/ttd-staged/collection-portrait-fit-v16.js online/collection-portrait-fit-v16.js
+          cp /tmp/ttd-staged/smoke-hosting-png-v34.sh scripts/smoke-hosting-png-v34.sh
+          unzip -o /tmp/ttd-jewel-masters-1536.zip -d assets/items >/dev/null
+          test "$(find assets/items -maxdepth 1 -type f -name 'jewel-*.png' | wc -l | tr -d ' ')" -eq 24
+          node --check online/collection-portrait-fit-v16.js
+          bash -n scripts/smoke-hosting-png-v34.sh
+
+      - name: Validate complete hosting source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run check:hosting
+
+      - name: Create reviewed release candidate branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/import-gem-masters-once.yml
+          git add assets/game-assets.json assets/immutable-assets.lock.json \
+            online/collection-portrait-fit-v16.js scripts/smoke-hosting-png-v34.sh \
+            assets/items/jewel-*.png
+          count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          [[ "$count" == '29' ]] || { echo "Expected 29 staged paths, got $count"; git diff --cached --name-only; exit 1; }
+          git commit -m '[release] Restore original gem masters and Collection grid'
+          git push origin HEAD:refs/heads/fix/gem-masters-final
