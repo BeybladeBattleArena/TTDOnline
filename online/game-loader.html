@@ -108,6 +108,13 @@
             practice.async=false;
             document.head.appendChild(practice);
           }
+          if(!document.getElementById('ttdPracticeEntryHotfixV2Script')){
+            const practiceEntryHotfix=document.createElement('script');
+            practiceEntryHotfix.id='ttdPracticeEntryHotfixV2Script';
+            practiceEntryHotfix.src=window.__TTD_ASSET_URL('/online/practice-entry-hotfix-v2.js?v=2');
+            practiceEntryHotfix.async=false;
+            document.head.appendChild(practiceEntryHotfix);
+          }
           if(!document.getElementById('ttdPracticeRuntimeSyncV1Script')){
             const practiceSync=document.createElement('script');
             practiceSync.id='ttdPracticeRuntimeSyncV1Script';
