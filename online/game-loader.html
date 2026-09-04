@@ -108,6 +108,13 @@
             practiceLoop.async=false;
             document.head.appendChild(practiceLoop);
           }
+          if(!document.getElementById('ttdPracticeResourceHudV1Script')){
+            const practiceHud=document.createElement('script');
+            practiceHud.id='ttdPracticeResourceHudV1Script';
+            practiceHud.src=window.__TTD_ASSET_URL('/online/practice-resource-hud-v1.js?v=1');
+            practiceHud.async=false;
+            document.head.appendChild(practiceHud);
+          }
           if(!document.getElementById('ttdPagePolishV32Script')){
             const polish=document.createElement('script');
             polish.id='ttdPagePolishV32Script';
