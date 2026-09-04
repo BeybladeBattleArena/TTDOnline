@@ -9,6 +9,7 @@
     freshStateBridge: false,
     damageShadow: false,
     classShadow: false,
+    rewardGuard: false,
     saveGuard: false,
   };
 
@@ -40,13 +41,15 @@
   });
   status.classShadow = makeShadowable('slottedClassOf');
 
-  // The canonical game exposes `state` as a configurable GETTER ONLY. Practice Mode v1 assigns
-  // `state = freshState(...)`, which throws in strict mode even when freshState succeeds. Keep the
-  // canonical getter, add a harmless setter, and have our training freshState call the canonical
-  // startGame() so the game's real lexical state is initialized instead of creating a detached copy.
+  let canonicalStateGet = () => null;
+
+  // The canonical game exposes `state` as a configurable getter only. Practice Mode v1 assigns
+  // `state = freshState(...)`, so we retain the canonical getter and add a harmless setter. The
+  // training freshState normally enters through startGame(), but on the recovery pass it reuses the
+  // canonical state that the first pass already created. This avoids creating a second battle loop.
   try {
     const stateDescriptor = Object.getOwnPropertyDescriptor(window, 'state');
-    const canonicalStateGet = stateDescriptor && typeof stateDescriptor.get === 'function'
+    canonicalStateGet = stateDescriptor && typeof stateDescriptor.get === 'function'
       ? stateDescriptor.get.bind(window)
       : (() => null);
 
@@ -56,28 +59,32 @@
         enumerable: stateDescriptor?.enumerable === true,
         get() { return canonicalStateGet(); },
         set(value) {
-          // Practice Mode immediately assigns the exact object returned by practiceFreshState.
-          // The real state was already installed by canonical startGame(), so this assignment is
-          // intentionally a no-op. Never replace the canonical lexical state from a sidecar.
           const current = canonicalStateGet();
-          if (value !== current && value != null) {
-            console.warn('Practice Mode ignored an attempt to replace canonical battle state.');
-          }
+          if (value !== current && value != null) console.warn('Practice Mode ignored an attempt to replace canonical battle state.');
         },
       });
       status.stateBridge = true;
     }
 
     const practiceFreshState = (modeKey = 'endlesshorde') => {
-      if (typeof window.startGame !== 'function') {
-        throw new Error('Canonical startGame() is not available to Practice Mode.');
-      }
-      window.startGame(modeKey);
       const current = canonicalStateGet();
-      if (!current || typeof current !== 'object') {
-        throw new Error('Canonical startGame() did not create battle state.');
+      if (window.__TTD_PRACTICE_REUSE_CANONICAL_STATE__ && current && typeof current === 'object') {
+        window.__TTD_PRACTICE_REUSE_CANONICAL_STATE__ = false;
+        current.running = true;
+        current.spawnQueue = [];
+        current.wave = 1;
+        current.completedWaves = 0;
+        current.waveClearCredited = false;
+        current.kills = 0;
+        current.coinGold = 0;
+        current.__ttdOutcomeCommitted = false;
+        return current;
       }
-      return current;
+      if (typeof window.startGame !== 'function') throw new Error('Canonical startGame() is not available to Practice Mode.');
+      window.startGame(modeKey);
+      const next = canonicalStateGet();
+      if (!next || typeof next !== 'object') throw new Error('Canonical startGame() did not create battle state.');
+      return next;
     };
 
     Object.defineProperty(window, 'freshState', {
@@ -91,13 +98,68 @@
     console.error('Practice Mode could not install its canonical state bridge.', error);
   }
 
-  // Never allow temporary training edits to be persisted through the canonical account saver.
+  function practiceProtected() {
+    const s = canonicalStateGet();
+    return !!(
+      window.__TTD_PRACTICE_ACTIVE__ ||
+      window.__TTD_PRACTICE_BOOTING_V2 ||
+      window.__TTD_PRACTICE?.active ||
+      s?.__ttdPracticeMode
+    );
+  }
+
+  function cancelPracticeOutcome() {
+    const s = canonicalStateGet();
+    if (s && typeof s === 'object') {
+      s.__ttdPracticeMode = true;
+      s.running = false;
+      s.spawnQueue = [];
+      s.wave = 1;
+      s.completedWaves = 0;
+      s.waveClearCredited = false;
+      s.kills = 0;
+      s.coinGold = 0;
+      s.zPlayTime = 0;
+      s.zTotalDamageDealt = 0;
+      s.zTotalDamageTaken = 0;
+      s.__ttdOutcomeCommitted = true;
+    }
+    if (window.__TTD_PRACTICE?.active && typeof window.__TTD_PRACTICE.close === 'function') {
+      queueMicrotask(() => {
+        try { window.__TTD_PRACTICE.close(); } catch (_) {}
+      });
+    }
+  }
+
+  // Practice must never pay pips, experience, gold, or any other native battle reward, including
+  // the brief recovery state used on first entry.
+  try {
+    const baseEndMatch = typeof window.endMatch === 'function' ? window.endMatch : null;
+    const baseEndEndlessHorde = typeof window.endEndlessHorde === 'function' ? window.endEndlessHorde : null;
+    if (baseEndMatch) {
+      window.endMatch = function practiceRewardGuardedEndMatch() {
+        if (practiceProtected()) { cancelPracticeOutcome(); return; }
+        return baseEndMatch.apply(this, arguments);
+      };
+    }
+    if (baseEndEndlessHorde) {
+      window.endEndlessHorde = function practiceRewardGuardedEndlessEnd() {
+        if (practiceProtected()) { cancelPracticeOutcome(); return; }
+        return baseEndEndlessHorde.apply(this, arguments);
+      };
+    }
+    status.rewardGuard = !!(baseEndMatch || baseEndEndlessHorde);
+  } catch (error) {
+    console.warn('Practice Mode could not install its reward guard.', error);
+  }
+
+  // Never allow temporary training edits to be persisted through the global account saver.
   try {
     if (typeof window.saveAccount === 'function' && !window.__TTD_PRACTICE_SAVE_GUARD_V1) {
       window.__TTD_PRACTICE_SAVE_GUARD_V1 = true;
       const baseSaveAccount = window.saveAccount;
       window.saveAccount = function practiceSaveGuard() {
-        if (window.__TTD_PRACTICE?.active || window.__TTD_PRACTICE_ACTIVE__) return;
+        if (practiceProtected()) return;
         return baseSaveAccount.apply(this, arguments);
       };
       status.saveGuard = true;
