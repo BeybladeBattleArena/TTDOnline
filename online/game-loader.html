@@ -35,11 +35,11 @@
         return nativeFetch(input,init);
       };
 
-      // Final Collection authority, item presentation authorities, Overdrive battle abilities and
-      // page-entry polish are injected after the transformed game document exists. They are
-      // independent of the synchronous bridge chain so an earlier optional bridge error cannot
-      // prevent item artwork, Rewards inventory, Overdrive content, collection transactions, or
-      // the page-reset contract.
+      // Final Collection authority, item presentation authorities, Overdrive battle abilities,
+      // Practice Mode, and page-entry polish are injected after the transformed game document exists.
+      // They are independent of the synchronous bridge chain so an earlier optional bridge error cannot
+      // prevent item artwork, Rewards inventory, Overdrive content, collection transactions, training,
+      // or the page-reset contract.
       let collectionAuthorityAttempts=0;
       const ensureCollectionAuthority=()=>{
         collectionAuthorityAttempts+=1;
@@ -93,6 +93,13 @@
             authority.src=window.__TTD_ASSET_URL('/online/collection-portrait-fit-v16.js');
             authority.async=false;
             document.head.appendChild(authority);
+          }
+          if(!document.getElementById('ttdPracticeModeV1Script')){
+            const practice=document.createElement('script');
+            practice.id='ttdPracticeModeV1Script';
+            practice.src=window.__TTD_ASSET_URL('/online/practice-mode-v1.js?v=1');
+            practice.async=false;
+            document.head.appendChild(practice);
           }
           if(!document.getElementById('ttdPagePolishV32Script')){
             const polish=document.createElement('script');
