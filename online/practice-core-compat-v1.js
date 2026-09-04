@@ -3,6 +3,15 @@
   if (window.__TTD_PRACTICE_CORE_COMPAT_V1) return;
   window.__TTD_PRACTICE_CORE_COMPAT_V1 = true;
 
+  const status = window.__TTD_PRACTICE_COMPAT_STATUS = {
+    loaded: true,
+    stateBridge: false,
+    freshStateBridge: false,
+    damageShadow: false,
+    classShadow: false,
+    saveGuard: false,
+  };
+
   function makeShadowable(name, wrapAssigned = null) {
     const descriptor = Object.getOwnPropertyDescriptor(window, name);
     if (!descriptor || descriptor.configurable === false) return false;
@@ -19,10 +28,8 @@
     return true;
   }
 
-  // These core bindings are intentionally read-only in the canonical bridge. Practice Mode needs
-  // a sidecar-visible wrapper without mutating the canonical lexical functions used by the game.
-  // A shadow property lets Practice Mode wrap sidecar callers while normal battle code remains intact.
-  makeShadowable('damageEnemy', (fn) => {
+  // Sidecar-only wrappers. These do not replace the canonical lexical functions used by normal battles.
+  status.damageShadow = makeShadowable('damageEnemy', (fn) => {
     if (typeof fn !== 'function') return fn;
     return function practiceSidecarDamageShadow() {
       const prior = !!window.__TTD_PRACTICE_DAMAGE_WRAPPER_ACTIVE;
@@ -31,99 +38,57 @@
       finally { window.__TTD_PRACTICE_DAMAGE_WRAPPER_ACTIVE = prior; }
     };
   });
-  makeShadowable('slottedClassOf');
+  status.classShadow = makeShadowable('slottedClassOf');
 
-  // freshState is deliberately private to the canonical game runtime, but Practice Mode was authored
-  // as a sidecar and needs an isolated state object before it enters the existing battle screen.
-  // Publish a training-only constructor without replacing the canonical lexical freshState function.
-  // The normal game therefore keeps using its original state factory unchanged.
-  if (typeof window.freshState !== 'function') {
-    const practiceFreshState = (modeKey = 'endlesshorde') => {
-      const cfg = {
-        startLives: 999999999,
-        bossEvery: 999999,
-        countBase: 0,
-        countPerWave: 0,
-        bossHpMult: 1,
-        hpGrowth: 0,
-        speedMult: 0,
-        rewardMult: 0,
-      };
-      let deck = [];
-      try {
-        if (typeof window.getActiveDeck === 'function') deck = window.getActiveDeck() || [];
-      } catch (_) {}
-      return {
-        modeKey,
-        cfg,
-        sp: 999999999,
-        summonCost: 0,
-        wave: 1,
-        lives: cfg.startLives,
-        deck,
-        board: new Array(15).fill(null),
-        enemies: [],
-        spawnQueue: [],
-        spawnTimer: 0,
-        waveClearedAt: 0,
-        completedWaves: 0,
-        waveClearCredited: false,
-        running: true,
-        time: 0,
-        kills: 0,
-        effects: [],
-        tilePulse: new Array(15).fill(null),
-        adventure: false,
-        adventureStage: null,
-        adventureDiff: null,
-        adventureDiffKey: null,
-        adventureStages: null,
-        adventureStageIdx: 0,
-        typhoonPhase: false,
-        typhoonDefeated: false,
-        snow: [],
-        projectiles: [],
-        coins: [],
-        coinGold: 0,
-        hazards: [],
-        playerShots: [],
-        dmgNumbers: [],
-        pierceShots: [],
-        screenTint: null,
-        icicleCasts: [],
-        blizzardPunches: [],
-        blizzardBreaths: [],
-        blizzardFloorSwaths: [],
-        blizzardCrystals: [],
-        devilCasts: [],
-        skyfalls: [],
-        gate: null,
-        gateCooldownT: 0,
-        asclepiusCD: 0,
-        zombieMode: false,
-        acidGlobs: [],
-        zombieAttackFx: [],
-        livesMax: cfg.startLives,
-        showPlayerHpBar: true,
-        playerHpLabel: 'Practice HP',
-        zPlayTime: 0,
-        zSpawnTimer: 0,
-        zTotalDamageDealt: 0,
-        zTotalDamageTaken: 0,
-        zDamageByDieKey: {},
-        __ttdPracticeMode: true,
-      };
-    };
-    try {
-      Object.defineProperty(window, 'freshState', {
+  // The canonical game exposes `state` as a configurable GETTER ONLY. Practice Mode v1 assigns
+  // `state = freshState(...)`, which throws in strict mode even when freshState succeeds. Keep the
+  // canonical getter, add a harmless setter, and have our training freshState call the canonical
+  // startGame() so the game's real lexical state is initialized instead of creating a detached copy.
+  try {
+    const stateDescriptor = Object.getOwnPropertyDescriptor(window, 'state');
+    const canonicalStateGet = stateDescriptor && typeof stateDescriptor.get === 'function'
+      ? stateDescriptor.get.bind(window)
+      : (() => null);
+
+    if (stateDescriptor?.configurable !== false) {
+      Object.defineProperty(window, 'state', {
         configurable: true,
-        enumerable: false,
-        writable: true,
-        value: practiceFreshState,
+        enumerable: stateDescriptor?.enumerable === true,
+        get() { return canonicalStateGet(); },
+        set(value) {
+          // Practice Mode immediately assigns the exact object returned by practiceFreshState.
+          // The real state was already installed by canonical startGame(), so this assignment is
+          // intentionally a no-op. Never replace the canonical lexical state from a sidecar.
+          const current = canonicalStateGet();
+          if (value !== current && value != null) {
+            console.warn('Practice Mode ignored an attempt to replace canonical battle state.');
+          }
+        },
       });
-    } catch (_) {
-      window.freshState = practiceFreshState;
+      status.stateBridge = true;
     }
+
+    const practiceFreshState = (modeKey = 'endlesshorde') => {
+      if (typeof window.startGame !== 'function') {
+        throw new Error('Canonical startGame() is not available to Practice Mode.');
+      }
+      window.startGame(modeKey);
+      const current = canonicalStateGet();
+      if (!current || typeof current !== 'object') {
+        throw new Error('Canonical startGame() did not create battle state.');
+      }
+      return current;
+    };
+
+    Object.defineProperty(window, 'freshState', {
+      configurable: true,
+      enumerable: false,
+      writable: true,
+      value: practiceFreshState,
+    });
+    status.freshStateBridge = true;
+  } catch (error) {
+    console.error('Practice Mode could not install its canonical state bridge.', error);
   }
 
   // Never allow temporary training edits to be persisted through the canonical account saver.
@@ -135,6 +100,7 @@
         if (window.__TTD_PRACTICE?.active || window.__TTD_PRACTICE_ACTIVE__) return;
         return baseSaveAccount.apply(this, arguments);
       };
+      status.saveGuard = true;
     }
   } catch (error) {
     console.warn('Practice Mode could not install its account-save guard.', error);
