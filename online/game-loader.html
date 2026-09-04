@@ -101,6 +101,13 @@
             practice.async=false;
             document.head.appendChild(practice);
           }
+          if(!document.getElementById('ttdPracticeLoopBridgeV1Script')){
+            const practiceLoop=document.createElement('script');
+            practiceLoop.id='ttdPracticeLoopBridgeV1Script';
+            practiceLoop.src=window.__TTD_ASSET_URL('/online/practice-loop-bridge-v1.js?v=1');
+            practiceLoop.async=false;
+            document.head.appendChild(practiceLoop);
+          }
           if(!document.getElementById('ttdPagePolishV32Script')){
             const polish=document.createElement('script');
             polish.id='ttdPagePolishV32Script';
