@@ -157,6 +157,11 @@
 
     try {
       api.open();
+      setTimeout(() => {
+        if (window.__TTD_PRACTICE?.active) return;
+        console.error('Practice Mode entry returned without activating the training state.');
+        notify('Practice Mode could not initialize. Reload once and try again.');
+      }, 650);
     } catch (error) {
       console.error('Practice Mode entry failed.', error);
       notify('Practice Mode could not initialize. Reload once and try again.');
