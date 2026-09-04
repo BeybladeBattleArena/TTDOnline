@@ -94,12 +94,26 @@
             authority.async=false;
             document.head.appendChild(authority);
           }
+          if(!document.getElementById('ttdPracticeCoreCompatV1Script')){
+            const practiceCompat=document.createElement('script');
+            practiceCompat.id='ttdPracticeCoreCompatV1Script';
+            practiceCompat.src=window.__TTD_ASSET_URL('/online/practice-core-compat-v1.js?v=1');
+            practiceCompat.async=false;
+            document.head.appendChild(practiceCompat);
+          }
           if(!document.getElementById('ttdPracticeModeV1Script')){
             const practice=document.createElement('script');
             practice.id='ttdPracticeModeV1Script';
             practice.src=window.__TTD_ASSET_URL('/online/practice-mode-v1.js?v=1');
             practice.async=false;
             document.head.appendChild(practice);
+          }
+          if(!document.getElementById('ttdPracticeRuntimeSyncV1Script')){
+            const practiceSync=document.createElement('script');
+            practiceSync.id='ttdPracticeRuntimeSyncV1Script';
+            practiceSync.src=window.__TTD_ASSET_URL('/online/practice-runtime-sync-v1.js?v=1');
+            practiceSync.async=false;
+            document.head.appendChild(practiceSync);
           }
           if(!document.getElementById('ttdPracticeLoopBridgeV1Script')){
             const practiceLoop=document.createElement('script');
