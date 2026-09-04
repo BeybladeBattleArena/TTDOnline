@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta id="ttd-online-game-bridge" data-mode="loader-v9">
-  <meta name="ttd-build" content="release-integrity-v15">
+  <meta name="ttd-build" content="release-integrity-v16">
   <title>Time To Die Online</title>
   <style>html,body{margin:0;width:100%;height:100%;background:#090b14;color:#e8e0c8;font-family:system-ui,sans-serif}body{display:flex;align-items:center;justify-content:center}.boot{opacity:.72;font-size:13px;letter-spacing:.02em;text-align:center;padding:24px}</style>
 </head>
@@ -97,7 +97,7 @@
           if(!document.getElementById('ttdPracticeCoreCompatV1Script')){
             const practiceCompat=document.createElement('script');
             practiceCompat.id='ttdPracticeCoreCompatV1Script';
-            practiceCompat.src=window.__TTD_ASSET_URL('/online/practice-core-compat-v1.js?v=2');
+            practiceCompat.src=window.__TTD_ASSET_URL('/online/practice-core-compat-v1.js?v=3');
             practiceCompat.async=false;
             document.head.appendChild(practiceCompat);
           }
@@ -107,6 +107,13 @@
             practice.src=window.__TTD_ASSET_URL('/online/practice-mode-v1.js?v=1');
             practice.async=false;
             document.head.appendChild(practice);
+          }
+          if(!document.getElementById('ttdPracticeRepairV2Script')){
+            const practiceRepair=document.createElement('script');
+            practiceRepair.id='ttdPracticeRepairV2Script';
+            practiceRepair.src=window.__TTD_ASSET_URL('/online/practice-repair-v2.js?v=1');
+            practiceRepair.async=false;
+            document.head.appendChild(practiceRepair);
           }
           if(!document.getElementById('ttdPracticeEntryHotfixV2Script')){
             const practiceEntryHotfix=document.createElement('script');
@@ -164,7 +171,7 @@
       }catch(err){
         console.error('Runtime asset bootstrap failed.',err);
         document.querySelector('.boot').textContent='Could not load verified game assets. Reload and try again.';
-        window.parent?.postMessage({type:'ttd:bridge-sync-error',message:`Could not load verified game assets: ${err?.message||'unknown error'}`},location.origin);
+        window.parent?.postMessage({type:'ttd:bridge-sync-error',message:`Could not start online gameplay: ${err?.message||'unknown error'}`},location.origin);
       }
     })();
   </script>
