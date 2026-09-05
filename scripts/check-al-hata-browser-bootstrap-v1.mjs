@@ -29,18 +29,7 @@ function hitStack(w,button){
 }
 function buttonIsTopmost(w,button){if(!button)return false;const r=button.getBoundingClientRect();const el=w.document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return el===button||button.contains(el);}
 function readTouchDiag(w){
-  try{return w.eval(`({
-    activateFn:typeof AH_PLAYTEST_activateNavigatorPrompt,
-    createFn:typeof AH_PLAYTEST_createNavigator,
-    promptRunSame:AH_PLAYTEST_promptRunState===state,
-    promptActivating:AH_PLAYTEST_promptActivating,
-    alHata:!!AH_isState(),
-    sessionExists:typeof session!=='undefined'&&!!session,
-    sessionActive:typeof session!=='undefined'&&!!session?.active,
-    segment:typeof session!=='undefined'?session?.segment||null:null,
-    phase:typeof session!=='undefined'?session?.phase||null:null,
-    boardCount:Array.isArray(state?.board)?state.board.filter(Boolean).length:-1
-  })`);}catch(err){return{diagError:String(err?.message||err)};}
+  try{return w.eval("({activateFn:typeof AH_PLAYTEST_activateNavigatorPrompt,createFn:typeof AH_PLAYTEST_createNavigator,promptRunSame:AH_PLAYTEST_promptRunState===state,promptActivating:AH_PLAYTEST_promptActivating,alHata:!!AH_isState(),sessionExists:typeof session!=='undefined'&&!!session,sessionActive:typeof session!=='undefined'&&!!session?.active,segment:typeof session!=='undefined'?session?.segment||null:null,phase:typeof session!=='undefined'?session?.phase||null:null,boardCount:Array.isArray(state?.board)?state.board.filter(Boolean).length:-1})");}catch(err){return{diagError:String(err?.message||err)};}
 }
 const started=performance.now();
 (function poll(){
