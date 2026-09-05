@@ -119,7 +119,7 @@ const bridge=read('online/run-ui-bridge-v21.js');
 need(bridge,paths.map((path)=>`/${path}?v=1`),'Al Hata loader module order');
 must(bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-temple-v1.js?v=1'),'refinement layer must load after authored regions');
 must(bridge.indexOf('/online/al-hata-stage1-playtest-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1'),'playtest layer must load after the refined authored map');
-need(bridge,["const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=1'",'await loadClassicScript(PLAYTEST_ENTRY'], 'Al Hata entry loader');
+need(bridge,["const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=2'",'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V3','await loadClassicScript(PLAYTEST_ENTRY'], 'cache-safe Al Hata entry loader');
 
 const presentation=read('online/game-presentation-v1.js');
 need(presentation,['async function playPreparedMissionStart','presentRunStart:playPreparedMissionStart'],'Prepared MISSION / START presentation contract');
@@ -135,12 +135,19 @@ new vm.Script(entry,{filename:'al-hata-stage1-playtest-entry-v1.js'});
 need(entry,[
   'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V1=true',
   'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V2=true',
+  'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V3=true',
   "const AH_ID='al_hata'",
   'const missionBase=',
+  'function isAlHataStage1Run(runState)',
+  "stageName===canonicalName",
   'window.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING=true',
   'runState.running=false',
   'runState.spawnQueue=[]',
+  "document.getElementById('ttdMissionHoldShieldV6')?.remove()",
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_API?.prepareInMapNavigator',
+  "const RECOVERY_ID='ttdAhCoveRecoveryV3'",
+  'RETRY COVE',
+  'END RUN',
   'startAdventureCampaign=wrappedCampaign',
   'wrappedCampaign.__ttdMissionWrappedV6=true',
 ],'Post-loading Al Hata entry gate');
@@ -149,16 +156,16 @@ must(!entry.includes('drawArrivalPreview'),'Al Hata entry must not use the old p
 
 {
   const events=[];
-  const stage={name:'Beach Landing'};
-  const oldState={id:'old'};
-  const runState={adventureStage:stage,running:true,spawnQueue:['default-wave'],enemies:[{id:'default-enemy'}],spawnTimer:3,wave:1};
+  const canonicalStage={name:'Island Landing',id:'al-hata-stage-1'};
+  const clonedStage={name:'Island Landing'};
+  const reusedState={id:'reused-menu-state'};
   const context={
     console,
-    ADVENTURES:{al_hata:{stages:[stage]}},
-    state:oldState,
+    ADVENTURES:{al_hata:{stages:[canonicalStage]}},
+    state:reusedState,
     performance:{now:()=>0},
     requestAnimationFrame:()=>0,
-    document:{getElementById:(id)=>id==='gameScreen'?{classList:{contains:(name)=>name==='active'}}:null},
+    document:{getElementById:(id)=>id==='gameScreen'?{classList:{contains:(name)=>name==='active'}}:null,body:{appendChild:()=>{}}},
     getActiveDeck:()=>[1,2,3,4,5],
     toastGlobal:()=>{},
     showScreen:()=>{},
@@ -167,17 +174,21 @@ must(!entry.includes('drawArrivalPreview'),'Al Hata entry must not use the old p
   };
   context.window=context;
   context.TTDGamePresentation={rebind:()=>{}};
-  const loadingRunner=()=>{events.push('loading-runner');context.state=runState;return 'loaded';};
+  const loadingRunner=()=>{
+    events.push('loading-runner');
+    Object.assign(reusedState,{adventure:true,adventureStageIdx:0,adventureStage:clonedStage,running:true,spawnQueue:['default-wave'],enemies:[{id:'default-enemy'}],spawnTimer:3,wave:1});
+    return 'loaded';
+  };
   context.startAdventureCampaign.__ttdMissionBaseV6=loadingRunner;
-  context.__TTD_AL_HATA_STAGE1_PLAYTEST_API={prepareInMapNavigator:(candidate)=>{must(candidate===runState,'in-map prepare must receive the freshly loaded campaign state');events.push('prepare-map');return true;}};
+  context.__TTD_AL_HATA_STAGE1_PLAYTEST_API={prepareInMapNavigator:(candidate)=>{must(candidate===reusedState,'in-map prepare must accept the live campaign state even when the launcher reused the state object');events.push('prepare-map');return true;}};
   vm.createContext(context);
   new vm.Script(entry,{filename:'al-hata-stage1-entry-behavior.js'}).runInContext(context);
   const result=context.startAdventureCampaign('al_hata','normal');
   must(result==='loaded','Al Hata entry must preserve the loading runner result');
   must(events.join('>')==='loading-runner>prepare-map',`Al Hata launch order must be loading then in-map prepare, got ${events.join('>')}`);
-  must(runState.running===false,'fresh Al Hata state must remain paused before Navigator/MISSION START');
-  must(runState.__ttdMissionIntroHold===true,'fresh Al Hata state must hold the mission intro before Navigator creation');
-  must(runState.spawnQueue.length===0&&runState.enemies.length===0,'default tower-defense enemies must be removed before Arrival Cove is revealed');
+  must(reusedState.running===false,'fresh Al Hata state must remain paused before Navigator/MISSION START');
+  must(reusedState.__ttdMissionIntroHold===true,'fresh Al Hata state must hold the mission intro before Navigator creation');
+  must(reusedState.spawnQueue.length===0&&reusedState.enemies.length===0,'default tower-defense enemies must be removed before Arrival Cove is revealed');
 }
 
 const itemClient=read('online/al-hata-world-item-client-v1.js');
@@ -188,4 +199,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: Begin Al Hata runs loading first, default TD is held/cleared, Arrival Cove owns the in-map free Navigator summon, prepared MISSION / START releases gameplay only afterward, and authored Stage 1 progression remains structurally wired.');
+console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is held/cleared; Arrival Cove owns the in-map free Navigator summon; stale mission shields are removed; recovery controls remain available; prepared MISSION / START releases gameplay only afterward.');
