@@ -70,3 +70,10 @@ startAdventure=function AH_startAdventureNavigatorFirst(advId,stageIdx,diffKey){
   if(advId===AH_ID&&Number(stageIdx)===0)AH_PLAYTEST_armNavigatorForMission();
   return result;
 };
+
+const AH_PLAYTEST_baseStartAdventureCampaign=startAdventureCampaign;
+startAdventureCampaign=function AH_startAdventureCampaignNavigatorFirst(advId,diffKey){
+  const result=AH_PLAYTEST_baseStartAdventureCampaign(advId,diffKey);
+  if(advId===AH_ID)AH_PLAYTEST_armNavigatorForMission();
+  return result;
+};
