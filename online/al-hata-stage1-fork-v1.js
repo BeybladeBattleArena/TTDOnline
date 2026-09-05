@@ -86,9 +86,14 @@ const AH_forkBaseEnemyRenderPos=enemyRenderPos;
 enemyRenderPos=function AH_enemyRenderPos(e){
   if(AH_isState()&&Number(state.__ttdAlHataCombatArea)===4&&e?.__ttdAhPincerSide){const t=totalLen>0?e.dist/totalLen:0,route=e.__ttdAhPincerSide==='right'?AH_PINCER_RIGHT_ROUTE:AH_ROUTES[4];return AH_pointOnProjectedRoute(route,t,cw,ch,AH_AREAS[4].cameraX);}return AH_forkBaseEnemyRenderPos(e);
 };
-const AH_forkBaseSpawnEnemy=spawnAdventureEnemy;
 let AH_pincerSpawnCounter=0;
-spawnAdventureEnemy=function AH_spawnPincerEnemy(entry){const before=state?.enemies?.length||0;AH_forkBaseSpawnEnemy(entry);if(AH_isState()&&Number(state.__ttdAlHataCombatArea)===4&&state.enemies.length>before){const e=state.enemies[state.enemies.length-1];e.__ttdAhPincerSide=(AH_pincerSpawnCounter++%2===0)?'left':'right';e.__ttdAhEntryKind='bridge';}};
+const AH_forkBaseUpdateSpawns=updateSpawns;
+updateSpawns=function AH_pincerAwareUpdateSpawns(dt){
+  if(!AH_isState()||session?.active||Number(state.__ttdAlHataCombatArea)!==4)return AH_forkBaseUpdateSpawns(dt);
+  const beforeEnemies=state.enemies?.length||0,result=AH_forkBaseUpdateSpawns(dt),afterEnemies=state.enemies?.length||0;
+  if(afterEnemies>beforeEnemies){for(let i=beforeEnemies;i<afterEnemies;i++){const e=state.enemies[i];if(!e)continue;e.__ttdAhPincerSide=(AH_pincerSpawnCounter++%2===0)?'left':'right';e.__ttdAhEntryKind='bridge';}}
+  return result;
+};
 function AH_drawPincerRoute(g,w,h,cameraX,vertices){const pts=AH_sampleRoute(vertices,w,h,cameraX);g.lineCap='round';for(let i=1;i<pts.length;i++){g.strokeStyle='rgba(89,57,32,.35)';g.lineWidth=Math.max(13,30*((pts[i].scale+pts[i-1].scale)*.5));g.beginPath();g.moveTo(pts[i-1].x,pts[i-1].y);g.lineTo(pts[i].x,pts[i].y);g.stroke();g.strokeStyle='rgba(240,215,164,.18)';g.lineWidth=1;g.stroke();}}
 AH_COMBAT_DRAWERS[4]=({back,front,spec})=>{
   AH_drawForkBackdrop(back.g,back.w,back.h,spec.cameraX);AH_drawBridgeDeck(back.g,back.w,back.h,spec.cameraX);AH_drawPincerRoute(back.g,back.w,back.h,spec.cameraX,AH_ROUTES[4]);AH_drawPincerRoute(back.g,back.w,back.h,spec.cameraX,AH_PINCER_RIGHT_ROUTE);
