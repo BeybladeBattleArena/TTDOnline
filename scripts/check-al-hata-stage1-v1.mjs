@@ -96,16 +96,21 @@ need(playtest,[
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V1=true',
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V2=true',
   'const AH_PLAYTEST_CENTER_BOARD_INDEX=7',
+  "const AH_PLAYTEST_NATIVE_PAUSE_KEY='__ttdAlHataNativePauseV1'",
+  'function AH_PLAYTEST_installNativePause',
+  'function AH_PLAYTEST_releaseNativePause',
   "AH_SEGMENT_STARTS.landing=",
   "AH_SEGMENT_DRAWERS.landing=AH_drawBeachTraversal",
   'AH_SEGMENT_UPDATERS.landing=AH_PLAYTEST_landingUpdater',
-  "if(!state.running||state.__ttdMissionIntroHold)",
+  "if(state.__ttdMissionIntroHold||session.phase!=='play')",
   'runState.board.fill(null)',
   'const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())',
   "session={active:true,phase:'summon'",
   "session.phase='ready'",
   "session.phase='play'",
   'runState.__ttdMissionIntroHold=true',
+  'AH_PLAYTEST_installNativePause(runState)',
+  "button?.addEventListener('pointerdown',activate,{passive:false})",
   'enterPlatformLayout();AH_PLAYTEST_setControllerLocked(true)',
   'ttdAhInMapNavigatorPromptV2',
   'window.TTDGamePresentation?.presentRunStart',
@@ -114,6 +119,7 @@ need(playtest,[
   "AH_finishTraversalToCombat(1,1,'Landing Shore')",
 ],'In-map Navigator playtest runtime');
 must(playtest.indexOf('const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())')<playtest.indexOf('AH_PLAYTEST_beginMissionAfterNavigator(runState);'),'Navigator must be created before prepared MISSION / START is requested');
+must(!playtest.includes('runState.__ttdMissionIntroHold=false;runState.running=true'),'Arrival Cove must not resume the native TD loop when MISSION / START releases traversal');
 
 const bridge=read('online/run-ui-bridge-v21.js');
 need(bridge,paths.map((path)=>`/${path}?v=1`),'Al Hata loader module order');
@@ -199,4 +205,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is held/cleared; Arrival Cove owns the in-map free Navigator summon; stale mission shields are removed; recovery controls remain available; prepared MISSION / START releases gameplay only afterward.');
+console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is hard-held behind Arrival Cove; the in-map free Navigator accepts touch input; stale mission shields are removed; prepared MISSION / START releases traversal while native TD remains paused until combat.');
