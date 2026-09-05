@@ -95,6 +95,7 @@ need(polish,[
 need(playtest,[
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V1=true',
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V2=true',
+  'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V3=true',
   'const AH_PLAYTEST_CENTER_BOARD_INDEX=7',
   "const AH_PLAYTEST_NATIVE_PAUSE_KEY='__ttdAlHataNativePauseV1'",
   'function AH_PLAYTEST_installNativePause',
@@ -110,7 +111,9 @@ need(playtest,[
   "session.phase='play'",
   'runState.__ttdMissionIntroHold=true',
   'AH_PLAYTEST_installNativePause(runState)',
-  "button?.addEventListener('pointerdown',activate,{passive:false})",
+  "for(const type of ['pointerdown','touchstart','click'])",
+  'window.addEventListener(type,event=>AH_PLAYTEST_activateNavigatorPrompt(event),{capture:true,passive:false})',
+  "button?.addEventListener('pointerdown',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false})",
   'enterPlatformLayout();AH_PLAYTEST_setControllerLocked(true)',
   'ttdAhInMapNavigatorPromptV2',
   'window.TTDGamePresentation?.presentRunStart',
@@ -205,4 +208,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is hard-held behind Arrival Cove; the in-map free Navigator accepts touch input; stale mission shields are removed; prepared MISSION / START releases traversal while native TD remains paused until combat.');
+console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is hard-held behind Arrival Cove; the in-map free Navigator accepts window-capture touch input; stale mission shields are removed; prepared MISSION / START releases traversal while native TD remains paused until combat.');
