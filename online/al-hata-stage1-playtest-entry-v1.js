@@ -5,6 +5,7 @@
   window.TTDGamePresentation?.rebind?.();
   const AH_ID='al_hata',CENTER_INDEX=7;
   const baseStartAdventure=startAdventure;
+  const baseStartAdventureCampaign=startAdventureCampaign;
   let opening=false,cleanupActive=null;
 
   const style=document.createElement('style');
@@ -52,22 +53,25 @@
     if(cleanupActive){cleanupActive();cleanupActive=null;}
   }
 
-  function showNavigatorPrelude(advId,stageIdx,diffKey,self,args){
-    const adv=ADVENTURES?.[advId],stage=adv?.stages?.[stageIdx];if(!adv||!stage)return baseStartAdventure.apply(self,args);
+  function showNavigatorPrelude(advId,stageIdx,diffKey,self,args,runner){
+    const adv=ADVENTURES?.[advId],stage=adv?.stages?.[stageIdx];if(!adv||!stage)return runner.apply(self,args);
     if(stage.locked){toastGlobal('Coming soon');return;}
     const deck=getActiveDeck();if(deck.length<5){toastGlobal(deck.length===0?'Build a deck first':'Your deck needs all 5 dice filled');showScreen('deck');return;}
     if(opening)return;opening=true;showScreen('game');
     if(modeLabel)modeLabel.textContent='Al Hata · Arrival Cove';document.getElementById('gameOverlay')?.classList.remove('show');document.getElementById('zSummaryOverlay')?.classList.remove('show');
     renderEmptyNavigatorTray();drawArrivalPreview();requestAnimationFrame(drawArrivalPreview);
-    const button=document.getElementById('summonBtn'),cost=document.getElementById('summonCost');if(!button){opening=false;cleanupPrelude();return baseStartAdventure.apply(self,args);}button.disabled=false;if(cost)cost.textContent='FREE';
+    const button=document.getElementById('summonBtn'),cost=document.getElementById('summonCost');if(!button){opening=false;cleanupPrelude();return runner.apply(self,args);}button.disabled=false;if(cost)cost.textContent='FREE';
     const onSummon=event=>{
       if(!opening)return;event.preventDefault();event.stopImmediatePropagation();opening=false;window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START=true;
       button.removeEventListener('click',onSummon,true);cleanupActive=null;const prompt=document.getElementById('ttdAhNavigatorPromptV1');if(prompt){prompt.textContent='Creating Navigator…';prompt.style.animation='none';}
-      const result=baseStartAdventure.apply(self,args);cleanupPrelude();return result;
+      const result=runner.apply(self,args);cleanupPrelude();return result;
     };
     button.addEventListener('click',onSummon,true);cleanupActive=()=>button.removeEventListener('click',onSummon,true);return undefined;
   }
 
-  const wrapped=function(...args){const [advId,stageIdx]=args;if(advId===AH_ID&&Number(stageIdx)===0)return showNavigatorPrelude(advId,stageIdx,args[2],this,args);return baseStartAdventure.apply(this,args);};
+  const wrapped=function(...args){const [advId,stageIdx]=args;if(advId===AH_ID&&Number(stageIdx)===0)return showNavigatorPrelude(advId,stageIdx,args[2],this,args,baseStartAdventure);return baseStartAdventure.apply(this,args);};
   wrapped.__ttdMissionWrappedV6=true;wrapped.__ttdMissionBaseV6=baseStartAdventure;startAdventure=wrapped;
+
+  const wrappedCampaign=function(...args){const [advId]=args;if(advId===AH_ID)return showNavigatorPrelude(advId,0,args[1],this,args,baseStartAdventureCampaign);return baseStartAdventureCampaign.apply(this,args);};
+  wrappedCampaign.__ttdMissionWrappedV6=true;wrappedCampaign.__ttdMissionBaseV6=baseStartAdventureCampaign;startAdventureCampaign=wrappedCampaign;
 })();
