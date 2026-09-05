@@ -1,11 +1,13 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import './check-al-hata-stage1-v1.mjs';
 
 const read=(path)=>fs.readFileSync(path,'utf8');
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
 const need=(source,markers,label)=>{for(const marker of markers)must(source.includes(marker),`${label} missing: ${marker}`);};
 
-const runUi=read('online/run-ui-bridge-v21.js');
+const runUiLoader=read('online/run-ui-bridge-v21.js');
+const runUi=read('online/run-ui-bridge-v21-testmap-frozen.js');
 const runtime=read('online/runtime-bridge-loader-v1.js');
 const platform=read('online/adventure-platforming-v2.js');
 const selector=read('online/adventure-platforming-selector-v6.js');
@@ -13,9 +15,19 @@ const continuous=read('online/adventure-continuous-world-v1.js');
 const battle=read('online/adventure-pseudo3d-battle-v1.js');
 const worldItems=read('online/world-items-v1.js');
 
-for(const [name,source] of Object.entries({runUi,runtime,platform,selector,continuous,battle,worldItems})){
+for(const [name,source] of Object.entries({runUiLoader,runUi,runtime,platform,selector,continuous,battle,worldItems})){
   new vm.Script(source,{filename:name});
 }
+
+need(runUiLoader,[
+  "const FROZEN_BRIDGE='/online/run-ui-bridge-v21-testmap-frozen.js?v=1'",
+  "'/online/al-hata-stage1-core-v1.js?v=1'",
+  "'/online/al-hata-stage1-polish-v1.js?v=1'",
+  'Frozen Test Map bridge injection marker changed',
+  'frozenSource=frozenSource.replace(WORLD_INSERTION_LINE,insertion);',
+  'eval(`${frozenSource}',
+  'window.__TTD_RUN_UI_EXTENSIONS_READY=bootstrapPromise;',
+],'safe Test Map / Al Hata loader');
 
 need(runUi,[
   "const TEST_ID='test_map'",
@@ -30,7 +42,7 @@ need(runUi,[
   'projectWorldPoint',
   'battleRouteWorld',
   'continuousPlatforms',
-],'run-ui Test Map bootstrap');
+],'frozen Test Map bootstrap');
 
 need(runtime,[
   "'/online/run-ui-bridge-v21.js?v=21'",
@@ -94,4 +106,4 @@ need(worldItems,[
   'jumpDown','dropLand','climbDown','climbUp',
 ],'breakable terrain and routed world physics');
 
-console.log('Test Map stack verified: continuous one-world traversal, navigator-die selection/gameplay, breakable terrain, projected 3D marching routes, same-map combat, and nested startup readiness remain wired end to end.');
+console.log('Test Map stack verified: active loader preserves the frozen Test Map runtime while Al Hata is injected separately; continuous traversal, navigator gameplay, breakable terrain, projected marching routes, and startup readiness remain wired end to end.');
