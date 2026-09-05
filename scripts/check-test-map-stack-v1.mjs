@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import './check-al-hata-stage1-v1.mjs';
 import './check-al-hata-runtime-exec-v1.mjs';
+import './check-al-hata-browser-bootstrap-v1.mjs';
 
 const read=(path)=>fs.readFileSync(path,'utf8');
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
