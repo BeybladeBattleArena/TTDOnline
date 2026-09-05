@@ -11,7 +11,7 @@ const innerName=`.__ttd-al-hata-inner-${process.pid}.html`;
 const harness=path.join(process.cwd(),harnessName),inner=path.join(process.cwd(),innerName);
 const innerHtml=`<!doctype html><html><head><script>window.addEventListener('error',e=>parent.postMessage({type:'harness-error',message:String(e.message||e.error||'window error')},location.origin));window.addEventListener('unhandledrejection',e=>parent.postMessage({type:'harness-error',message:String(e.reason?.message||e.reason||'unhandled rejection')},location.origin));<\/script><script src="/online/game-loader.js"><\/script></head><body></body></html>`;
 const html=`<!doctype html><html><body><iframe id="game" style="width:412px;height:820px" src="/${innerName}"></iframe><script>
-const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false;
+const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false,touchDiag=null;
 window.addEventListener('message',e=>{
   const m=e.data||{};
   if(m.type==='ttd:bridge-phase'||m.type==='ttd:bridge-sync-error'||m.type==='ttd:bridge-loader-error')messages.push(m);
@@ -28,6 +28,20 @@ function hitStack(w,button){
   return (w.document.elementsFromPoint?.(x,y)||[]).slice(0,12).map(el=>{const s=w.getComputedStyle(el);return{tag:el.tagName,id:el.id||'',class:String(el.className||''),pointerEvents:s.pointerEvents,zIndex:s.zIndex,position:s.position,display:s.display,visibility:s.visibility};});
 }
 function buttonIsTopmost(w,button){if(!button)return false;const r=button.getBoundingClientRect();const el=w.document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return el===button||button.contains(el);}
+function readTouchDiag(w){
+  try{return w.eval(`({
+    activateFn:typeof AH_PLAYTEST_activateNavigatorPrompt,
+    createFn:typeof AH_PLAYTEST_createNavigator,
+    promptRunSame:AH_PLAYTEST_promptRunState===state,
+    promptActivating:AH_PLAYTEST_promptActivating,
+    alHata:!!AH_isState(),
+    sessionExists:typeof session!=='undefined'&&!!session,
+    sessionActive:typeof session!=='undefined'&&!!session?.active,
+    segment:typeof session!=='undefined'?session?.segment||null:null,
+    phase:typeof session!=='undefined'?session?.phase||null:null,
+    boardCount:Array.isArray(state?.board)?state.board.filter(Boolean).length:-1
+  })`);}catch(err){return{diagError:String(err?.message||err)};}
+}
 const started=performance.now();
 (function poll(){
   const frame=document.getElementById('game'),w=frame?.contentWindow,now=performance.now();
@@ -53,14 +67,13 @@ const started=performance.now();
       driveStable=driveText(w)===snapshot.drive;
       topmost=buttonIsTopmost(w,button);
       if(!forcedResumeRejected||!stableWhileWaiting||!driveStable){
-        finish({ok:false,reason:'cove-not-frozen',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),buttonRect:button?.getBoundingClientRect?.().toJSON?.()||null,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
+        finish({ok:false,reason:'cove-not-frozen',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,touchDiag:readTouchDiag(w),hitStack:hitStack(w,button),buttonRect:button?.getBoundingClientRect?.().toJSON?.()||null,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
       }
-      // The normal game loading art may still be fading over Arrival Cove. Keep proving the native
-      // battle stays frozen underneath it, but do not synthesize the user touch until the CTA is
-      // genuinely the top hit target. A stuck loading layer is caught by the overall timeout below.
       if(topmost){
+        touchDiag={before:readTouchDiag(w)};
         const E=w.PointerEvent||w.MouseEvent;
         button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:button.getBoundingClientRect().left+5,clientY:button.getBoundingClientRect().top+5}));
+        touchDiag.afterDispatch=readTouchDiag(w);
         tappedAt=now;
       }
     }
@@ -71,12 +84,13 @@ const started=performance.now();
       const controllerUnlocked=!w.document.getElementById('gameScreen')?.classList.contains('ttd-ah-awaiting-navigator');
       const missionReleased=run.__ttdMissionIntroHold===false;
       const nativeBattlePaused=run.running===false;
+      touchDiag={...(touchDiag||{}),afterWait:readTouchDiag(w)};
       const ok=promptGone&&navigatorCount===1&&platform&&controllerUnlocked&&missionReleased&&nativeBattlePaused&&Number(run.wave)===1&&Number(run.lives)===snapshot.lives;
-      finish({ok,reason:ok?'ready':'navigator-touch-or-traversal-release-failed',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,promptGone,navigatorCount,platform,controllerUnlocked,missionReleased,nativeBattlePaused,wave:run.wave,lives:run.lives,messages,errors});return;
+      finish({ok,reason:ok?'ready':'navigator-touch-or-traversal-release-failed',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,promptGone,navigatorCount,platform,controllerUnlocked,missionReleased,nativeBattlePaused,wave:run.wave,lives:run.lives,touchDiag,messages,errors});return;
     }
     if(now-started>22000){
       const recovery=w?.document?.getElementById('ttdAhCoveRecoveryV3');
-      finish({ok:false,reason:'timeout',core,playtest,entry,api,launched,prompt:!!prompt,homeReady,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),pending:!!w?.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING,gameActive:!!w?.document?.getElementById('gameScreen')?.classList.contains('active'),platformMode:!!w?.document?.getElementById('gameScreen')?.classList.contains('ttd-platform-mode'),platformCanvas:!!w?.document?.getElementById('ttdPlatformCanvas'),missionShield:!!w?.document?.getElementById('ttdMissionHoldShieldV6'),recovery:recovery?.textContent?.replace(/\s+/g,' ').trim()||'',modeLabel:w?.document?.getElementById('modeLabel')?.textContent||'',state:run?{adventure:!!run.adventure,stage:run.adventureStage?.name||'',stageIdx:run.adventureStageIdx,running:run.running,wave:run.wave,lives:run.lives,missionHold:run.__ttdMissionIntroHold,alHata:run.__ttdAlHataStage1}:null,messages,errors});return;
+      finish({ok:false,reason:'timeout',core,playtest,entry,api,launched,prompt:!!prompt,homeReady,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,touchDiag:readTouchDiag(w),hitStack:hitStack(w,button),pending:!!w?.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING,gameActive:!!w?.document?.getElementById('gameScreen')?.classList.contains('active'),platformMode:!!w?.document?.getElementById('gameScreen')?.classList.contains('ttd-platform-mode'),platformCanvas:!!w?.document?.getElementById('ttdPlatformCanvas'),missionShield:!!w?.document?.getElementById('ttdMissionHoldShieldV6'),recovery:recovery?.textContent?.replace(/\s+/g,' ').trim()||'',modeLabel:w?.document?.getElementById('modeLabel')?.textContent||'',state:run?{adventure:!!run.adventure,stage:run.adventureStage?.name||'',stageIdx:run.adventureStageIdx,running:run.running,wave:run.wave,lives:run.lives,missionHold:run.__ttdMissionIntroHold,alHata:run.__ttdAlHataStage1}:null,messages,errors});return;
     }
   }catch(err){errors.push(String(err?.stack||err?.message||err));}
   setTimeout(poll,50);
