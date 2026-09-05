@@ -9,12 +9,20 @@ const SHELL_ID='al_hata_shell';
 const SHELL_NAME='Pearlescent Island Shell';
 
 function requireAuth(request){if(!request.auth)throw new HttpsError('unauthenticated','Authentication required.');return request.auth;}
-function cleanRunId(value){const id=String(value||'').trim();if(!id||id.length>120||!/^[A-Za-z0-9_-]+$/.test(id))throw new HttpsError('invalid-argument','The Adventure run identifier is invalid.');return id;}
+function cleanOptionalRunId(value){const id=String(value||'').trim();if(!id)return null;if(id.length>120||!/^[A-Za-z0-9_-]+$/.test(id))throw new HttpsError('invalid-argument','The Adventure run identifier is invalid.');return id;}
 function safeCount(value){return Math.max(0,Math.min(999999,Math.floor(Number(value)||0)));}
+function startedAtMs(data){const value=data?.startedAt;return typeof value?.toMillis==='function'?value.toMillis():0;}
+async function resolveAdventureRun(uid,rawRunId){
+  const explicit=cleanOptionalRunId(rawRunId);
+  if(explicit)return db.doc(`users/${uid}/runs/${explicit}`);
+  const snap=await db.collection(`users/${uid}/runs`).where('status','==','active').limit(20).get();
+  const candidates=snap.docs.filter(doc=>{const run=doc.data()||{};return run.modeKey==='adventure'&&run.campaign===true;}).sort((a,b)=>startedAtMs(b.data())-startedAtMs(a.data()));
+  if(!candidates.length)throw new HttpsError('failed-precondition','No active Adventure campaign run could be found for this shell.');
+  return candidates[0].ref;
+}
 
 exports.claimAlHataShellV1=onCall({region:REGION,timeoutSeconds:30},async(request)=>{
-  const auth=requireAuth(request),runId=cleanRunId(request.data?.runId);
-  const runRef=db.doc(`users/${auth.uid}/runs/${runId}`);
+  const auth=requireAuth(request),runRef=await resolveAdventureRun(auth.uid,request.data?.runId),runId=runRef.id;
   const itemRef=db.doc(`users/${auth.uid}/items/${SHELL_ID}`);
   const gameRef=db.doc(`users/${auth.uid}/game/state`);
   const receiptRef=db.collection(`users/${auth.uid}/transactions`).doc();
@@ -45,9 +53,14 @@ exports.claimAlHataShellV1=onCall({region:REGION,timeoutSeconds:30},async(reques
       updatedAtMs:Date.now(),
     },{merge:true});
     tx.set(runRef,{worldClaims:{...(run.worldClaims||{}),alHataStage1Shell:true},updatedAt:FieldValue.serverTimestamp()},{merge:true});
-    if(gameSnap.exists){const game=gameSnap.data()||{},revision=Number.isSafeInteger(game.revision)?game.revision+1:1,inventoryVersion=Math.max(1,Number(game.inventoryVersion||1));tx.set(gameRef,{revision,inventoryVersion,updatedAt:FieldValue.serverTimestamp()},{merge:true});}
+    if(gameSnap.exists){
+      const game=gameSnap.data()||{};
+      const revision=Number.isSafeInteger(game.revision)?game.revision+1:1;
+      const inventoryVersion=Math.max(1,Math.floor(Number(game.inventoryVersion)||1))+1;
+      tx.set(gameRef,{revision,inventoryVersion,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+    }
     tx.set(receiptRef,{operation:'world_item_claim',runId,itemId:SHELL_ID,quantity:1,source:'al_hata_stage1_beach',createdAt:FieldValue.serverTimestamp()});
   });
 
-  return {ok:true,alreadyClaimed,item:{id:SHELL_ID,itemId:SHELL_ID,kind:'material',materialId:SHELL_ID,name:SHELL_NAME,category:'materials',count}};
+  return {ok:true,runId,alreadyClaimed,item:{id:SHELL_ID,itemId:SHELL_ID,kind:'material',materialId:SHELL_ID,name:SHELL_NAME,category:'materials',count}};
 });
