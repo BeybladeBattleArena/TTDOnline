@@ -4,6 +4,7 @@
   window.__TTD_RUN_UI_AL_HATA_BOOT_V1=true;
 
   const FROZEN_BRIDGE='/online/run-ui-bridge-v21-testmap-frozen.js?v=1';
+  const VERIFIED_RESULT_FORWARDING_CONTRACT='window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)';
   const AL_HATA_MODULES=[
     '/online/al-hata-stage1-core-v1.js?v=1',
     '/online/al-hata-stage1-beach-v1.js?v=1',
@@ -18,6 +19,7 @@
   async function loadAdventurePlatformingV2(){
     let frozenSource=await fetchText(FROZEN_BRIDGE,'Frozen Test Map bridge');
     if(!frozenSource.includes(WORLD_INSERTION_LINE))throw new Error('Frozen Test Map bridge injection marker changed; refusing unsafe Al Hata bootstrap.');
+    if(!frozenSource.includes(VERIFIED_RESULT_FORWARDING_CONTRACT))throw new Error('Frozen Test Map bridge lost the canonical verified-result forwarding contract.');
     const moduleSources=[];
     for(const url of AL_HATA_MODULES)moduleSources.push(await fetchText(url,`Al Hata module ${url}`));
     const runtime=moduleSources.join('\n\n');
