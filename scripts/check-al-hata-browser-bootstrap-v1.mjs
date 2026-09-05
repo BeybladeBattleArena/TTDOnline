@@ -23,6 +23,10 @@ window.addEventListener('message',e=>{
 });
 function finish(report){if(done)return;done=true;document.body.dataset.report=JSON.stringify(report);}
 function driveText(w){return String(w?.document?.querySelector('#ttdDriveHud .ttdMeterLine.drive .value')?.textContent||'').trim();}
+function hitStack(w,button){
+  if(!button)return[];const r=button.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+  return (w.document.elementsFromPoint?.(x,y)||[]).slice(0,12).map(el=>{const s=w.getComputedStyle(el);return{tag:el.tagName,id:el.id||'',class:String(el.className||''),pointerEvents:s.pointerEvents,zIndex:s.zIndex,position:s.position,display:s.display,visibility:s.visibility};});
+}
 function buttonIsTopmost(w,button){if(!button)return false;const r=button.getBoundingClientRect();const el=w.document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return el===button||button.contains(el);}
 const started=performance.now();
 (function poll(){
@@ -49,7 +53,7 @@ const started=performance.now();
       driveStable=driveText(w)===snapshot.drive;
       topmost=topmost&&buttonIsTopmost(w,button);
       if(!forcedResumeRejected||!stableWhileWaiting||!driveStable||!topmost){
-        finish({ok:false,reason:'cove-not-frozen-or-button-obscured',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
+        finish({ok:false,reason:'cove-not-frozen-or-button-obscured',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),buttonRect:button?.getBoundingClientRect?.().toJSON?.()||null,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
       }
       const E=w.PointerEvent||w.MouseEvent;
       button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:button.getBoundingClientRect().left+5,clientY:button.getBoundingClientRect().top+5}));
