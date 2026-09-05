@@ -103,6 +103,8 @@ need(playtest,[
   "session={active:true,phase:'ready'",
   "AH_finishTraversalToCombat(1,1,'Landing Shore')",
   'state.running&&!state.__ttdMissionIntroHold',
+  'const AH_PLAYTEST_baseStartAdventureCampaign=startAdventureCampaign',
+  'startAdventureCampaign=function AH_startAdventureCampaignNavigatorFirst',
 ],'Navigator-first playtest runtime');
 
 const bridge=read('online/run-ui-bridge-v21.js');
@@ -110,6 +112,12 @@ need(bridge,paths.map((path)=>`/${path}?v=1`),'Al Hata loader module order');
 must(bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-temple-v1.js?v=1'),'refinement layer must load after authored regions');
 must(bridge.indexOf('/online/al-hata-stage1-playtest-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1'),'playtest layer must load after the refined authored map');
 need(bridge,["const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=1'",'await loadClassicScript(PLAYTEST_ENTRY'], 'Navigator-first entry loader');
+
+const gameHtml=read('random-dice-game-33.html');
+need(gameHtml,[
+  '<button>Begin Al Hata</button>',
+  'startAdventureCampaign(selectedAdventureId, selectedDifficulty)',
+],'Canonical Al Hata campaign launcher');
 
 const entry=read('online/al-hata-stage1-playtest-entry-v1.js');
 new vm.Script(entry,{filename:'al-hata-stage1-playtest-entry-v1.js'});
@@ -122,6 +130,8 @@ need(entry,[
   'CENTER_INDEX=7',
   'window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START=true',
   'event.stopImmediatePropagation()',
+  'const baseStartAdventureCampaign=startAdventureCampaign',
+  'startAdventureCampaign=wrappedCampaign',
   'wrapped.__ttdMissionWrappedV6=true',
 ],'Navigator-first entry prompt');
 
@@ -133,4 +143,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: concatenated authored/playtest modules parse together; navigator-first free summon, beach/jungle/fork/temple progression, refinement, and server-backed shell ownership remain structurally wired.');
+console.log('Al Hata Stage 1 verified: canonical Begin Al Hata campaign launch is intercepted; concatenated authored/playtest modules parse together; navigator-first free summon, beach/jungle/fork/temple progression, refinement, and server-backed shell ownership remain structurally wired.');
