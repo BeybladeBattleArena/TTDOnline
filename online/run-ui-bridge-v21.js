@@ -7,6 +7,7 @@
   const AL_HATA_MODULES=[
     '/online/al-hata-stage1-core-v1.js?v=1',
     '/online/al-hata-stage1-beach-v1.js?v=1',
+    '/online/al-hata-stage1-jungle-v1.js?v=1',
   ];
   const WORLD_INSERTION_LINE="      platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');";
 
