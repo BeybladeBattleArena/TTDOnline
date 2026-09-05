@@ -100,10 +100,34 @@ function AH_drawJungleCombat(area,{back,front,spec}){
 }
 AH_COMBAT_DRAWERS[2]=ctx=>AH_drawJungleCombat(2,ctx);AH_COMBAT_DRAWERS[3]=ctx=>AH_drawJungleCombat(3,ctx);
 
-const AH_jungleBaseBuildWave=buildAdventureWave;
-buildAdventureWave=function AH_buildAdventureWave(stage,wave,diff){const q=AH_jungleBaseBuildWave(stage,wave,diff);if(stage===AH_STAGE){const fractions={5:[.34],8:[.32],9:[.46,.54],10:[.28,.48]}[wave];if(fractions){for(let i=0;i<fractions.length&&i<q.length;i++){const idx=Math.max(0,q.length-1-i);q[idx].__ahEntryFraction=fractions[i];q[idx].__ahEntryKind=wave===10&&i===0?'cave':'foliage';}}}return q;};
-const AH_jungleBaseSpawnEnemy=spawnAdventureEnemy;
-spawnAdventureEnemy=function AH_spawnAdventureEnemy(entry){const before=state?.enemies?.length||0;AH_jungleBaseSpawnEnemy(entry);if(AH_isState()&&entry?.__ahEntryFraction&&state.enemies.length>before){const e=state.enemies[state.enemies.length-1];e.dist=Math.max(0,totalLen*entry.__ahEntryFraction);e.__ttdAhEntryKind=entry.__ahEntryKind;e.hitFlash=.20;}};
+const AH_JUNGLE_SURPRISE_ENTRIES=Object.freeze({
+  5:Object.freeze([{fraction:.34,kind:'foliage'}]),
+  8:Object.freeze([{fraction:.32,kind:'foliage'}]),
+  9:Object.freeze([{fraction:.46,kind:'foliage'},{fraction:.54,kind:'foliage'}]),
+  10:Object.freeze([{fraction:.28,kind:'cave'},{fraction:.48,kind:'foliage'}]),
+});
+function AH_decorateJungleSpawnQueue(wave,queue=state?.spawnQueue){
+  if(!AH_isState()||!Array.isArray(queue)||!queue.length)return queue;
+  const specs=AH_JUNGLE_SURPRISE_ENTRIES[Number(wave)];if(!specs?.length)return queue;
+  for(let i=0;i<specs.length&&i<queue.length;i++){
+    const idx=Math.max(0,queue.length-1-i),entry=queue[idx],spec=specs[i];if(!entry||typeof entry!=='object')continue;
+    entry.__ahEntryFraction=spec.fraction;entry.__ahEntryKind=spec.kind;
+  }
+  return queue;
+}
+const AH_jungleBaseUpdateSpawns=updateSpawns;
+updateSpawns=function AH_jungleUpdateSpawns(dt){
+  if(!AH_isState()||session?.active)return AH_jungleBaseUpdateSpawns(dt);
+  AH_decorateJungleSpawnQueue(state.wave,state.spawnQueue);
+  const beforeWave=Number(state.wave)||0,beforeQueue=state.spawnQueue,beforeQueueLen=beforeQueue?.length||0,beforeEnemies=state.enemies?.length||0,candidate=beforeQueueLen?beforeQueue[0]:null;
+  const result=AH_jungleBaseUpdateSpawns(dt);
+  const afterEnemies=state.enemies?.length||0,afterQueueLen=state.spawnQueue?.length||0;
+  if(candidate?.__ahEntryFraction&&afterEnemies>beforeEnemies&&afterQueueLen<beforeQueueLen){
+    const e=state.enemies[afterEnemies-1];if(e){e.dist=Math.max(0,totalLen*candidate.__ahEntryFraction);e.__ttdAhEntryKind=candidate.__ahEntryKind;e.hitFlash=.20;}
+  }
+  if((Number(state.wave)||0)!==beforeWave||state.spawnQueue!==beforeQueue)AH_decorateJungleSpawnQueue(state.wave,state.spawnQueue);
+  return result;
+};
 
 const AH_jungleLane=document.getElementById('laneWrap');
 AH_jungleLane?.addEventListener('pointerdown',event=>{
