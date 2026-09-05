@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { spawnSync } from 'node:child_process';
 
 const read=(path)=>fs.readFileSync(path,'utf8');
 const must=(condition,message)=>{if(!condition)throw new Error(message);};
@@ -96,6 +97,8 @@ must(bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1')>bridge.indexOf('/
 
 const itemClient=read('online/al-hata-world-item-client-v1.js');
 const itemServer=read('functions/al-hata-world-items-v1.js');
+const clientCheck=spawnSync(process.execPath,['--input-type=module','--check'],{input:itemClient,encoding:'utf8'});
+must(clientCheck.status===0,`Al Hata shell client syntax failed: ${clientCheck.stderr||clientCheck.stdout}`);
 new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
