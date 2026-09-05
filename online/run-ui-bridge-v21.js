@@ -15,7 +15,7 @@
   const WORLD_INSERTION_LINE="      platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');";
 
   async function fetchText(url,label){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`${label} HTTP ${r.status}`);return r.text();}
-  async function bootstrapAlHataStage1(){
+  async function loadAdventurePlatformingV2(){
     let frozenSource=await fetchText(FROZEN_BRIDGE,'Frozen Test Map bridge');
     if(!frozenSource.includes(WORLD_INSERTION_LINE))throw new Error('Frozen Test Map bridge injection marker changed; refusing unsafe Al Hata bootstrap.');
     const moduleSources=[];
@@ -29,7 +29,9 @@
     return true;
   }
 
-  const bootstrapPromise=bootstrapAlHataStage1().catch((err)=>{
+  window.__TTD_RUN_UI_EXTENSIONS_READY_V1=true;
+  window.__TTD_RUN_UI_EXTENSIONS_READY=loadAdventurePlatformingV2();
+  const bootstrapPromise=window.__TTD_RUN_UI_EXTENSIONS_READY.catch((err)=>{
     console.error('Al Hata Stage 1 bootstrap failed safely; frozen Test Map snapshot remains available.',err);
     try{window.parent?.postMessage({type:'ttd:bridge-phase',phase:'bridge-runtime-error',bridge:'al-hata-stage1-v1',message:String(err?.message||err)},location.origin);}catch(_){}
     throw err;
