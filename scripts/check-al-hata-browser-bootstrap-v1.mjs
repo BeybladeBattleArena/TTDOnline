@@ -11,7 +11,7 @@ const innerName=`.__ttd-al-hata-inner-${process.pid}.html`;
 const harness=path.join(process.cwd(),harnessName),inner=path.join(process.cwd(),innerName);
 const innerHtml=`<!doctype html><html><head><script>window.addEventListener('error',e=>parent.postMessage({type:'harness-error',message:String(e.message||e.error||'window error')},location.origin));window.addEventListener('unhandledrejection',e=>parent.postMessage({type:'harness-error',message:String(e.reason?.message||e.reason||'unhandled rejection')},location.origin));<\/script><script src="/online/game-loader.js"><\/script></head><body></body></html>`;
 const html=`<!doctype html><html><body><iframe id="game" style="width:412px;height:820px" src="/${innerName}"></iframe><script>
-const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false,touchDiag=null,directChecked=false;
+const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false,touchDiag=null,touchChecked=false;
 window.addEventListener('message',e=>{
   const m=e.data||{};
   if(m.type==='ttd:bridge-phase'||m.type==='ttd:bridge-sync-error'||m.type==='ttd:bridge-loader-error')messages.push(m);
@@ -30,10 +30,7 @@ function hitStack(w,button){
 function buttonIsTopmost(w,button){if(!button)return false;const r=button.getBoundingClientRect();const el=w.document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return el===button||button.contains(el);}
 function readTouchDiag(w){
   try{return{
-    activateFn:typeof w.AH_PLAYTEST_activateNavigatorPrompt,
-    createFn:typeof w.AH_PLAYTEST_createNavigator,
-    alHataFn:typeof w.AH_isState,
-    alHata:typeof w.AH_isState==='function'?!!w.AH_isState():null,
+    navDiag:w.__TTD_AL_HATA_NAV_DIAG?JSON.parse(JSON.stringify(w.__TTD_AL_HATA_NAV_DIAG)):null,
     boardCount:Array.isArray(w.state?.board)?w.state.board.filter(Boolean).length:-1,
     missionHold:w.state?.__ttdMissionIntroHold,
     running:w.state?.running,
@@ -70,23 +67,24 @@ const started=performance.now();
       }
       if(topmost){
         touchDiag={before:readTouchDiag(w)};
+        const r=button.getBoundingClientRect(),x=r.left+5,y=r.top+5;
         const E=w.PointerEvent||w.MouseEvent;
-        button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:button.getBoundingClientRect().left+5,clientY:button.getBoundingClientRect().top+5}));
-        touchDiag.afterDispatch=readTouchDiag(w);
+        button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:x,clientY:y}));
+        touchDiag.afterPointerDown=readTouchDiag(w);
+        if(button.isConnected){
+          button.dispatchEvent(new E('pointerup',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:x,clientY:y}));
+          touchDiag.afterPointerUp=readTouchDiag(w);
+        }
+        if(button.isConnected){button.click();touchDiag.afterClick=readTouchDiag(w);}
         tappedAt=now;
       }
     }
-    if(tappedAt&&run&&!directChecked&&now-tappedAt>=500){
-      directChecked=true;
+    if(tappedAt&&run&&!touchChecked&&now-tappedAt>=500){
+      touchChecked=true;
       const actualCount=(run.board||[]).filter(Boolean).length;
       touchDiag={...(touchDiag||{}),after500:readTouchDiag(w),actualTouchCreated:actualCount===1};
       if(actualCount===0){
-        let directResult=null,directError='';
-        try{directResult=typeof w.AH_PLAYTEST_createNavigator==='function'?w.AH_PLAYTEST_createNavigator(run):null;}catch(err){directError=String(err?.stack||err?.message||err);}
-        touchDiag.directResult=directResult;
-        touchDiag.directError=directError;
-        touchDiag.afterDirect=readTouchDiag(w);
-        finish({ok:false,reason:'navigator-touch-not-delivered',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,touchDiag,wave:run.wave,lives:run.lives,messages,errors});return;
+        finish({ok:false,reason:'navigator-tap-not-delivered',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,touchDiag,wave:run.wave,lives:run.lives,messages,errors});return;
       }
     }
     if(tappedAt&&run&&now-tappedAt>=3200){
@@ -122,4 +120,4 @@ const match=dom.match(/data-report="([^"]+)"/);must(match,'Al Hata browser boots
 const report=JSON.parse(match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#39;/g,"'"));
 if(!report.ok)console.error('AL_HATA_BROWSER_BOOTSTRAP_FAILURE',JSON.stringify(report,null,2));
 must(report.ok,`Al Hata Arrival Cove browser interaction failed: ${JSON.stringify(report)}`);
-console.log('Al Hata browser bootstrap + Cove interaction verified:',JSON.stringify({core:report.core,playtest:report.playtest,entry:report.entry,api:report.api,forcedResumeRejected:report.forcedResumeRejected,stableWhileWaiting:report.stableWhileWaiting,driveStable:report.driveStable,topmost:report.topmost,navigatorCount:report.navigatorCount,nativeBattlePaused:report.nativeBattlePaused}));
+console.log('Al Hata browser bootstrap + Cove interaction verified:',JSON.stringify({core:report.core,playtest:report.playtest,entry:report.entry,api:report.api,forcedResumeRejected:report.forcedResumeRejected,stableWhileWaiting:report.stableWhileWaiting,driveStable:report.driveStable,topmost:report.topmost,navigatorCount:report.navigatorCount,nativeBattlePaused:report.nativeBattlePaused,touchDiag:report.touchDiag?.afterWait?.navDiag||report.touchDiag?.after500?.navDiag||null}));
