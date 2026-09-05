@@ -94,24 +94,35 @@ need(polish,[
 
 need(playtest,[
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V1=true',
+  'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V2=true',
   'const AH_PLAYTEST_CENTER_BOARD_INDEX=7',
   "AH_SEGMENT_STARTS.landing=",
   "AH_SEGMENT_DRAWERS.landing=AH_drawBeachTraversal",
   'AH_SEGMENT_UPDATERS.landing=AH_PLAYTEST_landingUpdater',
-  'state.board.fill(null)',
+  "if(!state.running||state.__ttdMissionIntroHold)",
+  'runState.board.fill(null)',
   'const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())',
-  "session={active:true,phase:'ready'",
+  "session={active:true,phase:'summon'",
+  "session.phase='ready'",
+  "session.phase='play'",
+  'runState.__ttdMissionIntroHold=true',
+  'enterPlatformLayout();AH_PLAYTEST_setControllerLocked(true)',
+  'ttdAhInMapNavigatorPromptV2',
+  'window.TTDGamePresentation?.presentRunStart',
+  'window.__TTD_AL_HATA_STAGE1_PLAYTEST_API=',
+  'prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator',
   "AH_finishTraversalToCombat(1,1,'Landing Shore')",
-  'state.running&&!state.__ttdMissionIntroHold',
-  'const AH_PLAYTEST_baseStartAdventureCampaign=startAdventureCampaign',
-  'startAdventureCampaign=function AH_startAdventureCampaignNavigatorFirst',
-],'Navigator-first playtest runtime');
+],'In-map Navigator playtest runtime');
+must(playtest.indexOf('const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())')<playtest.indexOf('AH_PLAYTEST_beginMissionAfterNavigator(runState);'),'Navigator must be created before prepared MISSION / START is requested');
 
 const bridge=read('online/run-ui-bridge-v21.js');
 need(bridge,paths.map((path)=>`/${path}?v=1`),'Al Hata loader module order');
 must(bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-temple-v1.js?v=1'),'refinement layer must load after authored regions');
 must(bridge.indexOf('/online/al-hata-stage1-playtest-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1'),'playtest layer must load after the refined authored map');
-need(bridge,["const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=1'",'await loadClassicScript(PLAYTEST_ENTRY'], 'Navigator-first entry loader');
+need(bridge,["const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=1'",'await loadClassicScript(PLAYTEST_ENTRY'], 'Al Hata entry loader');
+
+const presentation=read('online/game-presentation-v1.js');
+need(presentation,['async function playPreparedMissionStart','presentRunStart:playPreparedMissionStart'],'Prepared MISSION / START presentation contract');
 
 const gameHtml=read('random-dice-game-33.html');
 need(gameHtml,[
@@ -123,17 +134,51 @@ const entry=read('online/al-hata-stage1-playtest-entry-v1.js');
 new vm.Script(entry,{filename:'al-hata-stage1-playtest-entry-v1.js'});
 need(entry,[
   'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V1=true',
-  "cost.textContent='FREE'",
-  "Tap <strong>[Summon Die]</strong> to create a Navigator Die",
-  'ttdAhNavPromptBounceV1',
-  'const AH_ID=',
-  'CENTER_INDEX=7',
-  'window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START=true',
-  'event.stopImmediatePropagation()',
-  'const baseStartAdventureCampaign=startAdventureCampaign',
+  'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V2=true',
+  "const AH_ID='al_hata'",
+  'const missionBase=',
+  'window.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING=true',
+  'runState.running=false',
+  'runState.spawnQueue=[]',
+  'window.__TTD_AL_HATA_STAGE1_PLAYTEST_API?.prepareInMapNavigator',
   'startAdventureCampaign=wrappedCampaign',
-  'wrapped.__ttdMissionWrappedV6=true',
-],'Navigator-first entry prompt');
+  'wrappedCampaign.__ttdMissionWrappedV6=true',
+],'Post-loading Al Hata entry gate');
+must(!entry.includes('showNavigatorPrelude'),'Al Hata entry must not show Navigator summon before the loading screen');
+must(!entry.includes('drawArrivalPreview'),'Al Hata entry must not use the old pre-loading fake Arrival Cove preview');
+
+{
+  const events=[];
+  const stage={name:'Beach Landing'};
+  const oldState={id:'old'};
+  const runState={adventureStage:stage,running:true,spawnQueue:['default-wave'],enemies:[{id:'default-enemy'}],spawnTimer:3,wave:1};
+  const context={
+    console,
+    ADVENTURES:{al_hata:{stages:[stage]}},
+    state:oldState,
+    performance:{now:()=>0},
+    requestAnimationFrame:()=>0,
+    document:{getElementById:(id)=>id==='gameScreen'?{classList:{contains:(name)=>name==='active'}}:null},
+    getActiveDeck:()=>[1,2,3,4,5],
+    toastGlobal:()=>{},
+    showScreen:()=>{},
+    startAdventure:function normalStageStart(){events.push('stage-wrapper');},
+    startAdventureCampaign:function missionWrappedCampaign(){events.push('mission-wrapper');},
+  };
+  context.window=context;
+  context.TTDGamePresentation={rebind:()=>{}};
+  const loadingRunner=()=>{events.push('loading-runner');context.state=runState;return 'loaded';};
+  context.startAdventureCampaign.__ttdMissionBaseV6=loadingRunner;
+  context.__TTD_AL_HATA_STAGE1_PLAYTEST_API={prepareInMapNavigator:(candidate)=>{must(candidate===runState,'in-map prepare must receive the freshly loaded campaign state');events.push('prepare-map');return true;}};
+  vm.createContext(context);
+  new vm.Script(entry,{filename:'al-hata-stage1-entry-behavior.js'}).runInContext(context);
+  const result=context.startAdventureCampaign('al_hata','normal');
+  must(result==='loaded','Al Hata entry must preserve the loading runner result');
+  must(events.join('>')==='loading-runner>prepare-map',`Al Hata launch order must be loading then in-map prepare, got ${events.join('>')}`);
+  must(runState.running===false,'fresh Al Hata state must remain paused before Navigator/MISSION START');
+  must(runState.__ttdMissionIntroHold===true,'fresh Al Hata state must hold the mission intro before Navigator creation');
+  must(runState.spawnQueue.length===0&&runState.enemies.length===0,'default tower-defense enemies must be removed before Arrival Cove is revealed');
+}
 
 const itemClient=read('online/al-hata-world-item-client-v1.js');
 const itemServer=read('functions/al-hata-world-items-v1.js');
@@ -143,4 +188,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: canonical Begin Al Hata campaign launch is intercepted; concatenated authored/playtest modules parse together; navigator-first free summon, beach/jungle/fork/temple progression, refinement, and server-backed shell ownership remain structurally wired.');
+console.log('Al Hata Stage 1 verified: Begin Al Hata runs loading first, default TD is held/cleared, Arrival Cove owns the in-map free Navigator summon, prepared MISSION / START releases gameplay only afterward, and authored Stage 1 progression remains structurally wired.');
