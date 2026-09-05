@@ -72,8 +72,28 @@ AH_COMBAT_DRAWERS[5]=({back,front,spec})=>{
   AH_templeBackdrop(back.g,back.w,back.h,spec.cameraX,true);AH_drawForecourtFloor(back.g,back.w,back.h,spec.cameraX);AH_drawRouteRibbon(back.g,back.w,back.h,5,spec.cameraX,'rgba(83,70,47,.25)');const pr=(x,z,y=0)=>AH_projectWorld(x,z,y,back.w,back.h,spec.cameraX);for(const p of AH_TEMPLE_PROPS)if(p.x>=6000&&p.z<120)AH_drawTempleProp(back.g,p,pr);for(const o of AH_ensureWorld()?.objects||[])if(o.x>=6000&&o.z<120)AH_drawTempleObject(back.g,o,pr);
   const fp=(x,z,y=0)=>AH_projectWorld(x,z,y,front.w,front.h,spec.cameraX);for(const p of AH_TEMPLE_PROPS)if(p.x>=6000&&p.z>=120)AH_drawTempleProp(front.g,p,fp);for(const o of AH_ensureWorld()?.objects||[])if(o.x>=6000&&o.z>=120)AH_drawTempleObject(front.g,o,fp);front.g.save();front.g.fillStyle='rgba(26,45,31,.78)';for(let i=0;i<5;i++){const x=i%2?front.w-5:5,y=front.h*.22+i*74;front.g.beginPath();front.g.ellipse(x,y,20,65,(i%2?-1:1)*.6,0,AH_TAU);front.g.fill();}front.g.restore();
 };
-const AH_templeBaseBuildWave=buildAdventureWave;
-buildAdventureWave=function AH_buildTempleWave(stage,wave,diff){const q=AH_templeBaseBuildWave(stage,wave,diff);if(stage===AH_STAGE){const fractions={14:[.36],15:[.30,.50],16:[.44]}[wave];if(fractions)for(let i=0;i<fractions.length&&i<q.length;i++){const idx=Math.max(0,q.length-1-i);q[idx].__ahEntryFraction=fractions[i];q[idx].__ahEntryKind=i%2?'upper-ledge':'side-arch';}}return q;};
+const AH_TEMPLE_SURPRISE_ENTRIES=Object.freeze({
+  14:Object.freeze([{fraction:.36,kind:'side-arch'}]),
+  15:Object.freeze([{fraction:.30,kind:'side-arch'},{fraction:.50,kind:'upper-ledge'}]),
+  16:Object.freeze([{fraction:.44,kind:'side-arch'}]),
+});
+function AH_decorateTempleSpawnQueue(wave,queue=state?.spawnQueue){
+  if(!AH_isState()||!Array.isArray(queue)||!queue.length)return queue;
+  const specs=AH_TEMPLE_SURPRISE_ENTRIES[Number(wave)];if(!specs?.length)return queue;
+  for(let i=0;i<specs.length&&i<queue.length;i++){
+    const idx=Math.max(0,queue.length-1-i),entry=queue[idx],spec=specs[i];if(!entry||typeof entry!=='object')continue;
+    entry.__ahEntryFraction=spec.fraction;entry.__ahEntryKind=spec.kind;
+  }
+  return queue;
+}
+const AH_templeBaseUpdateSpawns=updateSpawns;
+updateSpawns=function AH_templeAwareUpdateSpawns(dt){
+  if(!AH_isState()||session?.active||Number(state.__ttdAlHataCombatArea)!==5)return AH_templeBaseUpdateSpawns(dt);
+  AH_decorateTempleSpawnQueue(state.wave,state.spawnQueue);
+  const beforeWave=Number(state.wave)||0,beforeQueue=state.spawnQueue,result=AH_templeBaseUpdateSpawns(dt);
+  if((Number(state.wave)||0)!==beforeWave||state.spawnQueue!==beforeQueue)AH_decorateTempleSpawnQueue(state.wave,state.spawnQueue);
+  return result;
+};
 const AH_templeLane=document.getElementById('laneWrap');
 AH_templeLane?.addEventListener('pointerdown',event=>{
   if(!AH_isState()||Number(state.__ttdAlHataCombatArea)!==5||document.getElementById('gameScreen')?.classList.contains('ttd-platform-mode'))return;const r=AH_templeLane.getBoundingClientRect(),px=event.clientX-r.left,py=event.clientY-r.top,targets=[AH_templeObject('temple_combat_column'),AH_templeObject('temple_combat_statue')].filter(Boolean);for(const o of targets){if(o.broken)continue;const p=AH_projectWorld(o.x,o.z,(o.y||70)+58,r.width,r.height,AH_AREAS[5].cameraX);if(Math.hypot(px-p.x,py-p.y)>54)continue;event.preventDefault();o.combatHits=(o.combatHits||0)+1;o.flash=.18;const need=o.type==='ah_temple_column'?5:4;toast(`${o.name} · ${Math.min(o.combatHits,need)}/${need} hits`);if(o.combatHits<need)return;o.broken=true;const radius=o.type==='ah_temple_column'?145:120,mult=o.type==='ah_temple_column'?.34:.27;for(const e of state.enemies||[]){if(!e?.alive)continue;const ep=enemyRenderPos(e);if(Math.hypot(ep.x-p.x,ep.y-p.y)<radius)e.hp=Math.max(0,Number(e.hp||0)-Math.max(12,Number(e.maxHp||e.hp||30)*mult));}toast(o.type==='ah_temple_column'?'The column crashes through the enemy approach!':'The guardian statue topples into the marching line!');return;}
