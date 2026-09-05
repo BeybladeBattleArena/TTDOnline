@@ -39,7 +39,9 @@ function AH_PLAYTEST_landingUpdater(dt){
 AH_SEGMENT_UPDATERS.landing=AH_PLAYTEST_landingUpdater;
 
 function AH_PLAYTEST_armNavigatorForMission(){
-  if(!AH_isState()||!window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START)return false;
+  if(!window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START)return false;
+  if(state?.adventureStage===AH_STAGE&&!state.__ttdAlHataStage1)AH_tagState();
+  if(!AH_isState())return false;
   window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START=false;
   AH_tagState();
   state.spawnQueue=[];state.enemies=[];state.spawnTimer=0;state.wave=1;state.running=false;
