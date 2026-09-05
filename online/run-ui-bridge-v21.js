@@ -6,6 +6,13 @@
   const FROZEN_BRIDGE='/online/run-ui-bridge-v21-testmap-frozen.js?v=1';
   const VERIFIED_RESULT_MESSAGE_CONTRACT="m.type!=='ttd:v6-run-finish-result'";
   const VERIFIED_RESULT_FORWARDING_CONTRACT='window.__TTD_APPLY_VERIFIED_RUN_RESULT_V35?.(m)';
+  const FROZEN_PRESENTATION_CONTRACTS=[
+    'TTD_PRESENTATION_INDEPENDENT_LOAD_V1',
+    "window.__TTD_ASSET_URL?.('/online/game-presentation-v1.js?v=7')",
+    "bridge:'continuous-world-v2 + same-map-battle-v5'",
+    "bridge:'presentation-v6'",
+    "script.onload=resolve;script.onerror=()=>reject(new Error('Game presentation script could not load.'))",
+  ];
   const AL_HATA_MODULES=[
     '/online/al-hata-stage1-core-v1.js?v=1',
     '/online/al-hata-stage1-beach-v1.js?v=1',
@@ -21,6 +28,7 @@
     let frozenSource=await fetchText(FROZEN_BRIDGE,'Frozen Test Map bridge');
     if(!frozenSource.includes(WORLD_INSERTION_LINE))throw new Error('Frozen Test Map bridge injection marker changed; refusing unsafe Al Hata bootstrap.');
     if(!frozenSource.includes(VERIFIED_RESULT_MESSAGE_CONTRACT)||!frozenSource.includes(VERIFIED_RESULT_FORWARDING_CONTRACT))throw new Error('Frozen Test Map bridge lost the canonical verified-result forwarding listener contract.');
+    for(const marker of FROZEN_PRESENTATION_CONTRACTS)if(!frozenSource.includes(marker))throw new Error(`Frozen Test Map bridge lost presentation contract: ${marker}`);
     const moduleSources=[];
     for(const url of AL_HATA_MODULES)moduleSources.push(await fetchText(url,`Al Hata module ${url}`));
     const runtime=moduleSources.join('\n\n');
