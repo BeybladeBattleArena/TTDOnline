@@ -31,6 +31,31 @@ function randDeckKey(){
   if(!keys.length)throw new Error('Al Hata Navigator deck has no valid die keys.');
   return keys[Math.floor(Math.random()*keys.length)];
 }
+function makeDie(_requestedKey){
+  const run=state,board=run?.board;
+  if(!Array.isArray(board))throw new Error('Al Hata Navigator cannot access the live board.');
+  const nativeSummon=document.getElementById('summonBtn');
+  if(!nativeSummon)throw new Error('Al Hata Navigator cannot access native Summon Die.');
+  const hold=run?.[AH_PLAYTEST_NATIVE_PAUSE_KEY];
+  if(!hold)throw new Error('Al Hata Navigator native-pause ownership is missing.');
+  const beforeBoard=board.slice(),beforeSp=run.sp,beforeCost=run.summonCost,beforeDisabled=!!nativeSummon.disabled;
+  let die=null;
+  try{
+    hold.value=true;
+    nativeSummon.disabled=false;
+    if(Number(run.sp)<Number(run.summonCost))run.sp=Number(run.summonCost)||0;
+    nativeSummon.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
+    const created=[];
+    for(let i=0;i<board.length;i++)if(board[i]!==beforeBoard[i]&&board[i])created.push(i);
+    if(created.length!==1)throw new Error('Native Summon Die did not create exactly one starting die.');
+    die=board[created[0]];
+    if(!die||!die.key||!DICE?.[die.key])throw new Error('Native Summon Die returned an invalid Navigator die.');
+    return die;
+  }finally{
+    for(let i=0;i<board.length;i++)board[i]=beforeBoard[i]||null;
+    run.sp=beforeSp;run.summonCost=beforeCost;hold.value=false;nativeSummon.disabled=beforeDisabled;
+  }
+}
 `;
 
   async function fetchText(url,label){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`${label} HTTP ${r.status}`);return r.text();}
