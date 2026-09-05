@@ -106,7 +106,10 @@ need(playtest,[
   'AH_SEGMENT_UPDATERS.landing=AH_PLAYTEST_landingUpdater',
   "if(state.__ttdMissionIntroHold||session.phase!=='play')",
   'runState.board.fill(null)',
-  'const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())',
+  'const key=randDeckKey()',
+  'const die=makeDie(key)',
+  'const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX',
+  'runState.board[boardIndex]=die',
   "session={active:true,phase:'summon'",
   "session.phase='ready'",
   "session.phase='play'",
@@ -125,7 +128,8 @@ need(playtest,[
   'prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator',
   "AH_finishTraversalToCombat(1,1,'Landing Shore')",
 ],'In-map Navigator playtest runtime');
-must(playtest.indexOf('const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())')<playtest.indexOf('AH_PLAYTEST_beginMissionAfterNavigator(runState);'),'Navigator must be created before prepared MISSION / START is requested');
+must(playtest.indexOf('const die=makeDie(key)')<playtest.indexOf('AH_PLAYTEST_beginMissionAfterNavigator(runState);'),'Navigator must be constructed before prepared MISSION / START is requested');
+must(playtest.indexOf('runState.board[boardIndex]=die')<playtest.indexOf('AH_PLAYTEST_beginMissionAfterNavigator(runState);'),'Navigator must be committed to the live board before prepared MISSION / START is requested');
 must(!playtest.includes('runState.__ttdMissionIntroHold=false;runState.running=true'),'Arrival Cove must not resume the native TD loop when MISSION / START releases traversal');
 
 const bridge=read('online/run-ui-bridge-v21.js');
