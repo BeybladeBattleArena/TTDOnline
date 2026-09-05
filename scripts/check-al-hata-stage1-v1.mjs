@@ -13,9 +13,10 @@ const paths=[
   'online/al-hata-stage1-fork-v1.js',
   'online/al-hata-stage1-temple-v1.js',
   'online/al-hata-stage1-polish-v1.js',
+  'online/al-hata-stage1-playtest-v1.js',
 ];
-const [core,beach,jungle,fork,temple,polish]=paths.map(read);
-const combined=[core,beach,jungle,fork,temple,polish].join('\n\n');
+const [core,beach,jungle,fork,temple,polish,playtest]=paths.map(read);
+const combined=[core,beach,jungle,fork,temple,polish,playtest].join('\n\n');
 new vm.Script(combined,{filename:'al-hata-stage1-concatenated-runtime.js'});
 
 need(core,[
@@ -91,9 +92,38 @@ need(polish,[
   'AH_OBJECT_ATTACKERS.ah_shell=',
 ],'Stage 1 refinement layer');
 
+need(playtest,[
+  'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V1=true',
+  'const AH_PLAYTEST_CENTER_BOARD_INDEX=7',
+  "AH_SEGMENT_STARTS.landing=",
+  "AH_SEGMENT_DRAWERS.landing=AH_drawBeachTraversal",
+  'AH_SEGMENT_UPDATERS.landing=AH_PLAYTEST_landingUpdater',
+  'state.board.fill(null)',
+  'const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey())',
+  "session={active:true,phase:'ready'",
+  "AH_finishTraversalToCombat(1,1,'Landing Shore')",
+  'state.running&&!state.__ttdMissionIntroHold',
+],'Navigator-first playtest runtime');
+
 const bridge=read('online/run-ui-bridge-v21.js');
 need(bridge,paths.map((path)=>`/${path}?v=1`),'Al Hata loader module order');
 must(bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-temple-v1.js?v=1'),'refinement layer must load after authored regions');
+must(bridge.indexOf('/online/al-hata-stage1-playtest-v1.js?v=1')>bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1'),'playtest layer must load after the refined authored map');
+need(bridge,["const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=1'",'await loadClassicScript(PLAYTEST_ENTRY'], 'Navigator-first entry loader');
+
+const entry=read('online/al-hata-stage1-playtest-entry-v1.js');
+new vm.Script(entry,{filename:'al-hata-stage1-playtest-entry-v1.js'});
+need(entry,[
+  'window.__TTD_AL_HATA_PLAYTEST_ENTRY_V1=true',
+  "cost.textContent='FREE'",
+  "Tap <strong>[Summon Die]</strong> to create a Navigator Die",
+  'ttdAhNavPromptBounceV1',
+  'const AH_ID=',
+  'CENTER_INDEX=7',
+  'window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START=true',
+  'event.stopImmediatePropagation()',
+  'wrapped.__ttdMissionWrappedV6=true',
+],'Navigator-first entry prompt');
 
 const itemClient=read('online/al-hata-world-item-client-v1.js');
 const itemServer=read('functions/al-hata-world-items-v1.js');
@@ -103,4 +133,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: concatenated authored modules parse together; beach, jungle, fork, temple, polish, progression hooks, and server-backed shell ownership remain structurally wired.');
+console.log('Al Hata Stage 1 verified: concatenated authored/playtest modules parse together; navigator-first free summon, beach/jungle/fork/temple progression, refinement, and server-backed shell ownership remain structurally wired.');

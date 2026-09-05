@@ -20,10 +20,13 @@
     '/online/al-hata-stage1-fork-v1.js?v=1',
     '/online/al-hata-stage1-temple-v1.js?v=1',
     '/online/al-hata-stage1-polish-v1.js?v=1',
+    '/online/al-hata-stage1-playtest-v1.js?v=1',
   ];
+  const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=1';
   const WORLD_INSERTION_LINE="      platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');";
 
   async function fetchText(url,label){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`${label} HTTP ${r.status}`);return r.text();}
+  function loadClassicScript(url,label,ready){return new Promise((resolve,reject)=>{if(ready?.()){resolve();return;}const script=document.createElement('script');script.src=url;script.async=false;script.onload=resolve;script.onerror=()=>reject(new Error(`${label} could not load.`));document.head.appendChild(script);});}
   async function loadAdventurePlatformingV2(){
     let frozenSource=await fetchText(FROZEN_BRIDGE,'Frozen Test Map bridge');
     if(!frozenSource.includes(WORLD_INSERTION_LINE))throw new Error('Frozen Test Map bridge injection marker changed; refusing unsafe Al Hata bootstrap.');
@@ -37,6 +40,7 @@
     eval(`${frozenSource}\n//# sourceURL=/online/run-ui-bridge-v21-testmap-frozen.js`);
     const frozenReady=window.__TTD_RUN_UI_EXTENSIONS_READY;
     if(frozenReady&&frozenReady!==bootstrapPromise)await frozenReady;
+    await loadClassicScript(PLAYTEST_ENTRY,'Al Hata navigator-first playtest entry',()=>!!window.__TTD_AL_HATA_PLAYTEST_ENTRY_V1);
     return true;
   }
 
