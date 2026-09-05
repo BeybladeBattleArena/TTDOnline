@@ -1,5 +1,6 @@
-/* Al Hata Stage 1 playtest opening — free center-slot Navigator before MISSION / START. */
+/* Al Hata Stage 1 playtest opening — load first, then summon Navigator inside Arrival Cove before MISSION / START. */
 window.__TTD_AL_HATA_STAGE1_PLAYTEST_V1=true;
+window.__TTD_AL_HATA_STAGE1_PLAYTEST_V2=true;
 const AH_PLAYTEST_CENTER_BOARD_INDEX=7;
 const AH_PLAYTEST_LANDING_START=Object.freeze({x:285,z:0,y:0});
 const AH_PLAYTEST_LANDING_COMBAT_X=620;
@@ -14,6 +15,26 @@ AH_SEGMENT_STARTS.landing={...AH_PLAYTEST_LANDING_START};
 AH_SEGMENT_PLATFORMS.landing=AH_beachPlatforms;
 AH_SEGMENT_PLATFORMS.beach=AH_beachPlatforms;
 AH_SEGMENT_DRAWERS.landing=AH_drawBeachTraversal;
+
+const AH_PLAYTEST_STYLE_ID='ttdAhInMapNavigatorStyleV2';
+if(!document.getElementById(AH_PLAYTEST_STYLE_ID)){
+  const style=document.createElement('style');
+  style.id=AH_PLAYTEST_STYLE_ID;
+  style.textContent=`
+    #ttdAhInMapNavigatorPromptV2{position:absolute;inset:0;z-index:24;display:flex;align-items:center;justify-content:center;padding:18px;pointer-events:none;}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavCard{pointer-events:auto;width:min(88%,360px);padding:15px 16px 14px;border-radius:14px;border:1px solid rgba(243,212,145,.72);background:rgba(9,13,24,.90);box-shadow:0 12px 36px rgba(0,0,0,.46),0 0 22px rgba(243,212,145,.12);backdrop-filter:blur(4px);text-align:center;}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavEyebrow{margin-bottom:5px;color:#8fc4e8;font:700 9px 'Space Mono',monospace;letter-spacing:.16em;}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavTitle{color:#f3d491;font:400 clamp(20px,6vw,30px) 'Russo One',sans-serif;letter-spacing:.035em;text-shadow:0 2px 0 rgba(0,0,0,.88),0 0 10px rgba(243,212,145,.28);}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavCopy{margin:7px auto 12px;color:#d8d5c9;font:600 11px 'Inter',sans-serif;line-height:1.45;max-width:285px;}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavButton{appearance:none;border:1px solid rgba(212,236,250,.72);border-radius:10px;padding:10px 16px;min-width:190px;background:linear-gradient(180deg,#b8ecff,#6dbbe5);color:#102033;font:700 12px 'Cinzel',serif;letter-spacing:.04em;box-shadow:0 0 18px rgba(143,196,232,.28);cursor:pointer;animation:ttdAhInMapSummonPulseV2 1.1s ease-in-out infinite;}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavButton:active{transform:translateY(1px) scale(.98);}
+    #ttdAhInMapNavigatorPromptV2 .ttdAhNavFree{display:block;margin-top:6px;color:#f3d491;font:700 8px 'Space Mono',monospace;letter-spacing:.14em;}
+    @keyframes ttdAhInMapSummonPulseV2{50%{box-shadow:0 0 26px rgba(143,196,232,.52);transform:scale(.985)}}
+    #gameScreen.ttd-ah-awaiting-navigator #ttdJoyWrap,#gameScreen.ttd-ah-awaiting-navigator #ttdJumpBtn{visibility:hidden!important;pointer-events:none!important;}
+    #gameScreen.ttd-ah-awaiting-navigator #ttdControllerReadout{color:#97a0bd!important;}
+  `;
+  document.head.appendChild(style);
+}
 
 function AH_PLAYTEST_syncLandingWorld(){
   if(!session?.active)return;const w=AH_ensureWorld();if(!w)return;
@@ -38,42 +59,77 @@ function AH_PLAYTEST_landingUpdater(dt){
 }
 AH_SEGMENT_UPDATERS.landing=AH_PLAYTEST_landingUpdater;
 
-function AH_PLAYTEST_armNavigatorForMission(){
-  if(!window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START)return false;
-  if(state?.adventureStage===AH_STAGE&&!state.__ttdAlHataStage1)AH_tagState();
-  if(!AH_isState())return false;
-  window.__TTD_AL_HATA_PLAYTEST_PENDING_NAV_START=false;
-  AH_tagState();
-  state.spawnQueue=[];state.enemies=[];state.spawnTimer=0;state.wave=1;state.running=false;
-  state.__ttdAlHataOpeningPrelude=true;state.__ttdAlHataCombatArea=1;
-  state.board.fill(null);
-  const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey());state.board[boardIndex]=die;
-  const world=AH_ensureWorld();world.segment='landing';world.cameraX=330;world.checkpoint={...AH_PLAYTEST_LANDING_START};world.combatArea=1;
-  session={active:true,phase:'ready',nav:{die,boardIndex,x:AH_PLAYTEST_LANDING_START.x,z:0,y:0,vy:0,onGround:true,jumps:0,invuln:0,alpha:1,spawnT:0},w:1,h:1,cameraX:330,time:0,lastTs:0,joyX:0,joyZ:0,checkpoint:{...AH_PLAYTEST_LANDING_START},objects:world.objects,drops:world.drops,hazardCd:0,returnAlpha:1,__ttdAlHata:true,segment:'landing'};
-  renderBoard();renderHUD();
-  const button=document.getElementById('summonBtn');if(button)button.disabled=true;
-  toast(`${DICE[die.key]?.name||die.key} is ready as Navigator`);
-  const waitForMissionStart=()=>{
-    if(!AH_isState()||!session?.active||session.segment!=='landing')return;
-    if(session.phase==='ready'&&state.running&&!state.__ttdMissionIntroHold){
-      session.phase='play';initObjectHp();enterPlatformLayout();state.__ttdAlHataOpeningPrelude=false;
-      if(modeLabel)modeLabel.textContent='Al Hata · Arrival Cove';return;
-    }
-    requestAnimationFrame(waitForMissionStart);
-  };
-  requestAnimationFrame(waitForMissionStart);return true;
+function AH_PLAYTEST_setControllerLocked(locked){
+  const game=document.getElementById('gameScreen');game?.classList.toggle('ttd-ah-awaiting-navigator',!!locked);
+  const readout=document.getElementById('ttdControllerReadout');
+  if(readout)readout.innerHTML=locked?'<strong>NAVIGATOR</strong>Summon a die to begin':'<strong>MOVE</strong>Drag joystick<br>Double jump enabled';
 }
 
-const AH_PLAYTEST_baseStartAdventure=startAdventure;
-startAdventure=function AH_startAdventureNavigatorFirst(advId,stageIdx,diffKey){
-  const result=AH_PLAYTEST_baseStartAdventure(advId,stageIdx,diffKey);
-  if(advId===AH_ID&&Number(stageIdx)===0)AH_PLAYTEST_armNavigatorForMission();
-  return result;
-};
+function AH_PLAYTEST_removeInMapPrompt(){document.getElementById('ttdAhInMapNavigatorPromptV2')?.remove();}
+function AH_PLAYTEST_showError(message){
+  const prompt=document.getElementById('ttdAhInMapNavigatorPromptV2');if(!prompt)return;
+  const card=prompt.querySelector('.ttdAhNavCard');if(card)card.innerHTML=`<div class="ttdAhNavEyebrow">AL HATA</div><div class="ttdAhNavTitle">ARRIVAL PAUSED</div><div class="ttdAhNavCopy">${String(message||'The Navigator sequence could not continue.')}</div>`;
+}
 
-const AH_PLAYTEST_baseStartAdventureCampaign=startAdventureCampaign;
-startAdventureCampaign=function AH_startAdventureCampaignNavigatorFirst(advId,diffKey){
-  const result=AH_PLAYTEST_baseStartAdventureCampaign(advId,diffKey);
-  if(advId===AH_ID)AH_PLAYTEST_armNavigatorForMission();
-  return result;
-};
+function AH_PLAYTEST_beginMissionAfterNavigator(runState){
+  const begin=()=>{
+    if(state!==runState||!AH_isState()||!session?.active||session.segment!=='landing')return;
+    runState.__ttdMissionIntroHold=false;runState.running=true;runState.__ttdAlHataOpeningPrelude=false;
+    session.phase='play';session.lastTs=0;AH_PLAYTEST_setControllerLocked(false);
+    if(modeLabel)modeLabel.textContent='Al Hata · Arrival Cove';
+  };
+  const present=window.TTDGamePresentation?.presentRunStart;
+  if(typeof present!=='function'){
+    AH_PLAYTEST_showError('MISSION / START presentation is unavailable. Gameplay remains paused.');
+    console.error('Al Hata prepared mission start is unavailable.');
+    return;
+  }
+  Promise.resolve(present(begin)).then(started=>{
+    if(started===false&&state===runState&&session?.phase!=='play')AH_PLAYTEST_showError('MISSION / START could not begin. Gameplay remains paused.');
+  }).catch(err=>{console.error('Al Hata prepared mission start failed.',err);AH_PLAYTEST_showError('MISSION / START could not begin. Gameplay remains paused.');});
+}
+
+function AH_PLAYTEST_createNavigator(runState){
+  if(state!==runState||!AH_isState()||!session?.active||session.segment!=='landing'||session.phase!=='summon')return false;
+  const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey());
+  runState.board[boardIndex]=die;
+  session.nav={die,boardIndex,x:AH_PLAYTEST_LANDING_START.x,z:0,y:0,vy:0,onGround:true,jumps:0,invuln:0,alpha:1,spawnT:0};
+  session.phase='ready';
+  initObjectHp();renderBoard();renderHUD();
+  try{drawScene();}catch(err){console.warn('Arrival Cove Navigator preview draw recovered.',err);}
+  AH_PLAYTEST_removeInMapPrompt();
+  toast(`${DICE[die.key]?.name||die.key} is ready as Navigator`);
+  AH_PLAYTEST_beginMissionAfterNavigator(runState);
+  return true;
+}
+
+function AH_PLAYTEST_showInMapNavigatorPrompt(runState){
+  AH_PLAYTEST_removeInMapPrompt();
+  const lane=document.getElementById('laneWrap');if(!lane)return false;
+  const prompt=document.createElement('div');prompt.id='ttdAhInMapNavigatorPromptV2';
+  prompt.innerHTML='<div class="ttdAhNavCard"><div class="ttdAhNavEyebrow">AL HATA · ARRIVAL COVE</div><div class="ttdAhNavTitle">NAVIGATOR REQUIRED</div><div class="ttdAhNavCopy">Summon one starting die to lead the expedition. Gameplay will remain paused until your Navigator is ready.</div><button class="ttdAhNavButton" type="button">SUMMON NAVIGATOR</button><span class="ttdAhNavFree">FREE STARTING SUMMON</span></div>';
+  lane.appendChild(prompt);
+  prompt.querySelector('.ttdAhNavButton')?.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();AH_PLAYTEST_createNavigator(runState);},{once:true});
+  return true;
+}
+
+function AH_PLAYTEST_prepareInMapNavigator(runState){
+  if(!runState||state!==runState)return false;
+  if(runState.adventureStage===AH_STAGE&&!runState.__ttdAlHataStage1)AH_tagState();
+  if(!AH_isState())return false;
+  AH_tagState();
+  window.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING=false;
+  runState.spawnQueue=[];runState.enemies=[];runState.spawnTimer=0;runState.wave=1;runState.running=false;runState.__ttdMissionIntroHold=true;
+  runState.__ttdAlHataOpeningPrelude=true;runState.__ttdAlHataCombatArea=1;
+  runState.board.fill(null);
+  const world=AH_ensureWorld();world.segment='landing';world.cameraX=330;world.checkpoint={...AH_PLAYTEST_LANDING_START};world.combatArea=1;
+  session={active:true,phase:'summon',nav:null,w:1,h:1,cameraX:330,time:0,lastTs:0,joyX:0,joyZ:0,checkpoint:{...AH_PLAYTEST_LANDING_START},objects:world.objects,drops:world.drops,hazardCd:0,returnAlpha:1,__ttdAlHata:true,segment:'landing'};
+  renderBoard();renderHUD();
+  const nativeSummon=document.getElementById('summonBtn');if(nativeSummon)nativeSummon.disabled=true;
+  if(modeLabel)modeLabel.textContent='Al Hata · Arrival Cove';
+  enterPlatformLayout();AH_PLAYTEST_setControllerLocked(true);
+  requestAnimationFrame(()=>{try{drawScene();}catch(err){console.warn('Arrival Cove opening draw recovered.',err);}AH_PLAYTEST_showInMapNavigatorPrompt(runState);});
+  return true;
+}
+
+window.__TTD_AL_HATA_STAGE1_PLAYTEST_API=Object.freeze({version:2,prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator});
