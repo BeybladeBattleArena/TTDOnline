@@ -11,7 +11,7 @@ const innerName=`.__ttd-al-hata-inner-${process.pid}.html`;
 const harness=path.join(process.cwd(),harnessName),inner=path.join(process.cwd(),innerName);
 const innerHtml=`<!doctype html><html><head><script>window.addEventListener('error',e=>parent.postMessage({type:'harness-error',message:String(e.message||e.error||'window error')},location.origin));window.addEventListener('unhandledrejection',e=>parent.postMessage({type:'harness-error',message:String(e.reason?.message||e.reason||'unhandled rejection')},location.origin));<\/script><script src="/online/game-loader.js"><\/script></head><body></body></html>`;
 const html=`<!doctype html><html><body><iframe id="game" style="width:412px;height:820px" src="/${innerName}"></iframe><script>
-const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false,touchDiag=null;
+const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false,touchDiag=null,directChecked=false;
 window.addEventListener('message',e=>{
   const m=e.data||{};
   if(m.type==='ttd:bridge-phase'||m.type==='ttd:bridge-sync-error'||m.type==='ttd:bridge-loader-error')messages.push(m);
@@ -29,7 +29,17 @@ function hitStack(w,button){
 }
 function buttonIsTopmost(w,button){if(!button)return false;const r=button.getBoundingClientRect();const el=w.document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return el===button||button.contains(el);}
 function readTouchDiag(w){
-  try{return w.eval("({activateFn:typeof AH_PLAYTEST_activateNavigatorPrompt,createFn:typeof AH_PLAYTEST_createNavigator,promptRunSame:AH_PLAYTEST_promptRunState===state,promptActivating:AH_PLAYTEST_promptActivating,alHata:!!AH_isState(),sessionExists:typeof session!=='undefined'&&!!session,sessionActive:typeof session!=='undefined'&&!!session?.active,segment:typeof session!=='undefined'?session?.segment||null:null,phase:typeof session!=='undefined'?session?.phase||null:null,boardCount:Array.isArray(state?.board)?state.board.filter(Boolean).length:-1})");}catch(err){return{diagError:String(err?.message||err)};}
+  try{return{
+    activateFn:typeof w.AH_PLAYTEST_activateNavigatorPrompt,
+    createFn:typeof w.AH_PLAYTEST_createNavigator,
+    alHataFn:typeof w.AH_isState,
+    alHata:typeof w.AH_isState==='function'?!!w.AH_isState():null,
+    boardCount:Array.isArray(w.state?.board)?w.state.board.filter(Boolean).length:-1,
+    missionHold:w.state?.__ttdMissionIntroHold,
+    running:w.state?.running,
+    prompt:!!w.document?.getElementById('ttdAhInMapNavigatorPromptV2'),
+    awaiting:!!w.document?.getElementById('gameScreen')?.classList.contains('ttd-ah-awaiting-navigator')
+  };}catch(err){return{diagError:String(err?.message||err)};}
 }
 const started=performance.now();
 (function poll(){
@@ -64,6 +74,19 @@ const started=performance.now();
         button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:button.getBoundingClientRect().left+5,clientY:button.getBoundingClientRect().top+5}));
         touchDiag.afterDispatch=readTouchDiag(w);
         tappedAt=now;
+      }
+    }
+    if(tappedAt&&run&&!directChecked&&now-tappedAt>=500){
+      directChecked=true;
+      const actualCount=(run.board||[]).filter(Boolean).length;
+      touchDiag={...(touchDiag||{}),after500:readTouchDiag(w),actualTouchCreated:actualCount===1};
+      if(actualCount===0){
+        let directResult=null,directError='';
+        try{directResult=typeof w.AH_PLAYTEST_createNavigator==='function'?w.AH_PLAYTEST_createNavigator(run):null;}catch(err){directError=String(err?.stack||err?.message||err);}
+        touchDiag.directResult=directResult;
+        touchDiag.directError=directError;
+        touchDiag.afterDirect=readTouchDiag(w);
+        finish({ok:false,reason:'navigator-touch-not-delivered',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,touchDiag,wave:run.wave,lives:run.lives,messages,errors});return;
       }
     }
     if(tappedAt&&run&&now-tappedAt>=3200){
