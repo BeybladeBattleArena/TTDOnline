@@ -43,7 +43,7 @@ const started=performance.now();
     }
     const run=w?.state,prompt=w?.document?.getElementById('ttdAhInMapNavigatorPromptV2'),button=prompt?.querySelector('.ttdAhNavButton');
     if(launched&&prompt&&run&&!promptAt){
-      promptAt=now;topmost=buttonIsTopmost(w,button);
+      promptAt=now;
       snapshot={wave:Number(run.wave),lives:Number(run.lives),time:Number(run.time),drive:driveText(w)};
       run.running=true;
       forcedResumeRejected=run.running===false;
@@ -51,7 +51,7 @@ const started=performance.now();
     if(promptAt&&!tappedAt&&now-promptAt>=2600&&prompt&&run){
       stableWhileWaiting=Number(run.wave)===snapshot.wave&&Number(run.lives)===snapshot.lives&&Math.abs(Number(run.time)-snapshot.time)<0.001;
       driveStable=driveText(w)===snapshot.drive;
-      topmost=topmost&&buttonIsTopmost(w,button);
+      topmost=buttonIsTopmost(w,button);
       if(!forcedResumeRejected||!stableWhileWaiting||!driveStable||!topmost){
         finish({ok:false,reason:'cove-not-frozen-or-button-obscured',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),buttonRect:button?.getBoundingClientRect?.().toJSON?.()||null,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
       }
