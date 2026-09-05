@@ -1,10 +1,13 @@
 /* Al Hata Stage 1 playtest opening — load first, then summon Navigator inside Arrival Cove before MISSION / START. */
 window.__TTD_AL_HATA_STAGE1_PLAYTEST_V1=true;
 window.__TTD_AL_HATA_STAGE1_PLAYTEST_V2=true;
+window.__TTD_AL_HATA_STAGE1_PLAYTEST_V3=true;
 const AH_PLAYTEST_CENTER_BOARD_INDEX=7;
 const AH_PLAYTEST_LANDING_START=Object.freeze({x:285,z:0,y:0});
 const AH_PLAYTEST_LANDING_COMBAT_X=620;
 const AH_PLAYTEST_NATIVE_PAUSE_KEY='__ttdAlHataNativePauseV1';
+let AH_PLAYTEST_promptRunState=null;
+let AH_PLAYTEST_promptActivating=false;
 
 function AH_PLAYTEST_releaseNativePause(runState,running=false){
   if(!runState)return;
@@ -96,7 +99,11 @@ function AH_PLAYTEST_setControllerLocked(locked){
   if(readout)readout.innerHTML=locked?'<strong>NAVIGATOR</strong>Summon a die to begin':'<strong>MOVE</strong>Drag joystick<br>Double jump enabled';
 }
 
-function AH_PLAYTEST_removeInMapPrompt(){document.getElementById('ttdAhInMapNavigatorPromptV2')?.remove();}
+function AH_PLAYTEST_removeInMapPrompt(){
+  document.getElementById('ttdAhInMapNavigatorPromptV2')?.remove();
+  AH_PLAYTEST_promptRunState=null;
+  AH_PLAYTEST_promptActivating=false;
+}
 function AH_PLAYTEST_showError(message){
   const prompt=document.getElementById('ttdAhInMapNavigatorPromptV2');if(!prompt)return;
   const card=prompt.querySelector('.ttdAhNavCard');if(card)card.innerHTML=`<div class="ttdAhNavEyebrow">AL HATA</div><div class="ttdAhNavTitle">ARRIVAL PAUSED</div><div class="ttdAhNavCopy">${String(message||'The Navigator sequence could not continue.')}</div>`;
@@ -136,21 +143,45 @@ function AH_PLAYTEST_createNavigator(runState){
   return true;
 }
 
+function AH_PLAYTEST_activateNavigatorPrompt(event,runState=AH_PLAYTEST_promptRunState){
+  const target=event?.target;
+  const button=target?.closest?.('#ttdAhInMapNavigatorPromptV2 .ttdAhNavButton');
+  if(!button||!button.isConnected||AH_PLAYTEST_promptActivating)return false;
+  if(event?.cancelable)event.preventDefault();
+  event?.stopPropagation?.();
+  event?.stopImmediatePropagation?.();
+  AH_PLAYTEST_promptActivating=true;
+  const activeRun=runState||state;
+  if(AH_PLAYTEST_createNavigator(activeRun))return true;
+  AH_PLAYTEST_promptActivating=false;
+  console.error('Al Hata Navigator summon rejected an out-of-sync Cove state.',{
+    sameState:state===activeRun,
+    alHata:!!AH_isState(),
+    sessionActive:!!session?.active,
+    segment:session?.segment||null,
+    phase:session?.phase||null,
+  });
+  AH_PLAYTEST_showError('Navigator summon could not bind to the current Cove state. Retry the Cove.');
+  return false;
+}
+
+// The Cove CTA must outrank legacy board/drag/mobile gesture capture. Window capture runs before
+// document and target handlers, so a real Android touch cannot be consumed before the free summon.
+for(const type of ['pointerdown','touchstart','click']){
+  window.addEventListener(type,event=>AH_PLAYTEST_activateNavigatorPrompt(event),{capture:true,passive:false});
+}
+
 function AH_PLAYTEST_showInMapNavigatorPrompt(runState){
   AH_PLAYTEST_removeInMapPrompt();
   const lane=document.getElementById('laneWrap');if(!lane)return false;
+  AH_PLAYTEST_promptRunState=runState;
   const prompt=document.createElement('div');prompt.id='ttdAhInMapNavigatorPromptV2';
   prompt.innerHTML='<div class="ttdAhNavCard"><div class="ttdAhNavEyebrow">AL HATA · ARRIVAL COVE</div><div class="ttdAhNavTitle">NAVIGATOR REQUIRED</div><div class="ttdAhNavCopy">Summon one starting die to lead the expedition. Gameplay will remain paused until your Navigator is ready.</div><button class="ttdAhNavButton" type="button">SUMMON NAVIGATOR</button><span class="ttdAhNavFree">FREE STARTING SUMMON</span></div>';
   lane.appendChild(prompt);
-  const button=prompt.querySelector('.ttdAhNavButton');let activated=false;
-  const activate=event=>{
-    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();if(activated)return;
-    if(AH_PLAYTEST_createNavigator(runState)){activated=true;return;}
-    console.error('Al Hata Navigator summon rejected an out-of-sync Cove state.');
-    AH_PLAYTEST_showError('Navigator summon could not bind to the current Cove state. Retry the Cove.');
-  };
-  button?.addEventListener('pointerdown',activate,{passive:false});
-  button?.addEventListener('click',activate);
+  const button=prompt.querySelector('.ttdAhNavButton');
+  button?.addEventListener('pointerdown',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false});
+  button?.addEventListener('touchstart',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false});
+  button?.addEventListener('click',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true});
   return true;
 }
 
@@ -175,4 +206,4 @@ function AH_PLAYTEST_prepareInMapNavigator(runState){
   return true;
 }
 
-window.__TTD_AL_HATA_STAGE1_PLAYTEST_API=Object.freeze({version:3,prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator});
+window.__TTD_AL_HATA_STAGE1_PLAYTEST_API=Object.freeze({version:4,prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator});
