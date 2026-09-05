@@ -24,6 +24,14 @@
   ];
   const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=2';
   const WORLD_INSERTION_LINE="      platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');";
+  const AL_HATA_SCOPE_SHIMS=`
+function randDeckKey(){
+  const deck=Array.isArray(state?.deck)?state.deck:[];
+  const keys=deck.map(entry=>typeof entry==='string'?entry:entry?.key).filter(key=>typeof key==='string'&&!!DICE?.[key]);
+  if(!keys.length)throw new Error('Al Hata Navigator deck has no valid die keys.');
+  return keys[Math.floor(Math.random()*keys.length)];
+}
+`;
 
   async function fetchText(url,label){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`${label} HTTP ${r.status}`);return r.text();}
   function loadClassicScript(url,label,ready){return new Promise((resolve,reject)=>{if(ready?.()){resolve();return;}const script=document.createElement('script');script.src=url;script.async=false;script.onload=resolve;script.onerror=()=>reject(new Error(`${label} could not load.`));document.head.appendChild(script);});}
@@ -34,7 +42,7 @@
     for(const marker of FROZEN_PRESENTATION_CONTRACTS)if(!frozenSource.includes(marker))throw new Error(`Frozen Test Map bridge lost presentation contract: ${marker}`);
     const moduleSources=[];
     for(const url of AL_HATA_MODULES)moduleSources.push(await fetchText(url,`Al Hata module ${url}`));
-    const runtime=moduleSources.join('\n\n');
+    const runtime=AL_HATA_SCOPE_SHIMS+'\n'+moduleSources.join('\n\n');
     const insertion=WORLD_INSERTION_LINE+`\n      platformSource=requiredReplace(platformSource,renderMarker,${JSON.stringify(runtime)}+'\\n'+renderMarker,'Al Hata Stage 1 runtime insertion');`;
     frozenSource=frozenSource.replace(WORLD_INSERTION_LINE,insertion);
     eval(`${frozenSource}\n//# sourceURL=/online/run-ui-bridge-v21-testmap-frozen.js`);
