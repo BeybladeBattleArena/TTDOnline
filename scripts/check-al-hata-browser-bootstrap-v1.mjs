@@ -12,7 +12,15 @@ const harness=path.join(process.cwd(),harnessName),inner=path.join(process.cwd()
 const innerHtml=`<!doctype html><html><head><script>window.addEventListener('error',e=>parent.postMessage({type:'harness-error',message:String(e.message||e.error||'window error')},location.origin));window.addEventListener('unhandledrejection',e=>parent.postMessage({type:'harness-error',message:String(e.reason?.message||e.reason||'unhandled rejection')},location.origin));<\/script><script src="/online/game-loader.js"><\/script></head><body></body></html>`;
 const html=`<!doctype html><html><body><iframe id="game" style="width:412px;height:820px" src="/${innerName}"></iframe><script>
 const messages=[],errors=[];let done=false,launched=false,launchAt=0,promptAt=0,tappedAt=0,snapshot=null,topmost=false,forcedResumeRejected=false,stableWhileWaiting=false,driveStable=false;
-window.addEventListener('message',e=>{const m=e.data||{};if(m.type==='ttd:bridge-phase'||m.type==='ttd:bridge-sync-error'||m.type==='ttd:bridge-loader-error')messages.push(m);if(m.type==='harness-error')errors.push(m.message);});
+window.addEventListener('message',e=>{
+  const m=e.data||{};
+  if(m.type==='ttd:bridge-phase'||m.type==='ttd:bridge-sync-error'||m.type==='ttd:bridge-loader-error')messages.push(m);
+  if(m.type==='harness-error')errors.push(m.message);
+  if(m.type==='ttd:v6-run-begin-request'){
+    const frame=document.getElementById('game');
+    setTimeout(()=>frame?.contentWindow?.postMessage({type:'ttd:v6-run-begin-result',requestId:m.requestId,runId:'harness-al-hata-run'},location.origin),0);
+  }
+});
 function finish(report){if(done)return;done=true;document.body.dataset.report=JSON.stringify(report);}
 function driveText(w){return String(w?.document?.querySelector('#ttdDriveHud .ttdMeterLine.drive .value')?.textContent||'').trim();}
 function buttonIsTopmost(w,button){if(!button)return false;const r=button.getBoundingClientRect();const el=w.document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return el===button||button.contains(el);}
