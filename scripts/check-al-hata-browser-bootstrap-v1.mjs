@@ -25,7 +25,8 @@ const started=performance.now();
     const playtest=!!w?.__TTD_AL_HATA_STAGE1_PLAYTEST_V2;
     const entry=!!w?.__TTD_AL_HATA_PLAYTEST_ENTRY_V3;
     const deckReady=Array.isArray(w?.account?.decks?.[0])&&w.account.decks[0].filter(Boolean).length===5;
-    if(!launched&&api&&entry&&deckReady&&typeof w.startAdventureCampaign==='function'){
+    const homeReady=!!w?.document?.getElementById('homeScreen')?.classList.contains('active');
+    if(!launched&&api&&entry&&deckReady&&homeReady&&typeof w.startAdventureCampaign==='function'){
       w.startAdventureCampaign('al_hata','normal');launched=true;launchAt=now;
     }
     const run=w?.state,prompt=w?.document?.getElementById('ttdAhInMapNavigatorPromptV2'),button=prompt?.querySelector('.ttdAhNavButton');
@@ -56,7 +57,10 @@ const started=performance.now();
       const ok=promptGone&&navigatorCount===1&&platform&&controllerUnlocked&&missionReleased&&nativeBattlePaused&&Number(run.wave)===1&&Number(run.lives)===snapshot.lives;
       finish({ok,reason:ok?'ready':'navigator-touch-or-traversal-release-failed',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,promptGone,navigatorCount,platform,controllerUnlocked,missionReleased,nativeBattlePaused,wave:run.wave,lives:run.lives,messages,errors});return;
     }
-    if(now-started>22000){finish({ok:false,reason:'timeout',core,playtest,entry,api,launched,prompt:!!prompt,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,messages,errors});return;}
+    if(now-started>22000){
+      const recovery=w?.document?.getElementById('ttdAhCoveRecoveryV3');
+      finish({ok:false,reason:'timeout',core,playtest,entry,api,launched,prompt:!!prompt,homeReady,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,pending:!!w?.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING,gameActive:!!w?.document?.getElementById('gameScreen')?.classList.contains('active'),platformMode:!!w?.document?.getElementById('gameScreen')?.classList.contains('ttd-platform-mode'),platformCanvas:!!w?.document?.getElementById('ttdPlatformCanvas'),missionShield:!!w?.document?.getElementById('ttdMissionHoldShieldV6'),recovery:recovery?.textContent?.replace(/\s+/g,' ').trim()||'',modeLabel:w?.document?.getElementById('modeLabel')?.textContent||'',state:run?{adventure:!!run.adventure,stage:run.adventureStage?.name||'',stageIdx:run.adventureStageIdx,running:run.running,wave:run.wave,lives:run.lives,missionHold:run.__ttdMissionIntroHold,alHata:run.__ttdAlHataStage1}:null,messages,errors});return;
+    }
   }catch(err){errors.push(String(err?.stack||err?.message||err));}
   setTimeout(poll,50);
 })();
