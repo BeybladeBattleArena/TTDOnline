@@ -69,7 +69,7 @@ need(fork,[
 
 need(temple,[
   'AH_ROUTES[5]=',
-  "AH_SEGMENT_STARTS.templeApproach",
+  'AH_SEGMENT_STARTS.templeApproach',
   "id:'temple_secret_statue'",
   "id:'temple_hidden_sp_chest'",
   "id:'temple_combat_column'",
@@ -82,12 +82,12 @@ need(temple,[
 need(polish,[
   'window.__TTD_AL_HATA_STAGE1_POLISH_V1=true',
   'AH_POLISH_SHELL_SPOTS',
-  "ttd:al-hata-shell-claim-request",
-  "ttd:al-hata-shell-claim-result",
-  "ttd:v6-refresh-request",
+  'ttd:al-hata-shell-claim-request',
+  'ttd:al-hata-shell-claim-result',
+  'ttd:v6-refresh-request',
   "['BRIDGE AMBUSH','Hold the center']",
   "['TEMPLE FORECOURT','The mountain temple']",
-  "AH_OBJECT_ATTACKERS.ah_shell=",
+  'AH_OBJECT_ATTACKERS.ah_shell=',
 ],'Stage 1 refinement layer');
 
 const bridge=read('online/run-ui-bridge-v21.js');
@@ -96,7 +96,6 @@ must(bridge.indexOf('/online/al-hata-stage1-polish-v1.js?v=1')>bridge.indexOf('/
 
 const itemClient=read('online/al-hata-world-item-client-v1.js');
 const itemServer=read('functions/al-hata-world-items-v1.js');
-new vm.SourceTextModule(itemClient,{identifier:'al-hata-world-item-client-v1.js'});
 new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
