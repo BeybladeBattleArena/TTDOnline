@@ -98,6 +98,7 @@ need(playtest,[
   'window.__TTD_AL_HATA_STAGE1_PLAYTEST_V3=true',
   'const AH_PLAYTEST_CENTER_BOARD_INDEX=7',
   "const AH_PLAYTEST_NATIVE_PAUSE_KEY='__ttdAlHataNativePauseV1'",
+  'window.__TTD_AL_HATA_NAV_DIAG=',
   'function AH_PLAYTEST_installNativePause',
   'function AH_PLAYTEST_releaseNativePause',
   "AH_SEGMENT_STARTS.landing=",
@@ -111,9 +112,12 @@ need(playtest,[
   "session.phase='play'",
   'runState.__ttdMissionIntroHold=true',
   'AH_PLAYTEST_installNativePause(runState)',
-  "for(const type of ['pointerdown','touchstart','click'])",
+  "const AH_PLAYTEST_NAV_EVENTS=['pointerdown','pointerup','touchstart','touchend','click']",
+  'for(const type of AH_PLAYTEST_NAV_EVENTS)',
   'window.addEventListener(type,event=>AH_PLAYTEST_activateNavigatorPrompt(event),{capture:true,passive:false})',
-  "button?.addEventListener('pointerdown',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false})",
+  'button?.addEventListener(type,event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false})',
+  'AH_PLAYTEST_NAV_DIAG.createAttempts+=1',
+  'AH_PLAYTEST_NAV_DIAG.created+=1',
   'enterPlatformLayout();AH_PLAYTEST_setControllerLocked(true)',
   'ttdAhInMapNavigatorPromptV2',
   'window.TTDGamePresentation?.presentRunStart',
@@ -208,4 +212,4 @@ new vm.Script(itemServer,{filename:'al-hata-world-items-v1.js'});
 need(itemClient,['claimAlHataShellV1','ttd:al-hata-shell-claim-request','ttd:al-hata-shell-claim-result'],'shell client authority');
 need(itemServer,["const SHELL_ID='al_hata_shell'",'resolveAdventureRun','worldClaims?.alHataStage1Shell','world_item_claim'],'shell server authority');
 
-console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is hard-held behind Arrival Cove; the in-map free Navigator accepts window-capture touch input; stale mission shields are removed; prepared MISSION / START releases traversal while native TD remains paused until combat.');
+console.log('Al Hata Stage 1 verified: Begin Al Hata loads first; cloned/reused campaign state is recognized; default TD is hard-held behind Arrival Cove; the in-map free Navigator accepts the full Android tap lifecycle; stale mission shields are removed; prepared MISSION / START releases traversal while native TD remains paused until combat.');
