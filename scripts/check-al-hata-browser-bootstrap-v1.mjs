@@ -52,12 +52,17 @@ const started=performance.now();
       stableWhileWaiting=Number(run.wave)===snapshot.wave&&Number(run.lives)===snapshot.lives&&Math.abs(Number(run.time)-snapshot.time)<0.001;
       driveStable=driveText(w)===snapshot.drive;
       topmost=buttonIsTopmost(w,button);
-      if(!forcedResumeRejected||!stableWhileWaiting||!driveStable||!topmost){
-        finish({ok:false,reason:'cove-not-frozen-or-button-obscured',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),buttonRect:button?.getBoundingClientRect?.().toJSON?.()||null,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
+      if(!forcedResumeRejected||!stableWhileWaiting||!driveStable){
+        finish({ok:false,reason:'cove-not-frozen',core,playtest,entry,api,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),buttonRect:button?.getBoundingClientRect?.().toJSON?.()||null,snapshot,current:{wave:run.wave,lives:run.lives,time:run.time,drive:driveText(w),running:run.running},messages,errors});return;
       }
-      const E=w.PointerEvent||w.MouseEvent;
-      button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:button.getBoundingClientRect().left+5,clientY:button.getBoundingClientRect().top+5}));
-      tappedAt=now;
+      // The normal game loading art may still be fading over Arrival Cove. Keep proving the native
+      // battle stays frozen underneath it, but do not synthesize the user touch until the CTA is
+      // genuinely the top hit target. A stuck loading layer is caught by the overall timeout below.
+      if(topmost){
+        const E=w.PointerEvent||w.MouseEvent;
+        button.dispatchEvent(new E('pointerdown',{bubbles:true,cancelable:true,pointerId:1,pointerType:'touch',clientX:button.getBoundingClientRect().left+5,clientY:button.getBoundingClientRect().top+5}));
+        tappedAt=now;
+      }
     }
     if(tappedAt&&run&&now-tappedAt>=3200){
       const promptGone=!w.document.getElementById('ttdAhInMapNavigatorPromptV2');
@@ -71,7 +76,7 @@ const started=performance.now();
     }
     if(now-started>22000){
       const recovery=w?.document?.getElementById('ttdAhCoveRecoveryV3');
-      finish({ok:false,reason:'timeout',core,playtest,entry,api,launched,prompt:!!prompt,homeReady,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,pending:!!w?.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING,gameActive:!!w?.document?.getElementById('gameScreen')?.classList.contains('active'),platformMode:!!w?.document?.getElementById('gameScreen')?.classList.contains('ttd-platform-mode'),platformCanvas:!!w?.document?.getElementById('ttdPlatformCanvas'),missionShield:!!w?.document?.getElementById('ttdMissionHoldShieldV6'),recovery:recovery?.textContent?.replace(/\s+/g,' ').trim()||'',modeLabel:w?.document?.getElementById('modeLabel')?.textContent||'',state:run?{adventure:!!run.adventure,stage:run.adventureStage?.name||'',stageIdx:run.adventureStageIdx,running:run.running,wave:run.wave,lives:run.lives,missionHold:run.__ttdMissionIntroHold,alHata:run.__ttdAlHataStage1}:null,messages,errors});return;
+      finish({ok:false,reason:'timeout',core,playtest,entry,api,launched,prompt:!!prompt,homeReady,forcedResumeRejected,stableWhileWaiting,driveStable,topmost,hitStack:hitStack(w,button),pending:!!w?.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING,gameActive:!!w?.document?.getElementById('gameScreen')?.classList.contains('active'),platformMode:!!w?.document?.getElementById('gameScreen')?.classList.contains('ttd-platform-mode'),platformCanvas:!!w?.document?.getElementById('ttdPlatformCanvas'),missionShield:!!w?.document?.getElementById('ttdMissionHoldShieldV6'),recovery:recovery?.textContent?.replace(/\s+/g,' ').trim()||'',modeLabel:w?.document?.getElementById('modeLabel')?.textContent||'',state:run?{adventure:!!run.adventure,stage:run.adventureStage?.name||'',stageIdx:run.adventureStageIdx,running:run.running,wave:run.wave,lives:run.lives,missionHold:run.__ttdMissionIntroHold,alHata:run.__ttdAlHataStage1}:null,messages,errors});return;
     }
   }catch(err){errors.push(String(err?.stack||err?.message||err));}
   setTimeout(poll,50);
