@@ -6,6 +6,7 @@ const AH_PLAYTEST_CENTER_BOARD_INDEX=7;
 const AH_PLAYTEST_LANDING_START=Object.freeze({x:285,z:0,y:0});
 const AH_PLAYTEST_LANDING_COMBAT_X=620;
 const AH_PLAYTEST_NATIVE_PAUSE_KEY='__ttdAlHataNativePauseV1';
+const AH_PLAYTEST_NAV_DIAG=window.__TTD_AL_HATA_NAV_DIAG={version:1,events:0,targetMatches:0,createAttempts:0,createRejected:0,created:0,lastEvent:null,lastGuard:null,lastResult:null};
 let AH_PLAYTEST_promptRunState=null;
 let AH_PLAYTEST_promptActivating=false;
 
@@ -129,7 +130,18 @@ function AH_PLAYTEST_beginMissionAfterNavigator(runState){
 }
 
 function AH_PLAYTEST_createNavigator(runState){
-  if(state!==runState||!AH_isState()||!session?.active||session.segment!=='landing'||session.phase!=='summon')return false;
+  AH_PLAYTEST_NAV_DIAG.createAttempts+=1;
+  const guard={
+    sameState:state===runState,
+    alHata:!!AH_isState(),
+    sessionActive:!!session?.active,
+    segment:session?.segment||null,
+    phase:session?.phase||null,
+  };
+  AH_PLAYTEST_NAV_DIAG.lastGuard=guard;
+  if(!guard.sameState||!guard.alHata||!guard.sessionActive||guard.segment!=='landing'||guard.phase!=='summon'){
+    AH_PLAYTEST_NAV_DIAG.createRejected+=1;AH_PLAYTEST_NAV_DIAG.lastResult='guard-rejected';return false;
+  }
   AH_PLAYTEST_installNativePause(runState);
   const boardIndex=AH_PLAYTEST_CENTER_BOARD_INDEX,die=makeDie(randDeckKey());
   runState.board[boardIndex]=die;
@@ -137,6 +149,7 @@ function AH_PLAYTEST_createNavigator(runState){
   session.phase='ready';
   initObjectHp();renderBoard();renderHUD();
   try{drawScene();}catch(err){console.warn('Arrival Cove Navigator preview draw recovered.',err);}
+  AH_PLAYTEST_NAV_DIAG.created+=1;AH_PLAYTEST_NAV_DIAG.lastResult='created';
   AH_PLAYTEST_removeInMapPrompt();
   toast(`${DICE[die.key]?.name||die.key} is ready as Navigator`);
   AH_PLAYTEST_beginMissionAfterNavigator(runState);
@@ -144,9 +157,13 @@ function AH_PLAYTEST_createNavigator(runState){
 }
 
 function AH_PLAYTEST_activateNavigatorPrompt(event,runState=AH_PLAYTEST_promptRunState){
+  AH_PLAYTEST_NAV_DIAG.events+=1;
+  AH_PLAYTEST_NAV_DIAG.lastEvent=event?.type||'unknown';
   const target=event?.target;
   const button=target?.closest?.('#ttdAhInMapNavigatorPromptV2 .ttdAhNavButton');
-  if(!button||!button.isConnected||AH_PLAYTEST_promptActivating)return false;
+  if(!button||!button.isConnected){AH_PLAYTEST_NAV_DIAG.lastResult='target-miss';return false;}
+  AH_PLAYTEST_NAV_DIAG.targetMatches+=1;
+  if(AH_PLAYTEST_promptActivating){AH_PLAYTEST_NAV_DIAG.lastResult='already-activating';return false;}
   if(event?.cancelable)event.preventDefault();
   event?.stopPropagation?.();
   event?.stopImmediatePropagation?.();
@@ -165,9 +182,10 @@ function AH_PLAYTEST_activateNavigatorPrompt(event,runState=AH_PLAYTEST_promptRu
   return false;
 }
 
-// The Cove CTA must outrank legacy board/drag/mobile gesture capture. Window capture runs before
-// document and target handlers, so a real Android touch cannot be consumed before the free summon.
-for(const type of ['pointerdown','touchstart','click']){
+// A mobile tap may be claimed by legacy drag code on its opening event. Capture both press and
+// release phases, plus click, so the Cove CTA has a safe completion path across Android browsers.
+const AH_PLAYTEST_NAV_EVENTS=['pointerdown','pointerup','touchstart','touchend','click'];
+for(const type of AH_PLAYTEST_NAV_EVENTS){
   window.addEventListener(type,event=>AH_PLAYTEST_activateNavigatorPrompt(event),{capture:true,passive:false});
 }
 
@@ -179,9 +197,7 @@ function AH_PLAYTEST_showInMapNavigatorPrompt(runState){
   prompt.innerHTML='<div class="ttdAhNavCard"><div class="ttdAhNavEyebrow">AL HATA · ARRIVAL COVE</div><div class="ttdAhNavTitle">NAVIGATOR REQUIRED</div><div class="ttdAhNavCopy">Summon one starting die to lead the expedition. Gameplay will remain paused until your Navigator is ready.</div><button class="ttdAhNavButton" type="button">SUMMON NAVIGATOR</button><span class="ttdAhNavFree">FREE STARTING SUMMON</span></div>';
   lane.appendChild(prompt);
   const button=prompt.querySelector('.ttdAhNavButton');
-  button?.addEventListener('pointerdown',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false});
-  button?.addEventListener('touchstart',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false});
-  button?.addEventListener('click',event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true});
+  for(const type of AH_PLAYTEST_NAV_EVENTS)button?.addEventListener(type,event=>AH_PLAYTEST_activateNavigatorPrompt(event,runState),{capture:true,passive:false});
   return true;
 }
 
@@ -190,6 +206,7 @@ function AH_PLAYTEST_prepareInMapNavigator(runState){
   if(runState.adventureStage===AH_STAGE&&!runState.__ttdAlHataStage1)AH_tagState();
   if(!AH_isState())return false;
   AH_tagState();
+  Object.assign(AH_PLAYTEST_NAV_DIAG,{events:0,targetMatches:0,createAttempts:0,createRejected:0,created:0,lastEvent:null,lastGuard:null,lastResult:'prepared'});
   window.__TTD_AL_HATA_PLAYTEST_IN_MAP_NAV_PENDING=false;
   runState.spawnQueue=[];runState.enemies=[];runState.spawnTimer=0;runState.wave=1;runState.waveClearedAt=0;runState.waveClearCredited=false;runState.completedWaves=0;runState.kills=0;runState.time=0;
   if(Number.isFinite(Number(runState.adventureDiff?.lives)))runState.lives=Number(runState.adventureDiff.lives);
@@ -206,4 +223,4 @@ function AH_PLAYTEST_prepareInMapNavigator(runState){
   return true;
 }
 
-window.__TTD_AL_HATA_STAGE1_PLAYTEST_API=Object.freeze({version:4,prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator});
+window.__TTD_AL_HATA_STAGE1_PLAYTEST_API=Object.freeze({version:5,prepareInMapNavigator:AH_PLAYTEST_prepareInMapNavigator});
