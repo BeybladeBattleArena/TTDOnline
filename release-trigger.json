@@ -1,9 +1,9 @@
 {
-  "release": "2026-09-06-jewel-picker-search-scroll-v1",
+  "release": "2026-09-06-canonical-crit-skyhorn-freeze-v1",
   "includes": [
-    "keep the jewel socket picker within the visible mobile viewport",
-    "make the available-jewel list independently touch-scrollable",
-    "add a compact live jewel-name search field, clear control, and result count above the list",
-    "preserve the existing socket, unsocket, artwork, and inventory behavior"
+    "prevent canonical dice critical hits from calling the missing legacy crit multiplier helper",
+    "preserve the normal 1.8x critical multiplier plus socketed Bloodstone crit boost",
+    "keep Spinel crit chance safe during rapid-fire canonical attacks such as Skyhorn in Endless Horde",
+    "retain the jewel picker scrolling/search fix and all existing socket inventory data"
   ]
 }
