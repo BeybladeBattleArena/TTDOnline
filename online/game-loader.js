@@ -37,6 +37,7 @@
     document.close();
 
     loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript');
+    loadPostDocumentScript('/online/jewel-picker-ux-v1.js?v=1','ttdJewelPickerUxV1NativeScript');
 
     // These are the canonical files for jewel presentation and Collection layout.
     // They are edited directly; no presentation patch/sidecar is required.
