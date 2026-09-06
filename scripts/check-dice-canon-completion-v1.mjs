@@ -1,8 +1,25 @@
 import fs from 'node:fs';
 
 const src = fs.readFileSync('random-dice-game-33.html','utf8');
+const loader = fs.readFileSync('online/game-loader.js','utf8');
+const critHotfix = fs.readFileSync('online/canon-crit-hotfix-v1.js','utf8');
 const must = (needle,label)=>{if(!src.includes(needle))throw new Error(`Canon regression: ${label}`);};
 const mustNot = (needle,label)=>{if(src.includes(needle))throw new Error(`Canon regression: ${label}`);};
+const mustHotfix = (needle,label)=>{if(!critHotfix.includes(needle))throw new Error(`Canon regression: ${label}`);};
+
+// Parse the browser hotfix as JavaScript so a syntax error cannot ship through a string-only guard.
+new Function(critHotfix);
+
+// Canonical critical-hit crash guard. The native canonical helper currently contains a legacy
+// getCritMultiplier() reference; the post-document hotfix must replace the helper with the same
+// 1.8 + Bloodstone behavior used by the generic attack path before gameplay add-ons run.
+if(!loader.includes("loadPostDocumentScript('/online/canon-crit-hotfix-v1.js?v=1','ttdCanonCritHotfixV1NativeScript')"))
+  throw new Error('Canon regression: canonical crit hotfix must be loaded by the native game loader');
+if(loader.indexOf('/online/canon-crit-hotfix-v1.js?v=1') > loader.indexOf('/online/enchant-card-art-v1.js?v=4'))
+  throw new Error('Canon regression: canonical crit hotfix must load before post-document presentation add-ons');
+mustHotfix("canonRollDamage = function(die, base, extraCrit=0, canCrit=true, cap=0.5)",'canonical crit hotfix must replace canonRollDamage');
+mustHotfix("const critMult = 1.8 + dieJewelBonus(die, 'critBoost')",'canonical crits must preserve Bloodstone crit boost');
+mustHotfix("window.getCritMultiplier = () => 1.8",'legacy missing crit helper must have a non-crashing fallback');
 
 // Materialized source must be structurally clean.
 mustNot("const d = DICE[die.key]; const puMult = 1+die.pu*0.16;",'obsolete effDmg body must not survive below canonical effDmg');

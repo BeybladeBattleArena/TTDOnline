@@ -36,6 +36,7 @@
     document.write(gameHtml);
     document.close();
 
+    loadPostDocumentScript('/online/canon-crit-hotfix-v1.js?v=1','ttdCanonCritHotfixV1NativeScript');
     loadPostDocumentScript('/online/enchant-card-art-v1.js?v=4','ttdEnchantCardArtV4NativeScript');
     loadPostDocumentScript('/online/jewel-picker-ux-v1.js?v=1','ttdJewelPickerUxV1NativeScript');
 
