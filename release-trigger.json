@@ -1,9 +1,10 @@
 {
-  "release": "2026-09-06-canonical-crit-skyhorn-freeze-v1",
+  "release": "2026-09-06-native-canonical-crit-scope-v2",
   "includes": [
-    "prevent canonical dice critical hits from calling the missing legacy crit multiplier helper",
+    "repair the canonical critical-hit multiplier inside the native game IIFE before it executes",
     "preserve the normal 1.8x critical multiplier plus socketed Bloodstone crit boost",
-    "keep Spinel crit chance safe during rapid-fire canonical attacks such as Skyhorn in Endless Horde",
-    "retain the jewel picker scrolling/search fix and all existing socket inventory data"
+    "remove the ineffective post-document crit sidecar that could not access lexical combat helpers",
+    "protect Skyhorn and other canonical dice from Spinel-triggered battle-loop freezes in Endless Horde",
+    "retain jewel picker scrolling/search and all existing socket inventory data"
   ]
 }
