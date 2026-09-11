@@ -44,8 +44,8 @@ jobs:
       - name: Validate deployable game client
         id: validate
         run: |
-          npm run check:hosting
           node scripts/check-dark-monastery-v1.mjs
+          npm run check:hosting
 
       - name: Verify source tree is unchanged
         id: clean_source
