@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import './check-al-hata-stage1-v1.mjs';
+import './check-al-hata-continuous-world-v2.mjs';
 import './check-al-hata-runtime-exec-v1.mjs';
 import './check-al-hata-browser-bootstrap-v1.mjs';
 
@@ -25,6 +26,7 @@ need(runUiLoader,[
   "const FROZEN_BRIDGE='/online/run-ui-bridge-v21-testmap-frozen.js?v=1'",
   "'/online/al-hata-stage1-core-v1.js?v=1'",
   "'/online/al-hata-stage1-polish-v1.js?v=1'",
+  "'/online/al-hata-stage1-world-v2.js?v=1'",
   'Frozen Test Map bridge injection marker changed',
   'frozenSource=frozenSource.replace(WORLD_INSERTION_LINE,insertion);',
   'eval(`${frozenSource}',
