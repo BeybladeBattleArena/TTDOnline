@@ -24,8 +24,10 @@
     '/online/al-hata-stage1-world-v2.js?v=1',
     '/online/adventure-continuous-map-contract-v1.js?v=1',
     '/online/al-hata-stage1-world-v3.js?v=1',
+    '/online/al-hata-stage1-world-v4.js?v=1',
   ];
   const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=2';
+  const VIEWPORT_STABILITY='/online/gameplay-viewport-stability-v1.js?v=1';
   const WORLD_INSERTION_LINE="      platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');";
   const AL_HATA_SCOPE_SHIMS=`
 function randDeckKey(){
@@ -77,6 +79,7 @@ function makeDie(_requestedKey){
     const frozenReady=window.__TTD_RUN_UI_EXTENSIONS_READY;
     if(frozenReady&&frozenReady!==bootstrapPromise)await frozenReady;
     await loadClassicScript(PLAYTEST_ENTRY,'Al Hata in-map Navigator entry',()=>!!window.__TTD_AL_HATA_PLAYTEST_ENTRY_V3);
+    await loadClassicScript(VIEWPORT_STABILITY,'gameplay viewport stability',()=>!!window.__TTD_GAMEPLAY_VIEWPORT_STABILITY_V1);
     return true;
   }
 
