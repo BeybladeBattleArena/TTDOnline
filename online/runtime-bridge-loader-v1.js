@@ -52,7 +52,7 @@
     try{await window.__TTD_RUN_UI_EXTENSIONS_READY;}catch(error){report('/online/run-ui-bridge-v21.js',error);}
     await loadBridge('/online/dark-monastery-entry-v3.js?v=1');
     await loadBridge('/online/dark-monastery-runtime-guard-v6.js?v=2');
-    await loadBridge('/online/dark-monastery-lifecycle-v7.js?v=3');
+    await loadBridge('/online/dark-monastery-lifecycle-v7.js?v=4');
     window.__TTD_MARK_BRIDGES_READY?.();
   }
   boot().catch((error)=>{report('/online/runtime-bridge-loader-v1.js',error,'bridge-loader-error');window.__TTD_MARK_BRIDGES_READY?.();});
