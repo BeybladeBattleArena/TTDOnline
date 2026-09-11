@@ -1,8 +1,33 @@
 import fs from 'node:fs';
 
 const src = fs.readFileSync('random-dice-game-33.html','utf8');
+const loader = fs.readFileSync('online/game-loader.js','utf8');
 const must = (needle,label)=>{if(!src.includes(needle))throw new Error(`Canon regression: ${label}`);};
 const mustNot = (needle,label)=>{if(src.includes(needle))throw new Error(`Canon regression: ${label}`);};
+
+// Canonical critical-hit crash guard. The native game is wrapped in an IIFE, so combat helpers
+// cannot be repaired from a post-document sidecar. The loader must materialize the corrected
+// critical multiplier into the fetched game source before document.write() executes that IIFE.
+const brokenCanonCrit='getCritMultiplier()';
+const fixedCanonCrit="(1.8+dieJewelBonus(die,'critBoost'))";
+const nativeCritRefs=src.split(brokenCanonCrit).length-1;
+if(nativeCritRefs!==1)throw new Error(`Canon regression: expected exactly one native legacy crit reference, found ${nativeCritRefs}`);
+const transformedSrc=src.replace(brokenCanonCrit,fixedCanonCrit);
+if(transformedSrc.includes(brokenCanonCrit))throw new Error('Canon regression: materialized game source still contains legacy getCritMultiplier()');
+if(!transformedSrc.includes("canonPowerScale(die,base)*(crit?(1.8+dieJewelBonus(die,'critBoost')):1)"))
+  throw new Error('Canon regression: transformed canonical crit path does not preserve 1.8 + Bloodstone crit boost');
+if(!loader.includes("const CANON_CRIT_BROKEN='getCritMultiplier()';"))
+  throw new Error('Canon regression: loader is missing the native canonical crit transform target');
+if(!loader.includes("const CANON_CRIT_FIXED=\"(1.8+dieJewelBonus(die,'critBoost'))\";"))
+  throw new Error('Canon regression: loader is missing the native canonical crit replacement');
+if(!loader.includes('const critRefs=source.split(CANON_CRIT_BROKEN).length-1;') || !loader.includes('if(critRefs!==1)'))
+  throw new Error('Canon regression: native crit source transform must fail closed unless exactly one target exists');
+if(!loader.includes('const gameHtml=applyNativeRuntimeTransforms(rawGameHtml);'))
+  throw new Error('Canon regression: fetched game source must pass through native runtime transforms');
+if(loader.indexOf('const gameHtml=applyNativeRuntimeTransforms(rawGameHtml);') > loader.indexOf('document.write(gameHtml)'))
+  throw new Error('Canon regression: native crit transform must run before the game IIFE executes');
+if(loader.includes('canon-crit-hotfix-v1.js'))
+  throw new Error('Canon regression: ineffective post-document canonical crit sidecar must not return');
 
 // Materialized source must be structurally clean.
 mustNot("const d = DICE[die.key]; const puMult = 1+die.pu*0.16;",'obsolete effDmg body must not survive below canonical effDmg');
