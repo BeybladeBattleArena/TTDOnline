@@ -34,6 +34,7 @@ must(session.objects===world.objects&&session.drops===world.drops,'Traversal ses
 session.cameraX=140;session.cameraZ=-30;session.objects[0].opened=true;api.syncSession(world,session);
 must(world.camera.x===140&&world.camera.z===-30,'World camera did not persist both map axes.');
 must(world.objects[0].opened===true,'Interactable mutation did not persist on shared world object.');
-const arena={id:'test',bounds:{x1:0,x2:200,z1:-100,z2:100}},route:[{x:180,z:-40},{x:100,z:20},{x:20,z:50}]};must(api.assertArena(arena,arena.route),'World-space combat arena validation failed.');
+const arena={id:'test',bounds:{x1:0,x2:200,z1:-100,z2:100},route:[{x:180,z:-40},{x:100,z:20},{x:20,z:50}]};
+must(api.assertArena(arena,arena.route),'World-space combat arena validation failed.');
 
 console.log('Continuous Adventure map contract verified: one world instance, shared object/drop references, persistent two-axis camera, and world-space combat arenas.');
