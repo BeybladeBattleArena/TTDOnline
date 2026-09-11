@@ -139,7 +139,10 @@
     await loadBridge('/online/dark-monastery-entry-v3.js?v=1');
     // Final roaming authority: native Adventure is still free to render/update its dice, but it may
     // not stop Dark Monastery merely because legacy tower/lives assumptions fire later in the run.
-    await loadBridge('/online/dark-monastery-runtime-guard-v6.js?v=1');
+    await loadBridge('/online/dark-monastery-runtime-guard-v6.js?v=2');
+    // Per-run lifecycle authority: restores the canonical roaming stage after result screens, keeps
+    // all gameplay locked through most of START!'s fade, and owns the 50%-smaller running veil.
+    await loadBridge('/online/dark-monastery-lifecycle-v7.js?v=1');
     window.__TTD_MARK_BRIDGES_READY?.();
   }
 
