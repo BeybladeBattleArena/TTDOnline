@@ -2,6 +2,7 @@
   'use strict';
   if(window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2)return;
   window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2=true;
+  window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_BUILD='first-frame-arm-v1';
 
   const DM_ID='dark_monastery';
   const priorStartAdventure=startAdventure;
