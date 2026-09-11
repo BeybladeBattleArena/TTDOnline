@@ -43,7 +43,9 @@ jobs:
 
       - name: Validate deployable game client
         id: validate
-        run: npm run check:hosting
+        run: |
+          npm run check:hosting
+          node scripts/check-dark-monastery-v1.mjs
 
       - name: Verify source tree is unchanged
         id: clean_source
@@ -107,6 +109,7 @@ jobs:
             echo '### TTD production deployment verified'
             echo "- Commit: \`$DEPLOY_SHA\`"
             echo '- Source mutation: none'
+            echo '- Dark Monastery startup browser smoke: passed'
             echo '- Live build identity: verified'
             echo '- Critical asset smoke test: passed'
           } >> "$GITHUB_STEP_SUMMARY"
