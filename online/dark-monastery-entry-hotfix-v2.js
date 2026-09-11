@@ -2,7 +2,7 @@
   'use strict';
   if(window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2)return;
   window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2=true;
-  window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_BUILD='native-clear-hold-v2';
+  window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_BUILD='published-runtime-entry-v3';
 
   const DM_ID='dark_monastery';
   const priorStartAdventure=startAdventure;
@@ -27,30 +27,35 @@
     state.waveClearCredited=false;
   }
 
+  function runtimeReallyActive(){
+    // V1's public `active` getter reports isDM(), which becomes true before activate() creates the
+    // roaming runtime. A player object is the reliable readiness boundary for room/joystick/HP.
+    return !!window.__TTD_DARK_MONASTERY_API_V1?.player;
+  }
+
   function repairHud(){
     if(!state?.__ttdDarkMonastery)return false;
     const label=document.querySelector('#gameScreen .hud-stat.lives .label');
     if(label)label.textContent='HP';
     if(state.showPlayerHpBar && typeof renderHUD==='function')renderHUD();
-    return !!window.__TTD_DARK_MONASTERY_API_V1?.active;
+    return runtimeReallyActive();
   }
 
-  startAdventure=function DarkMonastery_startAdventure_v2(advId,stageIdx,diffKey){
+  const darkMonasteryStart=function DarkMonastery_startAdventure_v2(advId,stageIdx,diffKey){
     const result=priorStartAdventure(advId,stageIdx,diffKey);
     if(advId!==DM_ID)return result;
 
     // Synchronous handoff: runs before the native starter's queued gameplay RAF.
     armBeforeFirstFrame();
 
-    // V1 activation creates the player, room, collisions and joystick. V1 currently replaces the
-    // queue with [] during activation, so re-arm on each settle frame until activation is confirmed.
+    // V1 activation creates the player, room, collisions and joystick. Keep the native clear hold
+    // armed until the actual roaming player exists, rather than merely until the stage flag exists.
     let frames=0;
     const settle=()=>{
       if(!state?.__ttdDarkMonastery || !isDarkMonasteryStage())return;
       armBeforeFirstFrame();
       const active=repairHud();
       if(!active && frames++<180){requestAnimationFrame(settle);return;}
-      // One final re-arm after activation so the native wave-clear path stays permanently disabled.
       armBeforeFirstFrame();
       repairHud();
     };
@@ -58,10 +63,18 @@
     return result;
   };
 
+  startAdventure=darkMonasteryStart;
+  // Publish the exact wrapper while it still closes over V1's roaming starter. Later asynchronous
+  // Adventure authorities may replace global startAdventure; final Dark Monastery routing can call
+  // this function object directly without depending on wrapper order.
+  window.__TTD_DARK_MONASTERY_START_V2=darkMonasteryStart;
+
   window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_API=Object.freeze({
     version:2,
-    build:'native-clear-hold-v2',
+    build:'published-runtime-entry-v3',
     armBeforeFirstFrame,
     repairHud,
+    runtimeReallyActive,
+    start:darkMonasteryStart,
   });
 })();
