@@ -200,7 +200,7 @@
 
   window.__TTD_DARK_MONASTERY_ENTRY_V3_API=Object.freeze({
     version:4,
-    build:'mobile-input-proxy-visual-v4',
+    build:'mobile-input-proxy-visual-v4-release',
     id:DM_ID,
     normalizeAdventureEntry,
     startDarkMonastery,
