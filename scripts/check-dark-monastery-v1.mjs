@@ -21,11 +21,15 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewpor
 <div id="gameScreen" class="screen"><div id="hud"><span id="modeLabel">Adventure</span><div class="hud-stat lives" id="livesStat"><span class="label">Lives</span><span class="value" id="livesVal">12</span></div></div><div id="laneWrap"><canvas id="laneCanvas"></canvas></div><div id="playerHpWrap"><div id="playerHpFill"></div><span id="playerHpLabel"></span></div></div>
 <div id="modeScreen" class="screen active"></div><div id="overlayTitle"></div><div id="overlayText"></div><pre id="result">PENDING</pre>
 <script>
-// Headless Chrome does not reliably advance compositor-owned RAF callbacks under --dump-dom.
-// Match the repository's other phone-browser harnesses: drive frames at deterministic 16ms ticks
-// so Dark Monastery's real roaming loop accrues time and must actually spawn its first enemy.
 window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);
 window.cancelAnimationFrame=id=>clearTimeout(id);
+window.__dmFrontTexts=[];
+const __nativeHarnessFillText=CanvasRenderingContext2D.prototype.fillText;
+CanvasRenderingContext2D.prototype.fillText=function(text,x,y,maxWidth){
+ if(this?.canvas?.id==='ttdDarkMonasteryFrontV1')window.__dmFrontTexts.push(String(text));
+ if(maxWidth===undefined)return __nativeHarnessFillText.call(this,text,x,y);
+ return __nativeHarnessFillText.call(this,text,x,y,maxWidth);
+};
 var ADVENTURES={};var state=null;var cw=390,ch=360;var pathPts=[],segLens=[],totalLen=1000,towerPos={x:0,y:0};var currentAttackerDieKey=null;var __nativeCleared=false;var __ended='';var __nativeProxyDraws=0;
 window.__TTD_CORE_API_V1={};window.__TTD_ASSET_URL=p=>p;
 function showScreen(name){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(name+'Screen')?.classList.add('active');}
@@ -40,12 +44,13 @@ function startAdventureCampaign(advId,diffKey){return makeState(advId,0,diffKey)
 </script>
 <script src="${dmUrl}"></script><script src="${hotfixUrl}"></script><script src="${finalEntryUrl}"></script>
 <script>
-const report={errors:[]};let playerStartX=null;let pauseProbe=null;
+const report={errors:[]};let playerStartX=null;let pauseProbe=null;let initialHpOk=false;
 window.addEventListener('error',e=>report.errors.push(String(e.error?.stack||e.message||e.error||'window error')));window.addEventListener('unhandledrejection',e=>report.errors.push(String(e.reason?.stack||e.reason||'unhandled rejection')));
 setTimeout(()=>{try{startAdventureCampaign('dark_monastery','normal');}catch(error){report.errors.push(String(error?.stack||error));}},20);
 setTimeout(()=>{
  try{
   const api=window.__TTD_DARK_MONASTERY_API_V1,joy=document.getElementById('ttdDarkMonasteryJoyV1');
+  initialHpOk=state?.lives===50&&state?.livesMax===50;
   playerStartX=api?.player?.x??null;
   if(joy&&playerStartX!=null){
     const r=joy.getBoundingClientRect(),x=r.right-8,y=r.top+r.height/2,pointerId=77;
@@ -58,6 +63,15 @@ setTimeout(()=>{
 },520);
 setTimeout(()=>{
  try{
+  // Reproduce the reported post-hit failure mode: player HP changes and an old native Adventure
+  // owner incorrectly drops state.running. The Dark Monastery compatibility layer must recover.
+  state.lives=43;state.running=false;renderHUD();
+  const c=document.getElementById('ttdDarkMonasteryFrontV1')?.getContext('2d');
+  c?.fillText('-17',12,12);
+ }catch(error){report.errors.push(String(error?.stack||error));}
+},860);
+setTimeout(()=>{
+ try{
   const api=window.__TTD_DARK_MONASTERY_API_V1,compat=window.__TTD_DARK_MONASTERY_ENTRY_V3_API,adv=ADVENTURES.dark_monastery;
   report.nonCampaign=adv?.campaign===false;
   report.stageActive=state?.adventureStage?.darkMonastery===true;
@@ -66,11 +80,15 @@ setTimeout(()=>{
   report.playerPresent=!!api?.player;
   report.joystick=!!document.getElementById('ttdDarkMonasteryJoyV1');
   report.joystickMoved=playerStartX!=null&&Number(api?.player?.x)>playerStartX+5;
+  report.motionCanvas=!!document.getElementById('ttdDarkMonasteryMotionV5');
+  report.motionPainted=Number(compat?.motionDraws)>0;
   report.roomBack=!!document.getElementById('ttdDarkMonasteryBackV1');
   report.roomFront=!!document.getElementById('ttdDarkMonasteryFrontV1');
-  report.hpValue=state?.lives===50&&state?.livesMax===50;
+  report.hpValue=initialHpOk;
   report.hpLabel=document.querySelector('#livesStat .label')?.textContent==='HP';
   report.hpBar=state?.showPlayerHpBar===true&&getComputedStyle(document.getElementById('playerHpWrap')).display!=='none';
+  report.damageFreezeRecovered=state?.running===true&&Number(compat?.playerRunRecoveries)>0;
+  report.damageTextPositive=window.__dmFrontTexts.includes('17')&&!window.__dmFrontTexts.includes('-17');
   report.notCleared=__nativeCleared===false&&state?.running===true&&__ended==='';
   report.firstEnemy=(api?.actors?.length||0)>=1&&(state?.enemies?.length||0)>=1;
   report.proxyStillTargetable=state?.enemies?.some(e=>e?.__ttdDM&&e.alive)===true;
@@ -80,13 +98,13 @@ setTimeout(()=>{
   report.hold=Array.isArray(state?.spawnQueue)&&state.spawnQueue.some(x=>x?.__ttdDarkMonasteryHold===true);
   report.noErrors=report.errors.length===0;
  }catch(error){report.errors.push(String(error?.stack||error));}
- const checks=['nonCampaign','stageActive','runtimeFlag','runtimeActive','playerPresent','joystick','joystickMoved','roomBack','roomFront','hpValue','hpLabel','hpBar','notCleared','firstEnemy','proxyStillTargetable','nativeProxyHidden','customEnemyNamed','pauseRecovered','hold','noErrors'];report.ok=checks.every(k=>report[k]===true);document.getElementById('result').textContent=JSON.stringify(report);
-},1200);
+ const checks=['nonCampaign','stageActive','runtimeFlag','runtimeActive','playerPresent','joystick','joystickMoved','motionCanvas','motionPainted','roomBack','roomFront','hpValue','hpLabel','hpBar','damageFreezeRecovered','damageTextPositive','notCleared','firstEnemy','proxyStillTargetable','nativeProxyHidden','customEnemyNamed','pauseRecovered','hold','noErrors'];report.ok=checks.every(k=>report[k]===true);document.getElementById('result').textContent=JSON.stringify(report);
+},1450);
 </script></body></html>`;
 fs.writeFileSync(harness,html);
 let dom='';
 try{
-  dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=1750','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:16*1024*1024,timeout:45000,stdio:['ignore','pipe','pipe']});
+  dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=2100','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:16*1024*1024,timeout:45000,stdio:['ignore','pipe','pipe']});
 }finally{try{fs.unlinkSync(harness);}catch{}}
 const match=dom.match(/<pre id="result">([\s\S]*?)<\/pre>/i);must(match,'Headless Chrome did not return Dark Monastery smoke results.');
 const decoded=match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
