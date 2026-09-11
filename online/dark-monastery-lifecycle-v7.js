@@ -23,7 +23,7 @@
   function gameVisible(){return !!document.getElementById('gameScreen')?.classList.contains('active');}
   function joyElement(){return document.getElementById('ttdDarkMonasteryJoyV1');}
   function pointInsideJoy(x,y){const joy=joyElement();if(!joy)return false;const r=joy.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
-  function lockConsumesInput(){return !!(stageActive()&&state?.__ttdDMGameplayLock);}
+  function lockConsumesInput(){return !!(stageActive()&&(state?.__ttdDMGameplayLock||state?.__ttdMissionIntroHold===true));}
   function blockLockedPointer(ev){if(!lockConsumesInput()||!pointInsideJoy(ev.clientX,ev.clientY))return;ev.preventDefault();ev.stopImmediatePropagation?.();ev.stopPropagation();}
   for(const type of ['pointerdown','pointermove','pointerup','pointercancel'])window.addEventListener(type,blockLockedPointer,{capture:true,passive:false});
   function blockLockedTouch(ev){if(!lockConsumesInput())return;const touches=[...(ev.changedTouches||[]),...(ev.touches||[])];if(!touches.some(t=>pointInsideJoy(t.clientX,t.clientY)))return;ev.preventDefault();ev.stopImmediatePropagation?.();ev.stopPropagation();}
