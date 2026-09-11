@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import './check-adventure-continuous-map-contract-v1.mjs';
 
 const read=(p)=>fs.readFileSync(p,'utf8');
 const must=(c,m)=>{if(!c)throw new Error(m);};
@@ -14,9 +15,11 @@ const authored=[
   'online/al-hata-stage1-polish-v1.js',
   'online/al-hata-stage1-playtest-v1.js',
   'online/al-hata-stage1-world-v2.js',
+  'online/adventure-continuous-map-contract-v1.js',
+  'online/al-hata-stage1-world-v3.js',
 ];
 const combined=authored.map(read).join('\n\n');
-new vm.Script(combined,{filename:'al-hata-stage1-world-v2-concatenated.js'});
+new vm.Script(combined,{filename:'al-hata-stage1-continuous-world-concatenated.js'});
 
 const world=read('online/al-hata-stage1-world-v2.js');
 need(world,[
@@ -36,33 +39,63 @@ need(world,[
   'groundAt=function AH_WORLD_V2_groundAt',
   'const ceiling=nav?Number(nav.y||0)+(nav.onGround?40:ascending?8:22):Infinity',
   'for(const segment of AH_WORLD_V2_SEGMENTS)AH_SEGMENT_PLATFORMS[segment]=AH_WORLD_V2_platforms',
-  'for(const segment of AH_WORLD_V2_SEGMENTS)AH_SEGMENT_UPDATERS[segment]=AH_WORLD_V2_updateNavigator',
-  'for(const segment of AH_WORLD_V2_SEGMENTS)AH_SEGMENT_DRAWERS[segment]=AH_WORLD_V2_drawTraversal',
   'AH_WORLD_V2_drawOpenedChest',
   'battle canvas reads the same world.objects instance used by traversal',
-  'for(const area of [1,2,3,4,5])AH_COMBAT_DRAWERS[area]=function AH_WORLD_V2_combatDrawer',
-  'AH_finishTraversalToCombat=async function AH_WORLD_V2_finishTraversalToCombat',
-  'await AH_WORLD_V2_tween(760',
-  'world.navigatorBoardIndex=nav.boardIndex',
-  'AH_beginTraversal=function AH_WORLD_V2_beginTraversal',
-  'AH_AFTER_COMBAT[3]=()=>AH_WORLD_V2_resumeAfterCombat',
-  'AH_AFTER_COMBAT[6]=()=>AH_WORLD_V2_resumeAfterCombat',
-  'AH_AFTER_COMBAT[10]=()=>AH_WORLD_V2_resumeAfterCombat',
-  'AH_AFTER_COMBAT[12]=()=>AH_WORLD_V2_resumeAfterCombat',
   'AH_WORLD_V2_drawDebris',
   'AH_OBJECT_ATTACKERS.ah_push_crate=o=>AH_WORLD_V2_damageWood(o)',
   'AH_OBJECT_ATTACKERS.ah_barrier=o=>AH_WORLD_V2_damageWood(o)',
   'AH_WORLD_V2_requireProximity',
   "#gameScreen.ttd-platform-mode #ttdPlatformHud .ttdNavBadge{display:none!important;}",
-  'window.__TTD_AL_HATA_CONTINUOUS_WORLD_V2_API=Object.freeze',
-],'Al Hata perpetual world v2');
+],'Al Hata perpetual world v2 foundation');
 
 must(!world.includes("toast('Crate smashed")&&!world.includes("toast('Barrier destroyed"),'common destruction must be shown visually rather than announced by text');
-must(world.indexOf("AH_WORLD_V2_drawWorldLayer(args.back.g")<world.indexOf("AH_WORLD_V2_drawWorldLayer(args.front.g"),'combat must render back and front layers from one shared world');
-must(world.indexOf('restoreTrayChildren();')<world.indexOf('await AH_WORLD_V2_tween(760'),'tray should return before the same camera glides into combat, matching the Test Map handoff');
+
+const v3=read('online/al-hata-stage1-world-v3.js');
+need(v3,[
+  'window.__TTD_AL_HATA_CONTINUOUS_WORLD_V3=true',
+  'window.__TTD_CONTINUOUS_ADVENTURE_MAP_CONTRACT_V1',
+  'const AH_WORLD_V3_ARENAS=Object.freeze',
+  "id:'landing-shore'",
+  "id:'goblin-fringe'",
+  "id:'deep-jungle-ruins'",
+  "id:'pincer-bridge'",
+  "id:'temple-forecourt'",
+  'AH_WORLD_V3_CMAP.assertArena',
+  'function AH_WORLD_V3_projectWorld',
+  'relZ=Number(z)-Number(cameraZ||0)',
+  'world.cameraX=world.camera.x;world.cameraZ=world.camera.z',
+  'AH_WORLD_V2_syncWorld=function AH_WORLD_V3_syncWorld',
+  'AH_WORLD_V2_updateNavigator=function AH_WORLD_V3_updateNavigator',
+  'session.cameraZ=current+',
+  'world.discoveredSideAreas[area.id]=true',
+  'buildPath=function AH_WORLD_V3_buildPath',
+  'AH_WORLD_V3_sampleRoute(route,w,h,arena.center.x,arena.center.z)',
+  'AH_WORLD_V2_drawWorldLayer=function AH_WORLD_V3_drawWorldLayer',
+  'AH_COMBAT_DRAWERS[area]=function AH_WORLD_V3_combatDrawer',
+  'AH_finishTraversalToCombat=async function AH_WORLD_V3_finishTraversalToCombat',
+  'active.cameraZ=AH_lerp(fromZ,targetZ,e)',
+  'leavePlatformLayout(false);AH_WORLD_V3_primeCombatFrame',
+  'AH_WORLD_V3_retireTraversalCanvas()',
+  'AH_beginTraversal=function AH_WORLD_V3_beginTraversal',
+  'AH_WORLD_V3_CMAP.bindSession(world,session)',
+  'async function AH_WORLD_V3_resumeAfterCombat',
+  'AH_AFTER_COMBAT[3]=()=>AH_WORLD_V3_resumeAfterCombat(1)',
+  'AH_AFTER_COMBAT[6]=()=>AH_WORLD_V3_resumeAfterCombat(2)',
+  'AH_AFTER_COMBAT[10]=()=>AH_WORLD_V3_resumeAfterCombat(3)',
+  'AH_AFTER_COMBAT[12]=()=>AH_WORLD_V3_resumeAfterCombat(4)',
+  'window.__TTD_AL_HATA_CONTINUOUS_WORLD_V3_API=Object.freeze',
+],'Al Hata continuous world v3');
+must(v3.indexOf('leavePlatformLayout(false);AH_WORLD_V3_primeCombatFrame')<v3.indexOf('session=null;state.running=true'),'battle world must be rendered before traversal canvas is retired and native combat starts');
+must(v3.includes('world.objects=active.objects;world.drops=active.drops'),'combat handoff must carry exact traversal object/drop references into battle');
 
 const loader=read('online/run-ui-bridge-v21.js');
-need(loader,["'/online/al-hata-stage1-world-v2.js?v=1'"],'Al Hata loader');
-must(loader.indexOf('/online/al-hata-stage1-world-v2.js?v=1')>loader.indexOf('/online/al-hata-stage1-playtest-v1.js?v=1'),'continuous world v2 must load after the Navigator opening so it owns final traversal/combat hooks');
+need(loader,[
+  "'/online/al-hata-stage1-world-v2.js?v=1'",
+  "'/online/adventure-continuous-map-contract-v1.js?v=1'",
+  "'/online/al-hata-stage1-world-v3.js?v=1'",
+],'Al Hata loader');
+must(loader.indexOf('/online/al-hata-stage1-world-v2.js?v=1')>loader.indexOf('/online/al-hata-stage1-playtest-v1.js?v=1'),'continuous world v2 must load after the Navigator opening');
+must(loader.indexOf('/online/adventure-continuous-map-contract-v1.js?v=1')>loader.indexOf('/online/al-hata-stage1-world-v2.js?v=1'),'generic continuous-map contract must be available before Al Hata v3');
+must(loader.indexOf('/online/al-hata-stage1-world-v3.js?v=1')>loader.indexOf('/online/adventure-continuous-map-contract-v1.js?v=1'),'Al Hata v3 must load after the reusable continuous-map contract');
 
-console.log('Al Hata continuous world v2 verified: expanded hidden-edge terrain, side exploration areas, height-aware platforms, persistent world objects, same-map combat rendering, camera-glide handoffs, visual destruction, proximity slate chests, and reduced traversal HUD are structurally wired.');
+console.log('Al Hata continuous world verified: expanded hidden-edge terrain, six side areas, two-axis camera, world-space arena routes, exact persistent object/drop references, same-map combat rendering, cross-faded camera-glide handoffs, persistent discoveries, visual destruction, proximity slate chests, and reduced traversal HUD are wired on the reusable Adventure continuous-map contract.');
