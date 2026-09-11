@@ -31,6 +31,9 @@
     // Dark Monastery is a contained roaming-Adventure runtime: it adds the Adventure entry,
     // free-roam player body/HP, monster AI, pseudo-3D room presentation, and size-aware body collision.
     '/online/dark-monastery-v1.js?v=2',
+    // Arm Dark Monastery synchronously in the same task as native Adventure start so the first
+    // queued game-loop frame cannot see an empty native wave and clear the mission prematurely.
+    '/online/dark-monastery-entry-hotfix-v2.js?v=2',
     // Moving Screen stays direct committed source: stages -> engine -> map router -> visual route
     // UI -> Die-first gesture authority -> topology gestures -> map art -> bottom battle HUD.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
