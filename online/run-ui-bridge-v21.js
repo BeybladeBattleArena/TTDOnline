@@ -22,6 +22,8 @@
     '/online/al-hata-stage1-polish-v1.js?v=1',
     '/online/al-hata-stage1-playtest-v1.js?v=1',
     '/online/al-hata-stage1-world-v2.js?v=1',
+    '/online/adventure-continuous-map-contract-v1.js?v=1',
+    '/online/al-hata-stage1-world-v3.js?v=1',
   ];
   const PLAYTEST_ENTRY='/online/al-hata-stage1-playtest-entry-v1.js?v=2';
   const WORLD_INSERTION_LINE="      platformSource=requiredReplace(platformSource,renderMarker,worldInjection,'world renderer insertion');";
