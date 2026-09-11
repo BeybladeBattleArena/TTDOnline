@@ -21,6 +21,9 @@
   function gameVisible(){
     return !!document.getElementById('gameScreen')?.classList.contains('active');
   }
+  function gameplayLocked(){
+    return !!state?.__ttdDMGameplayLock;
+  }
   function actors(){
     return window.__TTD_DARK_MONASTERY_API_V1?.actors||[];
   }
@@ -59,7 +62,7 @@
     repairHud();
   }
   function shouldOwnRun(){
-    return stageActive()&&gameVisible()&&!terminal&&!playerDead()&&!encounterDone();
+    return stageActive()&&gameVisible()&&!gameplayLocked()&&!terminal&&!playerDead()&&!encounterDone();
   }
 
   if(priorEndMatch){
@@ -71,7 +74,7 @@
           blockedPrematureEnds++;
           ensureHold();
           repairHud();
-          state.running=true;
+          if(!gameplayLocked())state.running=true;
           return;
         }
         terminal=true;
@@ -90,7 +93,9 @@
     if(stageActive()){
       repairHud();
       ensureHold();
-      if(shouldOwnRun()&&state.running===false){
+      if(gameplayLocked()){
+        if(state.running!==false)state.running=false;
+      }else if(shouldOwnRun()&&state.running===false){
         state.running=true;
         state.__ttdDMNoWipeout=true;
         recoveries++;
@@ -105,6 +110,7 @@
     version:6,
     id:DM_ID,
     get stageActive(){return stageActive();},
+    get gameplayLocked(){return gameplayLocked();},
     get terminal(){return terminal;},
     get terminalReason(){return terminalReason;},
     get recoveries(){return recoveries;},
