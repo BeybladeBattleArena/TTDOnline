@@ -78,7 +78,7 @@
   const runtime={
     active:false,raf:0,lastTs:0,w:1,h:1,back:null,front:null,joy:null,joyKnob:null,
     joyX:0,joyZ:0,keys:new Set(),player:null,actors:[],decor:[],projectiles:[],floaters:[],
-    avatar:null,spawnClock:0,spawned:new Set(),clearClock:0,cleared:false,
+    avatar:null,spawnClock:0,spawned:new Set(),clearClock:0,cleared:false,lastFrameError:null,
   };
 
   const style=document.createElement('style');
@@ -163,27 +163,19 @@
   function drawRoom(){
     if(!ensureCanvases())return;const g=runtime.back.g,w=runtime.w,h=runtime.h;g.clearRect(0,0,w,h);
     const wall=g.createLinearGradient(0,0,0,h*.64);wall.addColorStop(0,'#171b20');wall.addColorStop(.55,'#252820');wall.addColorStop(1,'#111922');g.fillStyle=wall;g.fillRect(0,0,w,h*.65);
-    // stone wall courses and vertical ribs
     g.strokeStyle='rgba(152,148,119,.12)';g.lineWidth=1;
     for(let y=18;y<h*.62;y+=32){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
     for(let row=0,y=18;y<h*.62;y+=32,row++)for(let x=(row%2)*27;x<w;x+=54){g.beginPath();g.moveTo(x,y);g.lineTo(x,y+32);g.stroke();}
     for(const x of [w*.12,w*.38,w*.62,w*.88]){g.fillStyle='rgba(8,12,18,.55)';g.fillRect(x-10,0,20,h*.58);g.strokeStyle='rgba(126,130,117,.14)';g.strokeRect(x-10,0,20,h*.58);}
-    // floor trapezoid
     const floor=[project(-ROOM.halfX,ROOM.farZ),project(ROOM.halfX,ROOM.farZ),project(ROOM.halfX,ROOM.nearZ),project(-ROOM.halfX,ROOM.nearZ)];
     quad(g,floor,'#172432','rgba(142,172,183,.14)');
-    // floor tiles
     g.lineWidth=1;g.strokeStyle='rgba(105,151,175,.18)';
     for(let z=ROOM.farZ;z<=ROOM.nearZ;z+=35){const a=project(-ROOM.halfX,z),b=project(ROOM.halfX,z);g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
     for(let x=-ROOM.halfX;x<=ROOM.halfX;x+=46){const a=project(x,ROOM.farZ),b=project(x,ROOM.nearZ);g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
-    // pits
     for(const p of PITS){const x0=p.x-p.w/2,x1=p.x+p.w/2,z0=p.z-p.h/2,z1=p.z+p.h/2;const pts=[project(x0,z0),project(x1,z0),project(x1,z1),project(x0,z1)];quad(g,pts,'#02050a','rgba(73,111,136,.55)');}
-    // altar / wall blocks
     for(const b of BLOCKS){const x0=b.x-b.w/2,x1=b.x+b.w/2,z0=b.z-b.h/2,z1=b.z+b.h/2,top=12;const topPts=[project(x0,z0,top),project(x1,z0,top),project(x1,z1,top),project(x0,z1,top)];quad(g,topPts,'#33322c','rgba(110,104,87,.36)');}
-    // pillars
     for(const p of PILLARS){const pt=project(p.x,p.z),sc=pt.scale,r=p.r*sc;g.fillStyle='#202525';g.fillRect(pt.x-r*.72,pt.y-r*2.5,r*1.44,r*2.6);g.fillStyle='rgba(107,105,84,.15)';g.fillRect(pt.x-r*.72,pt.y-r*2.5,r*.18,r*2.6);g.fillStyle='#37372f';g.fillRect(pt.x-r*.88,pt.y-r*.12,r*1.76,r*.28);}
-    // wall lights
     drawTorch(g,w*.19,h*.25,.85);drawTorch(g,w*.81,h*.25,.85);drawTorch(g,w*.50,h*.31,.75);
-    // suspended chandelier reminiscent of the supplied reference
     g.save();g.translate(w*.5,h*.24);g.strokeStyle='#7e4c2f';g.lineWidth=3;for(const dx of [-44,0,44]){g.beginPath();g.moveTo(dx,-h*.28);g.lineTo(dx*.62,0);g.stroke();}g.strokeStyle='#7d4a2c';g.lineWidth=7;g.beginPath();g.ellipse(0,0,58,17,0,0,TAU);g.stroke();for(let i=0;i<8;i++){const a=i/8*TAU,x=Math.cos(a)*58,y=Math.sin(a)*17;drawTorch(g,x,y-5,.68);}g.restore();
     const vign=g.createRadialGradient(w*.5,h*.53,10,w*.5,h*.53,Math.max(w,h)*.72);vign.addColorStop(.52,'rgba(0,0,0,0)');vign.addColorStop(1,'rgba(0,0,0,.62)');g.fillStyle=vign;g.fillRect(0,0,w,h);
   }
@@ -265,14 +257,10 @@
       const ratio=attackElementMultiplier(actor,aff)*(1-actor.def.physicalDR);
       const correctedHp=actor.lastHp-nativeDamage*ratio;
       const nativeReward=actor.def.rank==='smallBoss'?24:3;
-      // A resisted hit can be lethal to the neutral proxy while the authored monster should survive.
-      // Undo that native death before considering Blood Revival / true defeat.
       if(correctedHp>0){
         state.kills=Math.max(0,state.kills-1);state.sp=Math.max(0,state.sp-nativeReward);
         e.hp=correctedHp;e.alive=true;if(!state.enemies.includes(e))state.enemies.push(e);
       }else if(actor.def.revives && actor.bloodDrain<3 && !holy){
-        // The native kill occurred first, so undo its ordinary-mob accounting and convert it into
-        // the Red Skeleton's not-yet-true defeat. Coins are disabled on this proxy, so no drop can leak.
         state.kills=Math.max(0,state.kills-1);state.sp=Math.max(0,state.sp-nativeReward);
         actor.bloodDrain++;actor.deadPile=true;actor.reviveT=10;actor.lastHolyKill=false;e.hp=0;e.alive=false;
         addBonePile(actor,true);toast(`Blood Drained ${actor.bloodDrain}/3`);
@@ -284,16 +272,11 @@
       }
     }else if(e.alive&&e.hp<actor.lastHp-.0001){
       const observed=actor.lastHp-e.hp,aff=sourceAffinities();let ratio=attackElementMultiplier(actor,aff);
-      // Current core proxies are deliberately neutral. Apply the authored elemental profile here.
-      // Physical DR is represented conservatively on every direct hit in this test slice because
-      // the monolith does not expose the per-hit category context to bridge scripts yet.
       ratio*=1-actor.def.physicalDR;
       const wanted=observed*ratio,diff=wanted-observed;e.hp-=diff;
       if(e.hp<=0){e.hp=0;e.alive=false;}
     }
-    // Poison immunity is exact because poison is represented directly on the enemy instance.
     if(actor.def.immune.includes('poison')){e.poison=null;if(e.statuses?.poison)e.statuses.poison=null;}
-    // Skeleton/Red Skeleton specifically shave only stun/pause duration rather than all statuses.
     if(actor.def.stunTimeResist&&e.pausedT>actor.lastPaused+.015)e.pausedT*=1-actor.def.stunTimeResist;
     actor.lastHp=e.hp;actor.lastAlive=e.alive;actor.lastPaused=e.pausedT||0;
   }
@@ -322,8 +305,6 @@
   }
 
   function syncThreatDist(a){
-    // Preserve ordinary die targeting semantics: the closest threat to the player/dice reads as
-    // furthest along the old path, while nobody can ever reach the native escape threshold.
     const d=Math.min(330,Math.hypot(a.x-runtime.player.x,a.z-runtime.player.z));a.e.dist=totalLen*clamp(.93-d/520,.16,.93);
   }
 
@@ -371,7 +352,6 @@
       if(c.t>=.6&&!c.fired){c.fired=true;startProjectile(a,c.target,(red?7:5)*dmgMult,{dur:.42,size:4.5});}
       if(c.t>=1.0)a.cast=null;
     }else{
-      // Pull back for .6, then snap forward; visual position changes but collision never permits phasing.
       const dx=tp.x-a.x,dz=tp.z-a.z,len=Math.hypot(dx,dz)||1,ux=dx/len,uz=dz/len;
       if(c.t<.6)slideMove(a,-ux*a.def.speed*.15*dt,-uz*a.def.speed*.15*dt);
       else if(c.t<.68)slideMove(a,ux*a.def.speed*5.5*dt,uz*a.def.speed*5.5*dt);
@@ -399,7 +379,7 @@
         if(c.target.kind==='die'){
           const row=Math.floor(c.target.idx/5),pool=[];
           for(let i=0;i<15;i++)if(state.board[i]&&Math.abs(Math.floor(i/5)-row)<=1)pool.push(dieAnchor(i));
-          if(pool.length)t=pool[Math.floor(Math.random()*pool.length)]; // may intentionally select the same die twice
+          if(pool.length)t=pool[Math.floor(Math.random()*pool.length)];
         }
         hitTarget(t,13*dmgMult,'physical',['shadow','ice'],{slow:.6,chance:.05});
       }
@@ -415,7 +395,8 @@
     steerToward(a,move.x,move.z,dt,1,CLOSE_RANGE*.72);
   }
   function updateDarkCast(a,dt,dmgMult){
-    const c=a.cast;c.t+=dt,tp=targetPoint(c.target),dx=tp.x-a.x,dz=tp.z-a.z,len=Math.hypot(dx,dz)||1,ux=dx/len,uz=dz/len;
+    const c=a.cast,tp=targetPoint(c.target),dx=tp.x-a.x,dz=tp.z-a.z,len=Math.hypot(dx,dz)||1,ux=dx/len,uz=dz/len;
+    c.t+=dt;
     if(c.kind==='leap'){
       if(c.t>=.3&&c.t<.62)slideMove(a,ux*a.def.speed*5.0*dt,uz*a.def.speed*5.0*dt);
       if(c.t>=.58&&!c.hit){c.hit=true;hitTarget(c.target,5*dmgMult,'physical',[],null);}
@@ -457,7 +438,6 @@
       syncThreatDist(a);
     }
     resolveBodySeparation();
-    // A body-separation correction may push something toward static geometry; never leave it there.
     for(const b of bodies())if(!staticValid(b.x,b.z,b.radius)){b.x=clamp(b.x,-ROOM.halfX+b.radius,ROOM.halfX-b.radius);b.z=clamp(b.z,ROOM.farZ+b.radius,ROOM.nearZ-b.radius);}
     if(runtime.spawned.size>=4&&runtime.actors.every(a=>a.finalDead)){
       runtime.clearClock+=dt;if(runtime.clearClock>1.25&&!runtime.cleared){runtime.cleared=true;state.completedWaves=Math.max(1,state.completedWaves||0);baseEndMatch('clear');document.getElementById('overlayTitle').textContent='Dark Monastery Test Cleared';document.getElementById('overlayText').textContent='The lower cloister is quiet — for now.';}
@@ -497,18 +477,23 @@
     for(const d of runtime.decor){const p=project(d.x,d.z),fade=d.persist?1:clamp(1-d.t/d.ttl,0,1);g.save();g.globalAlpha=fade;if(d.kind==='bones'){g.strokeStyle=d.color;g.lineWidth=2*p.scale;for(let i=0;i<5;i++){const ang=i*.9+.2;g.beginPath();g.moveTo(p.x+Math.cos(ang)*4,p.y+Math.sin(ang)*2);g.lineTo(p.x+Math.cos(ang)*11,p.y+Math.sin(ang)*5);g.stroke();}}else{g.fillStyle=d.color;for(let i=0;i<10;i++){const a=i/10*TAU+d.seed,r=4+d.t*19;g.fillRect(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r*.45,2.2,2.2);}}g.restore();}
     for(const p of runtime.projectiles){const t=clamp(p.t/p.dur,0,1),x=lerp(p.from.x,p.to.x,t),y=lerp(p.from.y,p.to.y,t)-Math.sin(t*Math.PI)*14;g.fillStyle=p.color;g.beginPath();g.arc(x,y,p.size,0,TAU);g.fill();}
     for(const f of runtime.floaters){g.save();g.globalAlpha=clamp(1-f.t/f.ttl,0,1);g.fillStyle=f.color;g.font="700 11px 'Space Mono',monospace";g.textAlign='center';g.fillText(f.text,f.x,f.y-f.t*22);g.restore();}
-    // subtle safe-room edge
     g.strokeStyle='rgba(143,196,232,.16)';g.strokeRect(2,2,w-4,h-4);
   }
 
   function frame(ts){
     if(!isDM()){if(runtime.active)deactivate();return;}
-    if(!runtime.active)activate();let dt=runtime.lastTs?(ts-runtime.lastTs)/1000:0;runtime.lastTs=ts;dt=Math.min(.05,Math.max(0,dt));
-    if(state.running){updatePlayer(dt);updateActors(dt);updateFx(dt);}drawRoom();drawFront();runtime.raf=requestAnimationFrame(frame);
+    if(!runtime.active)activate();
+    runtime.raf=requestAnimationFrame(frame);
+    let dt=runtime.lastTs?(ts-runtime.lastTs)/1000:0;runtime.lastTs=ts;dt=Math.min(.05,Math.max(0,dt));
+    try{
+      if(state.running){updatePlayer(dt);updateActors(dt);updateFx(dt);}drawRoom();drawFront();runtime.lastFrameError=null;
+    }catch(error){
+      runtime.lastFrameError=String(error?.stack||error);console.error('Dark Monastery frame recovered from runtime error.',error);
+    }
   }
 
   function activate(){
-    runtime.active=true;runtime.lastTs=0;runtime.spawnClock=0;runtime.spawned.clear();runtime.actors=[];runtime.decor=[];runtime.projectiles=[];runtime.floaters=[];runtime.clearClock=0;runtime.cleared=false;
+    runtime.active=true;runtime.lastTs=0;runtime.spawnClock=0;runtime.spawned.clear();runtime.actors=[];runtime.decor=[];runtime.projectiles=[];runtime.floaters=[];runtime.clearClock=0;runtime.cleared=false;runtime.lastFrameError=null;
     runtime.player={id:'player',kind:'player',x:0,z:118,radius:15,mass:1.35,flash:0,stunT:0,slowT:0};
     state.spawnQueue=[];state.spawnTimer=999;state.enemies=[];state.showPlayerHpBar=true;state.playerHpLabel='Player HP';state.livesMax=PLAYER_HP;state.lives=PLAYER_HP;state.__ttdDMNoWipeout=true;
     document.getElementById('gameScreen')?.classList.add('ttd-dark-monastery-v1');const livesLabel=document.querySelector('#gameScreen #livesStat .label');if(livesLabel)livesLabel.textContent='HP';
@@ -521,8 +506,6 @@
 
   buildPath=function DM_buildPath(w,h){
     if(!isDM())return baseBuildPath(w,h);
-    // Native die logic still expects a path-space distance. Keep a hidden logical path off-screen
-    // while enemyRenderPos supplies the real free-roam room coordinates.
     pathPts=[{x:-2200,y:-2200},{x:-1200,y:-2200}];segLens=[1000];totalLen=1000;towerPos=pathPts[1];
   };
   enemyRenderPos=function DM_enemyRenderPos(e){if(e?.__ttdDM){const a=runtime.actors.find(x=>x.e===e);if(a)return project(a.x,a.z);}return baseEnemyRenderPos(e);};
@@ -541,7 +524,7 @@
   window.addEventListener('resize',()=>{if(isDM()){ensureCanvases();buildPath(cw,ch);}});
 
   window.__TTD_DARK_MONASTERY_API_V1=Object.freeze({
-    version:1,id:DM_ID,get active(){return isDM();},get player(){return runtime.player;},get actors(){return runtime.actors;},
+    version:2,id:DM_ID,get active(){return isDM();},get player(){return runtime.player;},get actors(){return runtime.actors;},get lastFrameError(){return runtime.lastFrameError;},
     definitions:TYPES,
   });
 })();
