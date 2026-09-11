@@ -21,6 +21,11 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewpor
 <div id="gameScreen" class="screen"><div id="hud"><span id="modeLabel">Adventure</span><div class="hud-stat lives" id="livesStat"><span class="label">Lives</span><span class="value" id="livesVal">12</span></div></div><div id="laneWrap"><canvas id="laneCanvas"></canvas></div><div id="playerHpWrap"><div id="playerHpFill"></div><span id="playerHpLabel"></span></div></div>
 <div id="modeScreen" class="screen active"></div><div id="overlayTitle"></div><div id="overlayText"></div><pre id="result">PENDING</pre>
 <script>
+// Headless Chrome does not reliably advance compositor-owned RAF callbacks under --dump-dom.
+// Match the repository's other phone-browser harnesses: drive frames at deterministic 16ms ticks
+// so Dark Monastery's real roaming loop accrues time and must actually spawn its first enemy.
+window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);
+window.cancelAnimationFrame=id=>clearTimeout(id);
 var ADVENTURES={};var state=null;var cw=390,ch=360;var pathPts=[],segLens=[],totalLen=1000,towerPos={x:0,y:0};var currentAttackerDieKey=null;var __nativeCleared=false;var __ended='';
 window.__TTD_CORE_API_V1={};window.__TTD_ASSET_URL=p=>p;
 function showScreen(name){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(name+'Screen')?.classList.add('active');}
