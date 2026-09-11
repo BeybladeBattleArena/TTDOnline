@@ -134,6 +134,9 @@
     // wrappers after the normal bridge list has loaded. Install Dark Monastery's entry authority only
     // after that bootstrap resolves so its one-stage roaming route cannot be bypassed by campaign UI.
     await loadBridge('/online/dark-monastery-entry-v3.js?v=1');
+    // Final roaming authority: native Adventure is still free to render/update its dice, but it may
+    // not stop Dark Monastery merely because legacy tower/lives assumptions fire later in the run.
+    await loadBridge('/online/dark-monastery-runtime-guard-v6.js?v=1');
     window.__TTD_MARK_BRIDGES_READY?.();
   }
 
