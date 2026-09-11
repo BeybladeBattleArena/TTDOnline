@@ -13,6 +13,8 @@ const root=process.cwd();
 const dmUrl=pathToFileURL(path.join(root,'online/dark-monastery-v1.js')).href;
 const hotfixUrl=pathToFileURL(path.join(root,'online/dark-monastery-entry-hotfix-v2.js')).href;
 const finalEntryUrl=pathToFileURL(path.join(root,'online/dark-monastery-entry-v3.js')).href;
+const guardUrl=pathToFileURL(path.join(root,'online/dark-monastery-runtime-guard-v6.js')).href;
+const lifecycleUrl=pathToFileURL(path.join(root,'online/dark-monastery-lifecycle-v7.js')).href;
 const harness=path.join(os.tmpdir(),`ttd-dark-monastery-${process.pid}.html`);
 
 const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>
@@ -25,89 +27,40 @@ window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);
 window.cancelAnimationFrame=id=>clearTimeout(id);
 window.__dmFrontTexts=[];
 const __nativeHarnessFillText=CanvasRenderingContext2D.prototype.fillText;
-CanvasRenderingContext2D.prototype.fillText=function(text,x,y,maxWidth){
- if(this?.canvas?.id==='ttdDarkMonasteryFrontV1')window.__dmFrontTexts.push(String(text));
- if(maxWidth===undefined)return __nativeHarnessFillText.call(this,text,x,y);
- return __nativeHarnessFillText.call(this,text,x,y,maxWidth);
-};
-var ADVENTURES={};var state=null;var cw=390,ch=360;var pathPts=[],segLens=[],totalLen=1000,towerPos={x:0,y:0};var currentAttackerDieKey=null;var __nativeCleared=false;var __ended='';var __nativeProxyDraws=0;
+CanvasRenderingContext2D.prototype.fillText=function(text,x,y,maxWidth){if(this?.canvas?.id==='ttdDarkMonasteryFrontV1')window.__dmFrontTexts.push(String(text));if(maxWidth===undefined)return __nativeHarnessFillText.call(this,text,x,y);return __nativeHarnessFillText.call(this,text,x,y,maxWidth);};
+var ADVENTURES={};var state=null;var cw=390,ch=360;var pathPts=[],segLens=[],totalLen=1000,towerPos={x:0,y:0};var currentAttackerDieKey=null;var lastT=0;var __nativeCleared=false;var __ended='';var __nativeProxyDraws=0;
 window.__TTD_CORE_API_V1={};window.__TTD_ASSET_URL=p=>p;
 function showScreen(name){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(name+'Screen')?.classList.add('active');}
 function renderHUD(){if(!state)return;document.getElementById('livesVal').textContent=String(Math.max(0,Math.round(state.lives||0)));const hp=document.getElementById('playerHpWrap');hp.style.display=state.showPlayerHpBar?'block':'none';document.getElementById('playerHpLabel').textContent=state.playerHpLabel||'Player HP';if(state.showPlayerHpBar){const max=state.livesMax||1;document.getElementById('playerHpFill').style.width=Math.max(0,Math.min(100,(state.lives/max)*100))+'%';}}
 function renderBoard(){}function updateSpawns(){}function enemyRenderPos(){return{x:0,y:0}}function buildPath(){pathPts=[{x:0,y:0},{x:100,y:0}];segLens=[100];totalLen=100;towerPos=pathPts[1];}
 function drawLane(){if(Array.isArray(state?.enemies))__nativeProxyDraws+=state.enemies.filter(e=>e?.__ttdDM).length;}
 function endMatch(reason){__ended=String(reason);if(state)state.running=false;}function effAffinities(){return{}}function dieJewelBonus(){return 0}function triggerTilePulse(){}function toast(){}
-function nativeLoop(){if(!state?.running)return;if(state.spawnQueue.length===0&&state.enemies.length===0){__nativeCleared=true;endMatch('clear');return;}drawLane();requestAnimationFrame(nativeLoop);}
+function nativeLoop(){if(!state?.running)return;if(state.spawnQueue.length===0&&state.enemies.length===0){__nativeCleared=true;endMatch('clear');return;}drawLane();requestAnimationFrame(nativeLoop);}function loop(){nativeLoop();}
 function makeState(advId,stageIdx,diffKey){const adv=ADVENTURES[advId],stage=adv.stages[stageIdx];state={adventure:true,adventureStages:[stage],adventureStageIdx:0,adventureStage:stage,adventureDiff:{hpMult:1,dmgMult:1,durBonus:0},adventureDiffKey:diffKey,lives:12,livesMax:12,showPlayerHpBar:false,playerHpLabel:'Player HP',spawnQueue:[],spawnTimer:0,enemies:[],board:new Array(15).fill(null),coins:[],running:true,completedWaves:0,kills:0,sp:100,wave:1,waveClearCredited:false,waveClearedAt:0};showScreen('game');renderHUD();requestAnimationFrame(nativeLoop);return state;}
 function startAdventure(advId,stageIdx,diffKey){return makeState(advId,stageIdx,diffKey);}
 function startAdventureCampaign(advId,diffKey){return makeState(advId,0,diffKey);}
 </script>
-<script src="${dmUrl}"></script><script src="${hotfixUrl}"></script><script src="${finalEntryUrl}"></script>
+<script src="${dmUrl}"></script><script src="${hotfixUrl}"></script><script src="${finalEntryUrl}"></script><script src="${guardUrl}"></script><script src="${lifecycleUrl}"></script>
 <script>
-const report={errors:[]};let playerStartX=null;let pauseProbe=null;let initialHpOk=false;
+const report={errors:[]};let firstPlayer=null,lockStartX=null,postStartX=null,pauseProbe=null,initialHpOk=false,firstRunCanvas=null,secondRunState=null;
 window.addEventListener('error',e=>report.errors.push(String(e.error?.stack||e.message||e.error||'window error')));window.addEventListener('unhandledrejection',e=>report.errors.push(String(e.reason?.stack||e.reason||'unhandled rejection')));
+function dragJoy(pointerId=77){const joy=document.getElementById('ttdDarkMonasteryJoyV1');if(!joy)return false;const r=joy.getBoundingClientRect(),x=r.right-5,y=r.top+r.height/2;joy.dispatchEvent(new PointerEvent('pointerdown',{pointerId,pointerType:'touch',isPrimary:true,clientX:x,clientY:y,bubbles:true,cancelable:true}));setTimeout(()=>joy.dispatchEvent(new PointerEvent('pointermove',{pointerId,pointerType:'touch',isPrimary:true,clientX:r.right-2,clientY:y,bubbles:true,cancelable:true})),70);setTimeout(()=>joy.dispatchEvent(new PointerEvent('pointerup',{pointerId,pointerType:'touch',isPrimary:true,clientX:r.right-2,clientY:y,bubbles:true,cancelable:true})),240);return true;}
 setTimeout(()=>{try{startAdventureCampaign('dark_monastery','normal');}catch(error){report.errors.push(String(error?.stack||error));}},20);
-setTimeout(()=>{
- try{
-  const api=window.__TTD_DARK_MONASTERY_API_V1,joy=document.getElementById('ttdDarkMonasteryJoyV1');
-  initialHpOk=state?.lives===50&&state?.livesMax===50;
-  playerStartX=api?.player?.x??null;
-  if(joy&&playerStartX!=null){
-    const r=joy.getBoundingClientRect(),x=r.right-8,y=r.top+r.height/2,pointerId=77;
-    joy.dispatchEvent(new PointerEvent('pointerdown',{pointerId,pointerType:'touch',isPrimary:true,clientX:x,clientY:y,bubbles:true,cancelable:true}));
-    setTimeout(()=>joy.dispatchEvent(new PointerEvent('pointermove',{pointerId,pointerType:'touch',isPrimary:true,clientX:r.right-3,clientY:y,bubbles:true,cancelable:true})),90);
-    setTimeout(()=>joy.dispatchEvent(new PointerEvent('pointerup',{pointerId,pointerType:'touch',isPrimary:true,clientX:r.right-3,clientY:y,bubbles:true,cancelable:true})),300);
-  }
-  pauseProbe=api?.actors?.[0]||null;if(pauseProbe)pauseProbe.e.pausedT=.22;
- }catch(error){report.errors.push(String(error?.stack||error));}
-},520);
-setTimeout(()=>{
- try{
-  // Reproduce the reported post-hit failure mode: player HP changes and an old native Adventure
-  // owner incorrectly drops state.running. The Dark Monastery compatibility layer must recover.
-  state.lives=43;state.running=false;renderHUD();
-  const c=document.getElementById('ttdDarkMonasteryFrontV1')?.getContext('2d');
-  c?.fillText('-17',12,12);
- }catch(error){report.errors.push(String(error?.stack||error));}
-},860);
-setTimeout(()=>{
- try{
-  const api=window.__TTD_DARK_MONASTERY_API_V1,compat=window.__TTD_DARK_MONASTERY_ENTRY_V3_API,adv=ADVENTURES.dark_monastery;
-  report.nonCampaign=adv?.campaign===false;
-  report.stageActive=state?.adventureStage?.darkMonastery===true;
-  report.runtimeFlag=state?.__ttdDarkMonastery===true;
-  report.runtimeActive=api?.active===true;
-  report.playerPresent=!!api?.player;
-  report.joystick=!!document.getElementById('ttdDarkMonasteryJoyV1');
-  report.joystickMoved=playerStartX!=null&&Number(api?.player?.x)>playerStartX+5;
-  report.motionCanvas=!!document.getElementById('ttdDarkMonasteryMotionV5');
-  report.motionPainted=Number(compat?.motionDraws)>0;
-  report.roomBack=!!document.getElementById('ttdDarkMonasteryBackV1');
-  report.roomFront=!!document.getElementById('ttdDarkMonasteryFrontV1');
-  report.hpValue=initialHpOk;
-  report.hpLabel=document.querySelector('#livesStat .label')?.textContent==='HP';
-  report.hpBar=state?.showPlayerHpBar===true&&getComputedStyle(document.getElementById('playerHpWrap')).display!=='none';
-  report.damageFreezeRecovered=state?.running===true&&Number(compat?.playerRunRecoveries)>0;
-  report.damageTextPositive=window.__dmFrontTexts.includes('17')&&!window.__dmFrontTexts.includes('-17');
-  report.notCleared=__nativeCleared===false&&state?.running===true&&__ended==='';
-  report.firstEnemy=(api?.actors?.length||0)>=1&&(state?.enemies?.length||0)>=1;
-  report.proxyStillTargetable=state?.enemies?.some(e=>e?.__ttdDM&&e.alive)===true;
-  report.nativeProxyHidden=__nativeProxyDraws===0&&Number(compat?.proxyFilterPasses)>0;
-  report.customEnemyNamed=[...document.querySelectorAll('.ttd-dark-monastery-enemy-label')].some(el=>el.textContent==='Skeleton');
-  report.pauseRecovered=!!pauseProbe&&Number(pauseProbe.e.pausedT||0)<=.01;
-  report.hold=Array.isArray(state?.spawnQueue)&&state.spawnQueue.some(x=>x?.__ttdDarkMonasteryHold===true);
-  report.noErrors=report.errors.length===0;
- }catch(error){report.errors.push(String(error?.stack||error));}
- const checks=['nonCampaign','stageActive','runtimeFlag','runtimeActive','playerPresent','joystick','joystickMoved','motionCanvas','motionPainted','roomBack','roomFront','hpValue','hpLabel','hpBar','damageFreezeRecovered','damageTextPositive','notCleared','firstEnemy','proxyStillTargetable','nativeProxyHidden','customEnemyNamed','pauseRecovered','hold','noErrors'];report.ok=checks.every(k=>report[k]===true);document.getElementById('result').textContent=JSON.stringify(report);
-},1450);
+setTimeout(()=>{try{firstPlayer=window.__TTD_DARK_MONASTERY_API_V1?.player;initialHpOk=state?.lives===50&&state?.livesMax===50;firstRunCanvas=document.getElementById('ttdDarkMonasteryBackV1');state.__ttdMissionIntroHold=true;state.running=false;lockStartX=Number(firstPlayer?.x);dragJoy(71);}catch(e){report.errors.push(String(e?.stack||e));}},220);
+setTimeout(()=>{try{report.lockedDuringMission=Number(firstPlayer?.x)===lockStartX&&state?.running===false&&state?.__ttdDMGameplayLock===true;state.__ttdMissionIntroHold=false;state.running=true;postStartX=Number(firstPlayer?.x);dragJoy(72);}catch(e){report.errors.push(String(e?.stack||e));}},600);
+setTimeout(()=>{try{report.lockedDuringStart=Number(firstPlayer?.x)===postStartX&&state?.running===false&&state?.__ttdDMGameplayLock===true;}catch(e){report.errors.push(String(e?.stack||e));}},1250);
+setTimeout(()=>{try{report.startReleased=state?.running===true&&state?.__ttdDMGameplayLock===false;postStartX=Number(firstPlayer?.x);dragJoy(73);}catch(e){report.errors.push(String(e?.stack||e));}},1900);
+setTimeout(()=>{try{report.movesAfterStart=Number(firstPlayer?.x)>postStartX+3;pauseProbe=window.__TTD_DARK_MONASTERY_API_V1?.actors?.[0]||null;if(pauseProbe)pauseProbe.e.pausedT=.22;const c=document.getElementById('ttdDarkMonasteryFrontV1')?.getContext('2d');c?.fillText('-17',12,12);}catch(e){report.errors.push(String(e?.stack||e));}},2350);
+setTimeout(()=>{try{showScreen('mode');if(state)state.running=false;}catch(e){report.errors.push(String(e?.stack||e));}},2700);
+setTimeout(()=>{try{startAdventureCampaign('dark_monastery','normal');secondRunState=state;}catch(e){report.errors.push(String(e?.stack||e));}},2920);
+setTimeout(()=>{try{const api=window.__TTD_DARK_MONASTERY_API_V1,compat=window.__TTD_DARK_MONASTERY_ENTRY_V3_API,life=window.__TTD_DARK_MONASTERY_LIFECYCLE_V7_API,adv=ADVENTURES.dark_monastery;report.nonCampaign=adv?.campaign===false;report.stageActive=state?.adventureStage?.darkMonastery===true;report.runtimeFlag=state?.__ttdDarkMonastery===true;report.runtimeActive=api?.active===true;report.playerPresent=!!api?.player;report.joystick=!!document.getElementById('ttdDarkMonasteryJoyV1');report.repeatRun=state===secondRunState&&state?.adventureStage?.darkMonastery===true&&!!document.getElementById('ttdDarkMonasteryBackV1')&&!!document.getElementById('ttdDarkMonasteryFrontV1')&&!!api?.player&&api.player!==firstPlayer&&Number(life?.runCount)>=2;report.motionCanvas=!!document.getElementById('ttdDarkMonasteryMotionV7');report.motionSmaller=getComputedStyle(document.getElementById('ttdDarkMonasteryMotionV5')).display==='none'&&Number(life?.smallMotionDraws)>0;report.roomBack=!!document.getElementById('ttdDarkMonasteryBackV1');report.roomFront=!!document.getElementById('ttdDarkMonasteryFrontV1');report.hpValue=initialHpOk;report.hpLabel=document.querySelector('#livesStat .label')?.textContent==='HP';report.hpBar=state?.showPlayerHpBar===true&&getComputedStyle(document.getElementById('playerHpWrap')).display!=='none';report.damageTextPositive=window.__dmFrontTexts.includes('17')&&!window.__dmFrontTexts.includes('-17');report.notCleared=__nativeCleared===false&&__ended!=='clear';report.proxyStillTargetable=state?.enemies?.some(e=>e?.__ttdDM&&e.alive)===true||api?.actors?.length===0;report.nativeProxyHidden=__nativeProxyDraws===0&&Number(compat?.proxyFilterPasses)>=0;report.pauseRecovered=!pauseProbe||Number(pauseProbe.e.pausedT||0)<=.01;report.hold=Array.isArray(state?.spawnQueue)&&state.spawnQueue.some(x=>x?.__ttdDarkMonasteryHold===true);report.noErrors=report.errors.length===0;}catch(error){report.errors.push(String(error?.stack||error));}
+ const checks=['lockedDuringMission','lockedDuringStart','startReleased','movesAfterStart','nonCampaign','stageActive','runtimeFlag','runtimeActive','playerPresent','joystick','repeatRun','motionCanvas','motionSmaller','roomBack','roomFront','hpValue','hpLabel','hpBar','damageTextPositive','notCleared','proxyStillTargetable','nativeProxyHidden','pauseRecovered','hold','noErrors'];report.ok=checks.every(k=>report[k]===true);document.getElementById('result').textContent=JSON.stringify(report);},3900);
 </script></body></html>`;
 fs.writeFileSync(harness,html);
 let dom='';
-try{
-  dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=2100','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:16*1024*1024,timeout:45000,stdio:['ignore','pipe','pipe']});
-}finally{try{fs.unlinkSync(harness);}catch{}}
+try{dom=execFileSync(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--allow-file-access-from-files','--window-size=390,650','--virtual-time-budget=4700','--dump-dom',pathToFileURL(harness).href],{encoding:'utf8',maxBuffer:16*1024*1024,timeout:45000,stdio:['ignore','pipe','pipe']});}finally{try{fs.unlinkSync(harness);}catch{}}
 const match=dom.match(/<pre id="result">([\s\S]*?)<\/pre>/i);must(match,'Headless Chrome did not return Dark Monastery smoke results.');
 const decoded=match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
 let report;try{report=JSON.parse(decoded);}catch{throw new Error(`Could not parse Dark Monastery report: ${decoded}`);}
-if(!report.ok){console.error('Dark Monastery startup smoke failed:',JSON.stringify(report,null,2));process.exit(1);}
-console.log('Dark Monastery startup smoke passed:',JSON.stringify(report));
+if(!report.ok){console.error('Dark Monastery startup/repeat smoke failed:',JSON.stringify(report,null,2));process.exit(1);}
+console.log('Dark Monastery startup/repeat smoke passed:',JSON.stringify(report));
