@@ -130,6 +130,10 @@
       }
     }
     try{await window.__TTD_RUN_UI_EXTENSIONS_READY;}catch(error){report('/online/run-ui-bridge-v21.js',error);}
+    // Al Hata's asynchronous Adventure bootstrap installs final startAdventure/startAdventureCampaign
+    // wrappers after the normal bridge list has loaded. Install Dark Monastery's entry authority only
+    // after that bootstrap resolves so its one-stage roaming route cannot be bypassed by campaign UI.
+    await loadBridge('/online/dark-monastery-entry-v3.js?v=1');
     window.__TTD_MARK_BRIDGES_READY?.();
   }
 
