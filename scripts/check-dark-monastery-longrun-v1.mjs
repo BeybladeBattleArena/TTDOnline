@@ -19,7 +19,7 @@ html,body{margin:0;background:#090b14}.screen{display:none}.screen.active{displa
 </style></head><body><div id="gameScreen" class="screen"><div id="hud"><span id="modeLabel">Adventure</span><div class="hud-stat lives" id="livesStat"><span class="label">Lives</span><span id="livesVal">12</span></div></div><div id="laneWrap"><canvas id="laneCanvas"></canvas></div><div id="playerHpWrap"><div id="playerHpFill"></div><span id="playerHpLabel"></span></div></div><div id="modeScreen" class="screen active"></div><div id="overlayTitle"></div><div id="overlayText"></div><pre id="result">PENDING</pre>
 <script>
 window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);window.cancelAnimationFrame=id=>clearTimeout(id);
-var ADVENTURES={};var state=null;var cw=390,ch=360,pathPts=[],segLens=[],totalLen=1000,towerPos={x:0,y:0},currentAttackerDieKey=null;var __ended='';var __nativeCleared=false;var __forcedStops=0;
+var ADVENTURES={};var state=null;var cw=390,ch=360,pathPts=[],segLens=[],totalLen=1000,towerPos={x:0,y:0},currentAttackerDieKey=null;var __ended='';var __nativeCleared=false;var __forcedStops=0;var __recoveredStops=0;
 window.__TTD_CORE_API_V1={};window.__TTD_ASSET_URL=p=>p;
 function showScreen(name){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(name+'Screen')?.classList.add('active');}
 function renderHUD(){if(!state)return;document.getElementById('livesVal').textContent=String(state.lives||0);document.querySelector('#livesStat .label').textContent='Lives';document.getElementById('playerHpWrap').style.display=state.showPlayerHpBar?'block':'none';document.getElementById('playerHpLabel').textContent=state.playerHpLabel||'Player HP';}
@@ -32,9 +32,8 @@ function startAdventure(advId,stageIdx,diffKey){return makeState(advId,stageIdx,
 </script><script src="${dm}"></script><script src="${hotfix}"></script><script src="${entry}"></script><script src="${guard}"></script><script>
 const report={errors:[]};window.addEventListener('error',e=>report.errors.push(String(e.error?.stack||e.message||e.error||'error')));window.addEventListener('unhandledrejection',e=>report.errors.push(String(e.reason?.stack||e.reason||'rejection')));
 setTimeout(()=>{try{startAdventureCampaign('dark_monastery','normal');}catch(e){report.errors.push(String(e?.stack||e));}},20);
-setTimeout(()=>{if(state){state.running=false;__forcedStops++;}},3200);
-setTimeout(()=>{if(state){state.running=false;__forcedStops++;}},7600);
-setTimeout(()=>{if(state){state.running=false;__forcedStops++;}},10800);
+function forceAndVerifyStop(at){setTimeout(()=>{if(!state)return;state.running=false;__forcedStops++;setTimeout(()=>{if(state?.running===true)__recoveredStops++;},180);},at);}
+forceAndVerifyStop(3200);forceAndVerifyStop(7600);forceAndVerifyStop(10800);
 setTimeout(()=>{
  try{
   const api=window.__TTD_DARK_MONASTERY_API_V1,guardApi=window.__TTD_DARK_MONASTERY_RUNTIME_GUARD_V6_API;
@@ -47,12 +46,13 @@ setTimeout(()=>{
   report.diceRemain=state?.board?.some(Boolean)===true;
   report.hold=state?.spawnQueue?.some(x=>x?.__ttdDarkMonasteryHold===true)===true;
   report.hpLabel=document.querySelector('#livesStat .label')?.textContent==='HP';
-  report.recovered=Number(guardApi?.recoveries)>=__forcedStops;
-  report.forcedStops=__forcedStops;report.recoveries=guardApi?.recoveries||0;
+  report.recovered=__forcedStops===3&&__recoveredStops===3;
+  report.forcedStops=__forcedStops;report.recoveredStops=__recoveredStops;report.guardRecoveries=guardApi?.recoveries||0;
+  report.frameHealthy=!api?.lastFrameError;
   report.notTerminal=guardApi?.terminal===false;
   report.noNativeClear=__nativeCleared===false&&__ended==='';
   report.noErrors=report.errors.length===0;
-  report.ok=['stageActive','runtimeActive','running','playerAlive','allFourSpawned','giantSpawned','diceRemain','hold','hpLabel','recovered','notTerminal','noNativeClear','noErrors'].every(k=>report[k]===true);
+  report.ok=['stageActive','runtimeActive','running','playerAlive','allFourSpawned','giantSpawned','diceRemain','hold','hpLabel','recovered','frameHealthy','notTerminal','noNativeClear','noErrors'].every(k=>report[k]===true);
  }catch(e){report.errors.push(String(e?.stack||e));report.ok=false;}
  document.getElementById('result').textContent=JSON.stringify(report);
 },12200);
