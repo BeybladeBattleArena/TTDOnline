@@ -45,6 +45,7 @@ jobs:
         id: validate
         run: |
           node scripts/check-dark-monastery-v1.mjs
+          node scripts/check-dark-monastery-longrun-v1.mjs
           npm run check:hosting
 
       - name: Verify source tree is unchanged
@@ -110,6 +111,7 @@ jobs:
             echo "- Commit: \`$DEPLOY_SHA\`"
             echo '- Source mutation: none'
             echo '- Dark Monastery startup browser smoke: passed'
+            echo '- Dark Monastery delayed freeze regression smoke: passed'
             echo '- Live build identity: verified'
             echo '- Critical asset smoke test: passed'
           } >> "$GITHUB_STEP_SUMMARY"
