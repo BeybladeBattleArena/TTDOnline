@@ -15,12 +15,19 @@
   let activeTouch=null;
   let compatLastTs=0;
   let proxyFilterPasses=0;
+  let playerRunRecoveries=0;
+  let lastPlayerHp=null;
+  let damageRecoveryUntil=0;
+  let motionCanvas=null;
+  let motionCtx=null;
+  let motionLastX=null;
+  let motionLastZ=null;
+  let motionStrength=0;
+  let motionDraws=0;
 
   function normalizeAdventureEntry(){
     const adv=ADVENTURES?.[DM_ID];
     if(!adv)return false;
-    // The current Dark Monastery slice is one roaming stage. Use the ordinary stage-list route,
-    // then explicitly send that stage into the published Dark Monastery runtime starter below.
     adv.campaign=false;
     adv.darkMonastery=true;
     adv.roam3d=true;
@@ -44,17 +51,21 @@
     return finalCampaignStart.apply(this,arguments);
   };
 
+  function dmStageActive(){
+    return !!(state?.__ttdDarkMonastery&&state?.adventureStage?.darkMonastery);
+  }
   function dmActive(){
-    return !!(state?.__ttdDarkMonastery&&state?.adventureStage?.darkMonastery&&state?.running);
+    return !!(dmStageActive()&&state?.running);
+  }
+  function gameScreenVisible(){
+    return !!document.getElementById('gameScreen')?.classList.contains('active');
   }
 
-  // Dark Monastery actors intentionally keep native enemy objects in state.enemies so every
-  // existing die can target, damage and status them. The roaming renderer already draws the real
-  // Skeleton/Dark Goblin/etc. Hide ONLY those proxy objects during the native lane paint so the
-  // old green "Goblin" circles/names are not drawn underneath the authored monster art.
+  // Keep authored roaming monsters targetable through their native combat proxies, but never draw
+  // the old Goblin/Ogre proxy art underneath the real Skeleton/Dark Goblin presentation.
   if(nativeDrawLane){
     drawLane=function DarkMonasteryProxySafeDrawLane(){
-      if(!dmActive()||!Array.isArray(state?.enemies))return nativeDrawLane.apply(this,arguments);
+      if(!dmStageActive()||!Array.isArray(state?.enemies))return nativeDrawLane.apply(this,arguments);
       const complete=state.enemies;
       const visible=complete.filter(e=>!e?.__ttdDM);
       if(visible.length===complete.length)return nativeDrawLane.apply(this,arguments);
@@ -62,6 +73,21 @@
       proxyFilterPasses++;
       try{return nativeDrawLane.apply(this,arguments);}
       finally{state.enemies=complete;}
+    };
+  }
+
+  // Dark Monastery damage floaters are painted on the authored foreground canvas. Keep the damage
+  // amount itself and remove only the conventional leading minus sign; healing/other canvas text is
+  // untouched. This remains intentionally scoped to the Dark Monastery foreground canvas.
+  const canvasProto=window.CanvasRenderingContext2D?.prototype;
+  const nativeFillText=canvasProto?.fillText;
+  if(nativeFillText&&!canvasProto.__ttdDarkMonasteryDamageTextV5){
+    Object.defineProperty(canvasProto,'__ttdDarkMonasteryDamageTextV5',{value:true,configurable:true});
+    canvasProto.fillText=function DarkMonasteryDamageTextV5(text,x,y,maxWidth){
+      let shown=text;
+      if(dmStageActive()&&this?.canvas?.id==='ttdDarkMonasteryFrontV1'&&/^-[0-9]+(?:\.[0-9]+)?$/.test(String(text))){shown=String(text).slice(1);}
+      if(maxWidth===undefined)return nativeFillText.call(this,shown,x,y);
+      return nativeFillText.call(this,shown,x,y,maxWidth);
     };
   }
 
@@ -94,10 +120,6 @@
     return true;
   }
 
-  // The native mobile-input bridge owns pointer gestures over most of the battlefield. Handle the
-  // roaming joystick at WINDOW CAPTURE priority and translate it to the Dark Monastery runtime's
-  // already-supported WASD input. This keeps collision/slide movement in one authoritative path
-  // and also gives older Android WebViews a touch-event fallback.
   window.addEventListener('pointerdown',ev=>{
     if(!dmActive()||activePointer!=null||!pointInside(joyElement(),ev.clientX,ev.clientY))return;
     activePointer=ev.pointerId;activeTouch=null;driveFromPoint(ev.clientX,ev.clientY);
@@ -105,7 +127,7 @@
     ev.preventDefault();ev.stopPropagation();
   },{capture:true,passive:false});
   window.addEventListener('pointermove',ev=>{
-    if(!dmActive()||activePointer==null||ev.pointerId!==activePointer)return;
+    if(!dmStageActive()||activePointer==null||ev.pointerId!==activePointer)return;
     driveFromPoint(ev.clientX,ev.clientY);ev.preventDefault();ev.stopPropagation();
   },{capture:true,passive:false});
   const endPointer=ev=>{
@@ -121,7 +143,7 @@
     activeTouch=t.identifier;driveFromPoint(t.clientX,t.clientY);ev.preventDefault();ev.stopPropagation();
   },{capture:true,passive:false});
   window.addEventListener('touchmove',ev=>{
-    if(!dmActive()||activePointer!=null||activeTouch==null)return;
+    if(!dmStageActive()||activePointer!=null||activeTouch==null)return;
     const t=[...ev.touches].find(p=>p.identifier===activeTouch);if(!t)return;
     driveFromPoint(t.clientX,t.clientY);ev.preventDefault();ev.stopPropagation();
   },{capture:true,passive:false});
@@ -169,10 +191,59 @@
     for(const [actor,label] of [...enemyLabels])if(!live.has(actor)){label.remove();enemyLabels.delete(actor);}
   }
 
+  function ensureMotionCanvas(){
+    const lane=document.getElementById('laneWrap');if(!lane)return null;
+    const r=lane.getBoundingClientRect(),dpr=clamp(window.devicePixelRatio||1,1,2);
+    if(!motionCanvas){
+      motionCanvas=document.createElement('canvas');motionCanvas.id='ttdDarkMonasteryMotionV5';
+      motionCanvas.style.cssText='position:absolute;inset:0;z-index:5;width:100%;height:100%;pointer-events:none;display:block;';
+      lane.appendChild(motionCanvas);motionCtx=motionCanvas.getContext('2d');
+    }
+    const pw=Math.max(1,Math.round(r.width*dpr)),ph=Math.max(1,Math.round(r.height*dpr));
+    if(motionCanvas.width!==pw||motionCanvas.height!==ph){motionCanvas.width=pw;motionCanvas.height=ph;}
+    motionCanvas.style.width=r.width+'px';motionCanvas.style.height=r.height+'px';
+    motionCtx.setTransform(dpr,0,0,dpr,0,0);
+    return{lane,w:r.width,h:r.height,ctx:motionCtx};
+  }
+  function removeMotionCanvas(){
+    motionCanvas?.remove();motionCanvas=null;motionCtx=null;motionLastX=motionLastZ=null;motionStrength=0;
+  }
+  function drawRunMotion(ts,dt){
+    const api=window.__TTD_DARK_MONASTERY_API_V1,p=api?.player,host=ensureMotionCanvas();if(!p||!host)return;
+    const {lane,w,h,ctx}=host;ctx.clearRect(0,0,w,h);
+    if(motionLastX==null){motionLastX=p.x;motionLastZ=p.z;return;}
+    const moved=Math.hypot(p.x-motionLastX,p.z-motionLastZ);motionLastX=p.x;motionLastZ=p.z;
+    const target=(moved>.045&&state?.running)?1:0;
+    const ease=1-Math.exp(-dt*(target?18:12));motionStrength+=(target-motionStrength)*ease;
+    if(motionStrength<.025)return;
+    const pt=projectActor(p,lane),size=30*pt.scale,phase=ts*.014;
+    const dirX=clamp((Number(runtimeSafeJoyX())||0),-1,1);
+    const topY=pt.y-size*.50,bottomY=pt.y+size*.10,topHalf=size*.25,bottomHalf=size*.60,lean=dirX*size*.09;
+    ctx.save();ctx.globalAlpha=motionStrength;
+    const wash=ctx.createLinearGradient(0,topY,0,bottomY);wash.addColorStop(0,'rgba(74,211,255,.60)');wash.addColorStop(.48,'rgba(55,196,255,.73)');wash.addColorStop(1,'rgba(43,170,244,.62)');
+    ctx.fillStyle=wash;ctx.shadowBlur=8*pt.scale;ctx.shadowColor='rgba(75,211,255,.58)';
+    ctx.beginPath();ctx.moveTo(pt.x-topHalf,topY);
+    ctx.bezierCurveTo(pt.x-bottomHalf*.70+lean,topY+size*.15,pt.x-bottomHalf+lean,bottomY-size*.14,pt.x-bottomHalf+lean,bottomY);
+    ctx.quadraticCurveTo(pt.x+lean,bottomY+size*.12,pt.x+bottomHalf+lean,bottomY);
+    ctx.bezierCurveTo(pt.x+bottomHalf+lean,bottomY-size*.14,pt.x+bottomHalf*.70+lean,topY+size*.15,pt.x+topHalf,topY);
+    ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+    ctx.lineCap='round';
+    for(let i=0;i<6;i++){
+      const q=(i+.65)/6.4,yy=topY+(bottomY-topY)*q,wave=Math.sin(phase+i*.92)*size*.055,spread=topHalf+(bottomHalf-topHalf)*q;
+      ctx.strokeStyle=i%2?'rgba(151,239,255,.88)':'rgba(77,216,255,.92)';ctx.lineWidth=Math.max(1,1.35*pt.scale);
+      ctx.beginPath();ctx.moveTo(pt.x-spread+lean*q,yy);
+      ctx.bezierCurveTo(pt.x-spread*.38+lean*q,yy-wave,pt.x+spread*.30+lean*q,yy+wave,pt.x+spread+lean*q,yy-wave*.35);ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(91,223,255,.80)';ctx.lineWidth=Math.max(1.1,1.7*pt.scale);
+    ctx.beginPath();ctx.ellipse(pt.x+lean*.72,bottomY-size*.03,bottomHalf*.98,size*.14,Math.sin(phase*.55)*.07,0,Math.PI*2);ctx.stroke();
+    ctx.restore();motionDraws++;
+  }
+  function runtimeSafeJoyX(){
+    const knob=knobElement();if(!knob)return 0;const tr=knob.style.transform||'';const m=tr.match(/translate\(([-0-9.]+)px/);return m?Number(m[1])/30:0;
+  }
+
   // Native enemy ticking normally decays pausedT. If another bridge suppresses that tick while
   // Dark Monastery owns movement, do not let a one-frame hit-pause become a permanent freeze.
-  // Only intervene after the value has remained unchanged for >100ms, so native stun timing stays
-  // authoritative whenever it is actually advancing.
   function recoverStalledPauseTimers(dt){
     const api=window.__TTD_DARK_MONASTERY_API_V1;if(!api)return;
     for(const actor of api.actors||[]){
@@ -185,12 +256,32 @@
     }
   }
 
+  // A native Adventure owner can momentarily flip state.running false when the roaming player's HP
+  // changes, because that field historically represented tower lives. Dark Monastery owns player HP.
+  // Recover ONLY in the short window immediately following HP loss, and only while the player is
+  // alive, the encounter is unfinished, and the game screen is still actually open. Manual pause/
+  // navigation therefore remains untouched.
+  function recoverPlayerDamageFreeze(now){
+    if(!dmStageActive())return;
+    const hp=Number(state?.lives);if(Number.isFinite(hp)){
+      if(lastPlayerHp!=null&&hp<lastPlayerHp)damageRecoveryUntil=now+1200;
+      lastPlayerHp=hp;
+    }
+    if(now>damageRecoveryUntil||state?.running!==false||!gameScreenVisible()||!(hp>0))return;
+    const actors=window.__TTD_DARK_MONASTERY_API_V1?.actors||[];
+    const encounterDone=actors.length>=4&&actors.every(a=>a?.finalDead);
+    if(encounterDone)return;
+    state.running=true;state.__ttdDMNoWipeout=true;playerRunRecoveries++;
+  }
+
   function compatFrame(ts){
     const dt=compatLastTs?clamp((ts-compatLastTs)/1000,0,.05):0;compatLastTs=ts;
-    if(dmActive()){
-      syncActorLabels();recoverStalledPauseTimers(dt);
+    if(dmStageActive()&&gameScreenVisible()){
+      recoverPlayerDamageFreeze(ts);syncActorLabels();recoverStalledPauseTimers(dt);drawRunMotion(ts,dt);
     }else{
-      activePointer=null;activeTouch=null;releaseMovement();if(enemyLabels.size||document.getElementById('ttdDarkMonasteryEnemyLabelsV4'))clearLabels();
+      activePointer=null;activeTouch=null;releaseMovement();lastPlayerHp=null;damageRecoveryUntil=0;
+      if(enemyLabels.size||document.getElementById('ttdDarkMonasteryEnemyLabelsV4'))clearLabels();
+      if(motionCanvas)removeMotionCanvas();
     }
     requestAnimationFrame(compatFrame);
   }
@@ -199,12 +290,15 @@
   normalizeAdventureEntry();
 
   window.__TTD_DARK_MONASTERY_ENTRY_V3_API=Object.freeze({
-    version:4,
-    build:'mobile-input-proxy-visual-v4-release',
+    version:5,
+    build:'player-hit-motion-v5-release',
     id:DM_ID,
     normalizeAdventureEntry,
     startDarkMonastery,
     get proxyFilterPasses(){return proxyFilterPasses;},
+    get playerRunRecoveries(){return playerRunRecoveries;},
+    get motionDraws(){return motionDraws;},
+    get motionCanvas(){return motionCanvas;},
     get adventure(){return ADVENTURES?.[DM_ID]||null;},
   });
 })();
