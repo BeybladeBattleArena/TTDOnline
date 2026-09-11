@@ -28,6 +28,9 @@
     // The legacy online sell override only knows keys/cards/jewels. Load this after final item
     // wrappers so trusted server-backed items can use their own authoritative onSell route.
     '/online/server-item-sell-bridge-v1.js?v=1',
+    // Dark Monastery is a contained roaming-Adventure runtime: it adds the Adventure entry,
+    // free-roam player body/HP, monster AI, pseudo-3D room presentation, and size-aware body collision.
+    '/online/dark-monastery-v1.js?v=1',
     // Moving Screen stays direct committed source: stages -> engine -> map router -> visual route
     // UI -> Die-first gesture authority -> topology gestures -> map art -> bottom battle HUD.
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
