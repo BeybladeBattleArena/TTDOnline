@@ -2,7 +2,7 @@
   'use strict';
   if(window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2)return;
   window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2=true;
-  window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_BUILD='published-runtime-entry-v3';
+  window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_BUILD='repeat-runtime-readiness-v4';
 
   const DM_ID='dark_monastery';
   const priorStartAdventure=startAdventure;
@@ -28,9 +28,21 @@
   }
 
   function runtimeReallyActive(){
-    // V1's public `active` getter reports isDM(), which becomes true before activate() creates the
-    // roaming runtime. A player object is the reliable readiness boundary for room/joystick/HP.
-    return !!window.__TTD_DARK_MONASTERY_API_V1?.player;
+    // V1 deliberately keeps its last player object in its private runtime when leaving the game.
+    // A player reference by itself therefore becomes stale after run #1. Readiness now requires the
+    // current state to be Dark Monastery AND the live roaming DOM that activate() creates.
+    const api=window.__TTD_DARK_MONASTERY_API_V1;
+    const game=document.getElementById('gameScreen');
+    return !!(
+      state?.__ttdDarkMonastery &&
+      isDarkMonasteryStage() &&
+      api?.active &&
+      api?.player &&
+      game?.classList.contains('ttd-dark-monastery-v1') &&
+      document.getElementById('ttdDarkMonasteryBackV1') &&
+      document.getElementById('ttdDarkMonasteryFrontV1') &&
+      document.getElementById('ttdDarkMonasteryJoyV1')
+    );
   }
 
   function repairHud(){
@@ -49,7 +61,7 @@
     armBeforeFirstFrame();
 
     // V1 activation creates the player, room, collisions and joystick. Keep the native clear hold
-    // armed until the actual roaming player exists, rather than merely until the stage flag exists.
+    // armed until THIS RUN'S room DOM exists; never accept the stale player left by a prior run.
     let frames=0;
     const settle=()=>{
       if(!state?.__ttdDarkMonastery || !isDarkMonasteryStage())return;
@@ -71,7 +83,7 @@
 
   window.__TTD_DARK_MONASTERY_ENTRY_HOTFIX_V2_API=Object.freeze({
     version:2,
-    build:'published-runtime-entry-v3',
+    build:'repeat-runtime-readiness-v4',
     armBeforeFirstFrame,
     repairHud,
     runtimeReallyActive,
