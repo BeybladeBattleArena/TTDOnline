@@ -13,6 +13,7 @@
 
   let activeState=null;
   let sawIntroHold=false;
+  let introReleaseConsumed=false;
   let runStartedAt=0;
   let metersVisible=false;
   let lastModeText='';
@@ -108,13 +109,21 @@
   }
 
   function resetForState(next,now){
-    activeState=next;sawIntroHold=next?.__ttdMissionIntroHold===true;runStartedAt=now;locationRevealUntil=0;lastModeText=String(document.getElementById('modeLabel')?.textContent||'').trim();showLocation();
+    activeState=next;
+    sawIntroHold=next?.__ttdMissionIntroHold===true;
+    introReleaseConsumed=false;
+    runStartedAt=now;
+    locationRevealUntil=0;
+    lastModeText=String(document.getElementById('modeLabel')?.textContent||'').trim();
+    showLocation();
   }
   function handleAreaNameChange(now,text){
     if(!activeState||!text||text===lastModeText)return;
     lastModeText=text;
     if(metersVisible&&activeState.running&&!activeState.__ttdMissionIntroHold){
-      showLocation();locationRevealUntil=now+AREA_REVEAL_MS;areaReveals++;
+      showLocation();
+      locationRevealUntil=now+AREA_REVEAL_MS;
+      areaReveals++;
     }
   }
 
@@ -123,20 +132,40 @@
     const s=window.state;
     if(!slot){setTimeout(tick,80);return;}
     paintMeters();
-    if(!game?.classList.contains('active')||!s){activeState=null;sawIntroHold=false;locationRevealUntil=0;showLocation();setTimeout(tick,80);return;}
+    if(!game?.classList.contains('active')||!s){
+      activeState=null;sawIntroHold=false;introReleaseConsumed=false;locationRevealUntil=0;showLocation();setTimeout(tick,80);return;
+    }
     if(s!==activeState)resetForState(s,now);
-    const text=String(document.getElementById('modeLabel')?.textContent||'').trim();handleAreaNameChange(now,text);
-    if(s.__ttdMissionIntroHold===true){sawIntroHold=true;locationRevealUntil=0;if(metersVisible)showLocation();}
+    const text=String(document.getElementById('modeLabel')?.textContent||'').trim();
+    handleAreaNameChange(now,text);
+    if(s.__ttdMissionIntroHold===true){
+      sawIntroHold=true;
+      introReleaseConsumed=false;
+      locationRevealUntil=0;
+      if(metersVisible)showLocation();
+    }
     const startVisible=startWordVisible();
-    if(startVisible||sawIntroHold&&s.__ttdMissionIntroHold!==true){locationRevealUntil=0;showMeters();}
-    else if(locationRevealUntil>0&&now>=locationRevealUntil){locationRevealUntil=0;showMeters();}
-    else if(!metersVisible&&s.running&&now-runStartedAt>=FALLBACK_TRANSITION_MS){showMeters();}
+    const introReleased=sawIntroHold&&s.__ttdMissionIntroHold!==true&&!introReleaseConsumed;
+    if(startVisible){
+      introReleaseConsumed=true;
+      locationRevealUntil=0;
+      showMeters();
+    }else if(introReleased){
+      introReleaseConsumed=true;
+      locationRevealUntil=0;
+      showMeters();
+    }else if(locationRevealUntil>0&&now>=locationRevealUntil){
+      locationRevealUntil=0;
+      showMeters();
+    }else if(!metersVisible&&locationRevealUntil===0&&s.running&&now-runStartedAt>=FALLBACK_TRANSITION_MS){
+      showMeters();
+    }
     setTimeout(tick,80);
   }
 
   window.__TTD_GAMEPLAY_RESOURCE_HEADER_V1_API=Object.freeze({
-    version:1,
-    build:'location-to-hp-dp-drive-v1',
+    version:2,
+    build:'location-to-hp-dp-drive-v2',
     get activeState(){return activeState;},
     get metersVisible(){return metersVisible;},
     get startTransitions(){return startTransitions;},
