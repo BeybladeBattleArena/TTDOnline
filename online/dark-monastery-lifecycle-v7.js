@@ -63,7 +63,10 @@
     const current=target.adventureStage||target.adventureStages?.[idx]||null;
     const wasDark=!!(target.__ttdDarkMonastery||current===canonicalStage||current?.darkMonastery);
     if(!wasDark)return false;
-    const detached=current?{...current}:null;
+    // The detached copy intentionally loses the marker too. The entry hotfix detects Dark Monastery
+    // semantically, so leaving darkMonastery:true on the stale copy would let it re-arm the old run
+    // while the server request is still pending even though strict stage identity was already broken.
+    const detached=current?{...current,darkMonastery:false}:null;
     if(detached)target.adventureStage=detached;
     if(Array.isArray(target.adventureStages)){
       const stages=target.adventureStages.slice();
