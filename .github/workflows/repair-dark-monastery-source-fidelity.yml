@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: firebase-production-deploy
+  group: dark-monastery-source-fidelity-repair
   cancel-in-progress: false
 
 jobs:
