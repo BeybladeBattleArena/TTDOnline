@@ -1,5 +1,5 @@
 {
-  "release": "2026-09-12-shared-gameplay-resource-header-v5c",
+  "release": "2026-09-12-shared-gameplay-resource-header-v5d",
   "includes": [
     "use the existing gold gameplay title slot as the shared location/mode intro across gameplay",
     "crossfade that title slot into compact HP, DP, and Drive bars as START appears, before the START presentation finishes",
@@ -9,6 +9,6 @@
     "render meter fill spans as block elements so their percentage widths paint reliably on mobile browsers",
     "briefly resurface a new area name when gameplay changes location, then return to the resource bars",
     "make the shared title/resource slot authoritative even inside custom gameplay shells that hide ordinary HUD children with !important rules",
-    "gate production with browser coverage for visible HP/DP fills, empty-to-growing Drive fill, START crossfade, area-name resurfacing, Moving Screen visibility, and a second gameplay run"
+    "gate production with browser coverage for visible HP/DP fills, Drive percentage updates, START crossfade, area-name resurfacing, Moving Screen visibility, and a second gameplay run"
   ]
 }
