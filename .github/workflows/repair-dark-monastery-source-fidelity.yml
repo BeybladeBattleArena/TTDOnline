@@ -1,0 +1,151 @@
+name: Repair and Deploy Dark Monastery Source Fidelity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repair-dark-monastery-source-fidelity.yml'
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: firebase-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  repair-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Repair Dark Monastery bundle encoding and bump cache key
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const zlib=require('zlib');
+          const runtimePath='online/dark-monastery-adventure-v2.js';
+          let text=fs.readFileSync(runtimePath,'utf8');
+
+          // The prior release candidate accidentally stored pairs of the intended UTF-8 bytes
+          // as Unicode code points (for example "((" became U+2828). Restore those pairs.
+          if(!text.startsWith('(() => {')){
+            const bytes=[];
+            for(const ch of text){
+              const cp=ch.codePointAt(0);
+              if(cp>0xffff)throw new Error(`Unexpected supplementary code point U+${cp.toString(16)} in malformed bundle.`);
+              bytes.push((cp>>>8)&0xff,cp&0xff);
+            }
+            while(bytes.length&&bytes[bytes.length-1]===0)bytes.pop();
+            text=Buffer.from(bytes).toString('utf8');
+          }
+          if(!text.startsWith('(() => {'))throw new Error('Dark Monastery bundle did not restore to JavaScript text.');
+          new Function(text);
+
+          const match=text.match(/const payload\s*=([\s\S]*?);\s*window\.__TTD_DARK_MONASTERY_V2_READY/);
+          if(!match)throw new Error('Dark Monastery payload expression is missing after repair.');
+          const payload=Function(`"use strict"; return (${match[1]});`)();
+          const source=zlib.gunzipSync(Buffer.from(payload,'base64')).toString('utf8');
+          new Function(source);
+          const required=[
+            "const CAMERA_ZOOM=1.15",
+            "const GUILLOTINE_APEX_HOLD=.375",
+            "visualRevision:'source-fidelity-v3'",
+            "northWallBrokenStair:true",
+            "official-eight-room-map-v3-source-fidelity",
+          ];
+          for(const marker of required)if(!source.includes(marker))throw new Error(`Repaired Dark Monastery source is missing: ${marker}`);
+          fs.writeFileSync(runtimePath,text,'utf8');
+
+          const loaderPath='online/runtime-bridge-loader-v1.js';
+          let loader=fs.readFileSync(loaderPath,'utf8');
+          if(loader.includes('/online/dark-monastery-adventure-v2.js?v=2')){
+            loader=loader.replace('/online/dark-monastery-adventure-v2.js?v=2','/online/dark-monastery-adventure-v2.js?v=3');
+          }else if(!loader.includes('/online/dark-monastery-adventure-v2.js?v=3')){
+            throw new Error('Could not find the Dark Monastery bridge cache key to bump.');
+          }
+          fs.writeFileSync(loaderPath,loader,'utf8');
+
+          // This workflow is intentionally one-shot; keep the finished release tree clean.
+          fs.rmSync('.github/workflows/repair-dark-monastery-source-fidelity.yml');
+          console.log(`Repaired bundle: ${text.length} UTF-8 chars; source payload: ${source.length} chars.`);
+          NODE
+
+      - name: Install hosting toolchain
+        run: npm install
+
+      - name: Validate source-fidelity Dark Monastery and deployable client
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-gameplay-resource-header-v1.mjs
+          node scripts/check-dark-monastery-map-v2.mjs
+          node scripts/check-dark-monastery-v1.mjs
+          node scripts/check-dark-monastery-online-repeat-v1.mjs
+          node scripts/check-dark-monastery-longrun-v1.mjs
+          npm run check:hosting
+
+      - name: Commit exact repaired release source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'BeybladeBattleArena'
+          git config user.email 'stepmaniaredditrequests@gmail.com'
+          git add -A
+          git commit -m '[release] Repair Dark Monastery bundle and ship source fidelity'
+          git push origin HEAD:main
+          echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Committed repaired production candidate $(git rev-parse HEAD)"
+
+      - name: Verify committed source tree is clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- .
+          [[ -z "$(git status --porcelain --untracked-files=no)" ]] || { git status --short; exit 1; }
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ttd-online-b8c0f
+          workload_identity_provider: projects/761371312112/locations/global/workloadIdentityPools/github-actions/providers/ttd-online
+          service_account: github-firebase-deployer@ttd-online-b8c0f.iam.gserviceaccount.com
+
+      - name: Stamp exact production build
+        run: |
+          printf '{"commit":"%s","ref":"main","builtAt":"%s"}\n' "$DEPLOY_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build.json
+
+      - name: Deploy Hosting
+        run: npx firebase-tools deploy --only hosting --project ttd-online-b8c0f --non-interactive --force
+
+      - name: Verify exact repaired commit is live
+        env:
+          LIVE_URL: https://ttd-online-b8c0f.web.app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            body="$(curl -fsS -H 'Cache-Control: no-cache, no-store' "$LIVE_URL/build.json?verify=$DEPLOY_SHA-$attempt" || true)"
+            if [[ "$body" == *"\"commit\":\"$DEPLOY_SHA\""* ]]; then
+              echo "Verified production Hosting commit $DEPLOY_SHA"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Production verification failed: Hosting is not serving $DEPLOY_SHA"
+          exit 1
+
+      - name: Verify critical production assets
+        env:
+          LIVE_URL: https://ttd-online-b8c0f.web.app
+        run: bash scripts/smoke-hosting-png-v34.sh
