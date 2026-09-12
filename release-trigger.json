@@ -1,10 +1,10 @@
 {
-  "release": "2026-09-11-dark-monastery-real-repeat-reentry-v8",
+  "release": "2026-09-11-dark-monastery-deferred-online-repeat-v9",
   "includes": [
-    "force known Dark Monastery starts back onto the original roaming stage object before V1 checks stage identity",
-    "recover once through the preserved roaming starter if a later Adventure wrapper bypasses V1",
-    "require live room canvases and joystick rather than a stale prior-run player object for runtime readiness",
-    "regression-test a second run whose Adventure stage is rebuilt as a fresh object with its Dark Monastery marker stripped",
-    "preserve START gameplay lock, pseudo-3D presentation, targetable monster proxies, positive damage numbers, and the half-size running effect"
+    "fix the real Online-mode race where run #2 could re-bind Dark Monastery to the completed prior state before the server returned the new run state",
+    "detach the stale completed Dark Monastery state while the online run-begin request is pending so V1 keeps waiting for the fresh state",
+    "re-anchor only the newly created run state to the canonical roaming stage and arm the native-clear hold before ordinary TD can take ownership",
+    "remove duplicate recovery-start behavior that could request another online run while a server start was already pending",
+    "add a browser regression that mirrors the real deferred online starter, leaves the first run state in memory, rebuilds the second stage object, and proves the second run still creates a new pseudo-3D room, player, joystick, and canvases"
   ]
 }
