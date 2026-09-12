@@ -37,6 +37,12 @@ jobs:
           const zlib=require('zlib');
           const parts=[];
           for(let i=0;i<6;i++)parts.push(fs.readFileSync(`.dm-repair/dark-monastery-v3.part${i}.b64`,'utf8').trim());
+          for(const i of [1,3]){
+            for(let j=0;j<9;j++){
+              const block=parts[i].slice(j*1000,(j+1)*1000);
+              console.log(`DMCHUNK part=${i} block=${j} len=${block.length} sha256=${crypto.createHash('sha256').update(block).digest('hex')}`);
+            }
+          }
           const text=Buffer.from(parts.join(''),'base64').toString('utf8');
           const digest=crypto.createHash('sha256').update(text).digest('hex');
           if(digest!=='2badecdcb40c98d846cb198462995aee75ad028ab6aa28a37db497fd8d1b75d7')throw new Error(`Assembled Dark Monastery bundle hash mismatch: ${digest}`);
