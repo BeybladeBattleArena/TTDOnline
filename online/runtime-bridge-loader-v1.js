@@ -22,9 +22,7 @@
     '/online/avatar-inventory-v22.js?v=22',
     '/online/world-items-v1.js?v=1',
     '/online/server-item-sell-bridge-v1.js?v=1',
-    '/online/dark-monastery-v1.js?v=3',
-    '/online/dark-monastery-presentation-v2.js?v=2',
-    '/online/dark-monastery-entry-hotfix-v2.js?v=3',
+    '/online/dark-monastery-adventure-v2.js?v=1',
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
     '/online/moving-screen-construction-climb-v1.js?v=2',
     '/online/moving-screen-engine-v5.js?v=2',
@@ -51,9 +49,7 @@
     preloadBridges();
     for(let i=0;i<BRIDGES.length;i++){const bridge=BRIDGES[i],ok=await loadBridge(bridge);if(!ok)continue;try{if(i===0)installCatalogBattleHooks();else if(i===2)installSlitherBattleHooks();}catch(error){report(bridge,error);}}
     try{await window.__TTD_RUN_UI_EXTENSIONS_READY;}catch(error){report('/online/run-ui-bridge-v21.js',error);}
-    await loadBridge('/online/dark-monastery-entry-v3.js?v=1');
-    await loadBridge('/online/dark-monastery-runtime-guard-v6.js?v=2');
-    await loadBridge('/online/dark-monastery-lifecycle-v7.js?v=5');
+    try{if(window.__TTD_DARK_MONASTERY_V2_READY)await window.__TTD_DARK_MONASTERY_V2_READY;}catch(error){report('/online/dark-monastery-adventure-v2.js',error);}
     window.__TTD_MARK_BRIDGES_READY?.();
   }
   boot().catch((error)=>{report('/online/runtime-bridge-loader-v1.js',error,'bridge-loader-error');window.__TTD_MARK_BRIDGES_READY?.();});
