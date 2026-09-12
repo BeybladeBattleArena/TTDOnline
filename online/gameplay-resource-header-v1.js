@@ -28,6 +28,7 @@
     #gameScreen.ttd-gameplay-resource-header-v1 .hud-left{flex:1 1 auto;min-width:0;}
     #gameScreen.ttd-gameplay-resource-header-v1 .hud-stats{flex:0 0 auto;}
     #${SLOT_ID}{position:relative;flex:1 1 250px;min-width:150px;max-width:350px;height:44px;overflow:hidden;}
+    #gameScreen.ttd-moving-screen-v4 .hud-left>#${SLOT_ID}{display:block!important;}
     #${SLOT_ID}>#modeLabel{position:absolute;inset:0;display:flex;align-items:center;min-width:0;max-width:100%;line-height:1.16;white-space:normal;overflow:hidden;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .30s ease;}
     #${METERS_ID}{position:absolute;inset:0;display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:2px;opacity:0;transform:translateY(4px);transition:opacity .28s ease,transform .30s ease;pointer-events:none;}
     #${SLOT_ID}.meters-on>#modeLabel{opacity:0;transform:translateY(-5px);}
@@ -164,8 +165,8 @@
   }
 
   window.__TTD_GAMEPLAY_RESOURCE_HEADER_V1_API=Object.freeze({
-    version:2,
-    build:'location-to-hp-dp-drive-v2',
+    version:3,
+    build:'location-to-hp-dp-drive-v3',
     get activeState(){return activeState;},
     get metersVisible(){return metersVisible;},
     get startTransitions(){return startTransitions;},
