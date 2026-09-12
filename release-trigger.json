@@ -1,10 +1,10 @@
 {
-  "release": "2026-09-11-dark-monastery-deferred-online-repeat-v9",
+  "release": "2026-09-11-dark-monastery-deferred-online-repeat-v9b",
   "includes": [
     "fix the real Online-mode race where run #2 could re-bind Dark Monastery to the completed prior state before the server returned the new run state",
-    "detach the stale completed Dark Monastery state while the online run-begin request is pending so V1 keeps waiting for the fresh state",
+    "detach the completed prior Dark Monastery state from both canonical stage identity and the Dark Monastery marker while the server run-begin request is pending",
     "re-anchor only the newly created run state to the canonical roaming stage and arm the native-clear hold before ordinary TD can take ownership",
     "remove duplicate recovery-start behavior that could request another online run while a server start was already pending",
-    "add a browser regression that mirrors the real deferred online starter, leaves the first run state in memory, rebuilds the second stage object, and proves the second run still creates a new pseudo-3D room, player, joystick, and canvases"
+    "run a dedicated deferred-online browser regression that leaves the first run state in memory, delays the second native state like the real server ticket path, rebuilds that second stage object, and requires a fresh pseudo-3D room, player, joystick, and canvases"
   ]
 }
