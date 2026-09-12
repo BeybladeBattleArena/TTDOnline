@@ -5,17 +5,16 @@
 
   const DM_ID='dark_monastery';
   const START_FADE_LOCK_MS=1220;
+  const START_WAIT_MS=22000;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const priorStartAdventure=startAdventure;
   const priorStartAdventureCampaign=startAdventureCampaign;
-  // This is V1's exact private DM_STAGE object at boot. Keep it for the whole page session. Native
-  // result/re-entry flows are allowed to rebuild or clone Adventure state later, but V1 originally
-  // used strict object identity. Re-anchoring to this object before V1's queued bind frame makes
-  // every run equivalent to the first run instead of depending on how the result screen rebuilt it.
+  // This is V1's exact private DM_STAGE object at boot. Keep it for the whole page session.
   const canonicalStage=ADVENTURES?.[DM_ID]?.stages?.[0]||null;
+  const HOLD=Object.freeze({__ttdDarkMonasteryHold:true,__ttdDarkMonasteryLifecycle:true});
 
   let runState=null,introSeen=false,releaseAt=0,released=true,lastTs=0,startLocks=0,repeatArms=0,runCount=0;
-  let forcedArms=0,recoveryStarts=0;
+  let forcedArms=0,recoveryStarts=0,staleDetaches=0,deferredTransitions=0,pendingPreviousState=null;
   let motionCanvas=null,motionCtx=null,motionLastX=null,motionLastZ=null,motionStrength=0,smallMotionDraws=0;
 
   const style=document.createElement('style');
@@ -44,13 +43,45 @@
   function blockLockedTouch(ev){if(!lockConsumesInput())return;const touches=[...(ev.changedTouches||[]),...(ev.touches||[])];if(!touches.some(t=>pointInsideJoy(t.clientX,t.clientY)))return;ev.preventDefault();ev.stopImmediatePropagation?.();ev.stopPropagation();}
   for(const type of ['touchstart','touchmove','touchend','touchcancel'])window.addEventListener(type,blockLockedTouch,{capture:true,passive:false});
 
+  function ensureNativeHold(target=state){
+    if(!target)return;
+    if(!Array.isArray(target.spawnQueue)||!target.spawnQueue.some(entry=>entry?.__ttdDarkMonasteryHold))target.spawnQueue=[HOLD];
+    target.spawnTimer=999;
+    target.waveClearedAt=0;
+    target.waveClearCredited=false;
+  }
+
+  // Online Adventure starts are asynchronous: the click first asks the server for a run ticket and
+  // the native state object is created only after that reply. On run #2+, the old Dark Monastery
+  // state is still sitting in `state` while that request is in flight. V1's original bind loop used
+  // only `state.adventureStage===DM_STAGE`, so it could instantly re-bind to that OLD state, stop
+  // waiting, and then miss the fresh native state when the server reply arrived. That exact race is
+  // why the first run worked and every later run fell back to ordinary green top-down TD.
+  function detachPriorRunState(target){
+    if(!target||!target.adventure)return false;
+    const idx=Number(target.adventureStageIdx)||0;
+    const current=target.adventureStage||target.adventureStages?.[idx]||null;
+    const wasDark=!!(target.__ttdDarkMonastery||current===canonicalStage||current?.darkMonastery);
+    if(!wasDark)return false;
+    const detached=current?{...current}:null;
+    if(detached)target.adventureStage=detached;
+    if(Array.isArray(target.adventureStages)){
+      const stages=target.adventureStages.slice();
+      if(detached)stages[idx]=detached;
+      target.adventureStages=stages;
+    }
+    target.__ttdDarkMonastery=false;
+    target.__ttdDMNoWipeout=false;
+    target.__ttdDMGameplayLock=false;
+    target.__ttdDMStartReleased=true;
+    staleDetaches++;
+    return true;
+  }
+
   function armCurrentState(force=false){
     if(!state)return false;
     const stage=canonicalStage||ADVENTURES?.[DM_ID]?.stages?.[0];if(!stage)return false;
     const semanticallyDM=!!(state.adventureStage?.darkMonastery||state.adventureStages?.[state.adventureStageIdx||0]?.darkMonastery||state.__ttdDarkMonastery);
-    // When this function is called directly from a known Dark Monastery start, force=true is safe
-    // and important: real post-result flows can hand us a rebuilt stage object with the marker
-    // stripped. The old test reused the same object and therefore missed the production failure.
     if(!force&&!semanticallyDM)return false;
     if(!state.adventure)return false;
     stage.darkMonastery=true;
@@ -59,57 +90,59 @@
     state.adventureStageIdx=0;
     state.__ttdDarkMonastery=true;
     state.__ttdDMNoWipeout=true;
+    ensureNativeHold(state);
     if(force)forcedArms++;
     repeatArms++;
     return true;
   }
   function resetRunLifecycle(nextState){runState=nextState;runCount++;introSeen=false;releaseAt=0;released=true;motionLastX=motionLastZ=null;motionStrength=0;if(state){state.__ttdDMGameplayLock=false;state.__ttdDMStartReleased=true;}}
 
-  function afterDarkStart(diffKey){
+  function afterDarkStart(previousState){
     normalizeCatalog();
     const started=performance.now();
-    let observedState=state;
-    let frames=0;
-    let recoveryUsed=false;
-    // Do this synchronously. V1's own starter waits until the next RAF to compare its private
-    // DM_STAGE by identity; re-anchoring here means that comparison succeeds even on run #2+.
-    if(state){armCurrentState(true);if(state!==runState)resetRunLifecycle(state);}
+    let acceptedState=null;
+    pendingPreviousState=previousState||null;
+
+    const acceptFreshState=()=>{
+      if(!state||state===previousState)return false;
+      if(state!==acceptedState){acceptedState=state;deferredTransitions++;}
+      armCurrentState(true);
+      if(state!==runState)resetRunLifecycle(state);
+      return runtimeReady();
+    };
+
+    // Offline/direct starts replace `state` synchronously. Online starts normally do not.
+    if(acceptFreshState()){pendingPreviousState=null;return;}
+
     const settle=()=>{
-      if(!state||performance.now()-started>5000)return;
-      if(state!==observedState){observedState=state;armCurrentState(true);if(state!==runState)resetRunLifecycle(state);}
-      else armCurrentState(true);
-      if(runtimeReady())return;
-      // If some later wrapper bypassed V1 entirely, use the preserved V2 function object, which
-      // closes directly over V1's roaming starter. This is a one-shot recovery for this requested
-      // Dark Monastery start, not a polling restart loop.
-      if(!recoveryUsed&&++frames>=12){
-        const dmStart=window.__TTD_DARK_MONASTERY_START_V2;
-        if(typeof dmStart==='function'){
-          recoveryUsed=true;recoveryStarts++;
-          try{
-            normalizeCatalog();
-            dmStart.call(window,DM_ID,0,diffKey);
-            observedState=state;
-            armCurrentState(true);
-            if(state!==runState)resetRunLifecycle(state);
-          }catch(error){console.error('Dark Monastery repeat-run recovery start failed.',error);}
-        }
-      }
+      if(performance.now()-started>START_WAIT_MS){pendingPreviousState=null;return;}
+      if(!state||state===previousState){requestAnimationFrame(settle);return;}
+      acceptFreshState();
+      if(runtimeReady()){pendingPreviousState=null;return;}
+      // Keep the fresh state canonical while V1's already-running bind loop gets its next frame.
+      // Do NOT call the preserved starter again here: in Online mode that would request a second
+      // server run ticket and is exactly the kind of duplicate-start race we want to avoid.
       requestAnimationFrame(settle);
     };
     requestAnimationFrame(settle);
   }
 
-  startAdventure=function DarkMonasteryRepeatSafeStageStartV7(advId,stageIdx,diffKey){
-    if(advId===DM_ID)normalizeCatalog();
+  startAdventure=function DarkMonasteryRepeatSafeStageStartV9(advId,stageIdx,diffKey){
+    if(advId!==DM_ID)return priorStartAdventure.apply(this,arguments);
+    normalizeCatalog();
+    const previousState=state;
+    detachPriorRunState(previousState);
     const result=priorStartAdventure.apply(this,arguments);
-    if(advId===DM_ID)afterDarkStart(diffKey);
+    afterDarkStart(previousState);
     return result;
   };
-  startAdventureCampaign=function DarkMonasteryRepeatSafeCampaignStartV7(advId,diffKey){
-    if(advId===DM_ID)normalizeCatalog();
+  startAdventureCampaign=function DarkMonasteryRepeatSafeCampaignStartV9(advId,diffKey){
+    if(advId!==DM_ID)return priorStartAdventureCampaign.apply(this,arguments);
+    normalizeCatalog();
+    const previousState=state;
+    detachPriorRunState(previousState);
     const result=priorStartAdventureCampaign.apply(this,arguments);
-    if(advId===DM_ID)afterDarkStart(diffKey);
+    afterDarkStart(previousState);
     return result;
   };
 
@@ -124,5 +157,5 @@
 
   function tick(ts){const dt=lastTs?clamp((ts-lastTs)/1000,0,.05):0;lastTs=ts;normalizeCatalog();if(stageActive()&&gameVisible()){if(state!==runState)resetRunLifecycle(state);armCurrentState(false);updateStartGate(ts);drawSmallRunMotion(ts,dt);}else{if(runState&&state!==runState)runState=null;if(motionCanvas)removeMotionCanvas();}requestAnimationFrame(tick);}
   requestAnimationFrame(tick);normalizeCatalog();
-  window.__TTD_DARK_MONASTERY_LIFECYCLE_V7_API=Object.freeze({version:8,build:'real-repeat-reentry-v8',id:DM_ID,get startLocks(){return startLocks;},get repeatArms(){return repeatArms;},get forcedArms(){return forcedArms;},get recoveryStarts(){return recoveryStarts;},get runCount(){return runCount;},get smallMotionDraws(){return smallMotionDraws;},get gameplayLocked(){return !!state?.__ttdDMGameplayLock;},get runtimeReady(){return runtimeReady();},normalizeCatalog,armCurrentState});
+  window.__TTD_DARK_MONASTERY_LIFECYCLE_V7_API=Object.freeze({version:9,build:'deferred-online-reentry-v9',id:DM_ID,get startLocks(){return startLocks;},get repeatArms(){return repeatArms;},get forcedArms(){return forcedArms;},get recoveryStarts(){return recoveryStarts;},get staleDetaches(){return staleDetaches;},get deferredTransitions(){return deferredTransitions;},get waitingForFreshState(){return !!pendingPreviousState&&state===pendingPreviousState;},get runCount(){return runCount;},get smallMotionDraws(){return smallMotionDraws;},get gameplayLocked(){return !!state?.__ttdDMGameplayLock;},get runtimeReady(){return runtimeReady();},normalizeCatalog,armCurrentState,detachPriorRunState});
 })();
