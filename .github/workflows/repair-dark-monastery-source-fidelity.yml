@@ -27,33 +27,23 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Repair Dark Monastery bundle encoding and bump cache key
+      - name: Assemble exact Dark Monastery source-fidelity bundle
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs=require('fs');
+          const crypto=require('crypto');
           const zlib=require('zlib');
-          const runtimePath='online/dark-monastery-adventure-v2.js';
-          let text=fs.readFileSync(runtimePath,'utf8');
-
-          // The prior release candidate accidentally stored pairs of the intended UTF-8 bytes
-          // as Unicode code points (for example "((" became U+2828). Restore those pairs.
-          if(!text.startsWith('(() => {')){
-            const bytes=[];
-            for(const ch of text){
-              const cp=ch.codePointAt(0);
-              if(cp>0xffff)throw new Error(`Unexpected supplementary code point U+${cp.toString(16)} in malformed bundle.`);
-              bytes.push((cp>>>8)&0xff,cp&0xff);
-            }
-            while(bytes.length&&bytes[bytes.length-1]===0)bytes.pop();
-            text=Buffer.from(bytes).toString('utf8');
-          }
-          if(!text.startsWith('(() => {'))throw new Error('Dark Monastery bundle did not restore to JavaScript text.');
+          const parts=[];
+          for(let i=0;i<6;i++)parts.push(fs.readFileSync(`.dm-repair/dark-monastery-v3.part${i}.b64`,'utf8').trim());
+          const text=Buffer.from(parts.join(''),'base64').toString('utf8');
+          const digest=crypto.createHash('sha256').update(text).digest('hex');
+          if(digest!=='2badecdcb40c98d846cb198462995aee75ad028ab6aa28a37db497fd8d1b75d7')throw new Error(`Assembled Dark Monastery bundle hash mismatch: ${digest}`);
+          if(!text.startsWith('(() => {'))throw new Error('Assembled Dark Monastery bundle is not JavaScript text.');
           new Function(text);
-
           const match=text.match(/const payload\s*=([\s\S]*?);\s*window\.__TTD_DARK_MONASTERY_V2_READY/);
-          if(!match)throw new Error('Dark Monastery payload expression is missing after repair.');
+          if(!match)throw new Error('Dark Monastery payload expression is missing.');
           const payload=Function(`"use strict"; return (${match[1]});`)();
           const source=zlib.gunzipSync(Buffer.from(payload,'base64')).toString('utf8');
           new Function(source);
@@ -64,8 +54,8 @@ jobs:
             "northWallBrokenStair:true",
             "official-eight-room-map-v3-source-fidelity",
           ];
-          for(const marker of required)if(!source.includes(marker))throw new Error(`Repaired Dark Monastery source is missing: ${marker}`);
-          fs.writeFileSync(runtimePath,text,'utf8');
+          for(const marker of required)if(!source.includes(marker))throw new Error(`Dark Monastery source is missing: ${marker}`);
+          fs.writeFileSync('online/dark-monastery-adventure-v2.js',text,'utf8');
 
           const loaderPath='online/runtime-bridge-loader-v1.js';
           let loader=fs.readFileSync(loaderPath,'utf8');
@@ -76,9 +66,9 @@ jobs:
           }
           fs.writeFileSync(loaderPath,loader,'utf8');
 
-          // This workflow is intentionally one-shot; keep the finished release tree clean.
+          fs.rmSync('.dm-repair',{recursive:true,force:true});
           fs.rmSync('.github/workflows/repair-dark-monastery-source-fidelity.yml');
-          console.log(`Repaired bundle: ${text.length} UTF-8 chars; source payload: ${source.length} chars.`);
+          console.log(`Assembled exact bundle ${digest}; source payload ${source.length} chars.`);
           NODE
 
       - name: Install hosting toolchain
