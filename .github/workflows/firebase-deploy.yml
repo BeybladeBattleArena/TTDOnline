@@ -114,7 +114,7 @@ jobs:
             echo "- Commit: \`$DEPLOY_SHA\`"
             echo '- Source mutation: none'
             echo '- Shared gameplay location-to-resource header smoke: passed'
-            echo '- Dark Monastery official eight-room map smoke: passed'
+            echo '- Dark Monastery source-fidelity eight-room map smoke: passed'
             echo '- Dark Monastery startup browser smoke: passed'
             echo '- Dark Monastery deferred online repeat-run smoke: passed'
             echo '- Dark Monastery delayed freeze regression smoke: passed'
