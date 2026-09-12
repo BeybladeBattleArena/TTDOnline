@@ -1,10 +1,11 @@
 {
-  "release": "2026-09-11-dark-monastery-deferred-online-repeat-v9b",
+  "release": "2026-09-11-shared-gameplay-resource-header-v1",
   "includes": [
-    "fix the real Online-mode race where run #2 could re-bind Dark Monastery to the completed prior state before the server returned the new run state",
-    "detach the completed prior Dark Monastery state from both canonical stage identity and the Dark Monastery marker while the server run-begin request is pending",
-    "re-anchor only the newly created run state to the canonical roaming stage and arm the native-clear hold before ordinary TD can take ownership",
-    "remove duplicate recovery-start behavior that could request another online run while a server start was already pending",
-    "run a dedicated deferred-online browser regression that leaves the first run state in memory, delays the second native state like the real server ticket path, rebuilds that second stage object, and requires a fresh pseudo-3D room, player, joystick, and canvases"
+    "use the existing gold gameplay title slot as the shared location/mode intro across gameplay",
+    "crossfade that title slot into compact HP, DP, and Drive bars as START appears, before the START presentation finishes",
+    "suppress the older floating DP/Drive panel and lower Player HP bar once the shared header is active",
+    "keep the three bars live from the existing player HP and Overdrive resource authorities without changing combat mechanics",
+    "briefly resurface a new area name when gameplay changes location, then return to the resource bars",
+    "add a phone-browser regression covering title-first presentation, START crossfade, live HP/DP/Drive values, area-name resurfacing, and a second gameplay run"
   ]
 }
