@@ -34,8 +34,8 @@
     #${SLOT_ID}.meters-on>#${METERS_ID}{opacity:1;transform:translateY(0);}
     .ttdHeaderMeter{display:grid;grid-template-columns:30px minmax(54px,1fr) 47px;gap:4px;align-items:center;min-height:0;}
     .ttdHeaderMeter .name{font:800 6.5px 'Space Mono',monospace;letter-spacing:.055em;text-transform:uppercase;text-shadow:0 1px #000;}
-    .ttdHeaderMeter .track{height:5px;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:4px;box-shadow:inset 0 1px 3px rgba(0,0,0,.58);}
-    .ttdHeaderMeter .fill{height:100%;width:0;transition:width .15s linear;border-radius:3px;}
+    .ttdHeaderMeter .track{display:block;box-sizing:border-box;height:5px;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:4px;box-shadow:inset 0 1px 3px rgba(0,0,0,.58);}
+    .ttdHeaderMeter .fill{display:block;height:100%;width:0;min-width:0;transition:width .15s linear;border-radius:3px;}
     .ttdHeaderMeter .value{text-align:right;font:800 6.5px 'Space Mono',monospace;white-space:nowrap;text-shadow:0 1px #000;}
     .ttdHeaderMeter.hp .name,.ttdHeaderMeter.hp .value{color:#a7e8b7}.ttdHeaderMeter.hp .track{background:#10291a}.ttdHeaderMeter.hp .fill{background:linear-gradient(90deg,#5cae72,#8ed39e);box-shadow:0 0 6px rgba(111,205,137,.42)}
     .ttdHeaderMeter.dp .name,.ttdHeaderMeter.dp .value{color:#a9dff6}.ttdHeaderMeter.dp .track{background:#071827}.ttdHeaderMeter.dp .fill{background:linear-gradient(90deg,#46bdf0,#8ce7ff);box-shadow:0 0 6px rgba(85,207,255,.54)}
@@ -66,9 +66,9 @@
       slot.appendChild(label);
       const meters=document.createElement('div');meters.id=METERS_ID;
       meters.innerHTML=`
-        <div class="ttdHeaderMeter hp"><span class="name">HP</span><span class="track"><span class="fill"></span></span><span class="value">50 / 50</span></div>
-        <div class="ttdHeaderMeter dp"><span class="name">DP</span><span class="track"><span class="fill"></span></span><span class="value">45 / 45</span></div>
-        <div class="ttdHeaderMeter drive"><span class="name">Drive</span><span class="track"><span class="fill"></span></span><span class="value">0%</span></div>`;
+        <div class="ttdHeaderMeter hp"><span class="name">HP</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="value">50 / 50</span></div>
+        <div class="ttdHeaderMeter dp"><span class="name">DP</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="value">45 / 45</span></div>
+        <div class="ttdHeaderMeter drive"><span class="name">Drive</span><span class="track"><span class="fill" style="width:0%"></span></span><span class="value">0%</span></div>`;
       slot.appendChild(meters);
     }else if(label.parentElement!==slot){slot.prepend(label);}
     // Several custom gameplay shells deliberately hide ordinary direct HUD children with
@@ -85,6 +85,7 @@
   }
   function showMeters(){
     const slot=ensureSlot();if(!slot||metersVisible)return;
+    paintMeters();
     slot.classList.add('meters-on');metersVisible=true;startTransitions++;
   }
   function startWordVisible(){return !!document.querySelector(START_SIGNAL);}
@@ -121,6 +122,7 @@
     locationRevealUntil=0;
     lastModeText=String(document.getElementById('modeLabel')?.textContent||'').trim();
     showLocation();
+    paintMeters();
   }
   function handleAreaNameChange(now,text){
     if(!activeState||!text||text===lastModeText)return;
@@ -169,13 +171,13 @@
   }
 
   window.__TTD_GAMEPLAY_RESOURCE_HEADER_V1_API=Object.freeze({
-    version:4,
-    build:'location-to-hp-dp-drive-v4',
+    version:5,
+    build:'location-to-hp-dp-drive-v5-visible-fills',
     get activeState(){return activeState;},
     get metersVisible(){return metersVisible;},
     get startTransitions(){return startTransitions;},
     get areaReveals(){return areaReveals;},
-    showLocation,showMeters,resourceSnapshot,
+    showLocation,showMeters,resourceSnapshot,paintMeters,
   });
-  ensureSlot();tick();
+  ensureSlot();paintMeters();requestAnimationFrame(()=>paintMeters());tick();
 })();
