@@ -1,11 +1,12 @@
 {
-  "release": "2026-09-11-shared-gameplay-resource-header-v2",
+  "release": "2026-09-11-shared-gameplay-resource-header-v3",
   "includes": [
     "use the existing gold gameplay title slot as the shared location/mode intro across gameplay",
     "crossfade that title slot into compact HP, DP, and Drive bars as START appears, before the START presentation finishes",
     "suppress the older floating DP/Drive panel and lower Player HP bar once the shared header is active",
     "keep the three bars live from the existing player HP and Overdrive resource authorities without changing combat mechanics",
-    "briefly resurface a new area name when gameplay changes location, then return to the resource bars without the already-consumed START transition overriding it",
-    "add a phone-browser regression covering title-first presentation, START crossfade, live HP/DP/Drive values, area-name resurfacing, and a second gameplay run"
+    "briefly resurface a new area name when gameplay changes location, then return to the resource bars",
+    "preserve the shared title/resource slot inside Moving Screen's custom mobile gameplay shell instead of letting its direct-child HUD rule hide the new shared header",
+    "gate production with browser coverage for title-first presentation, START crossfade, live HP/DP/Drive values, area-name resurfacing, Moving Screen visibility, and a second gameplay run"
   ]
 }
