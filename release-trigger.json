@@ -1,5 +1,5 @@
 {
-  "release": "2026-09-12-shared-gameplay-resource-header-v5",
+  "release": "2026-09-12-shared-gameplay-resource-header-v5b",
   "includes": [
     "use the existing gold gameplay title slot as the shared location/mode intro across gameplay",
     "crossfade that title slot into compact HP, DP, and Drive bars as START appears, before the START presentation finishes",
