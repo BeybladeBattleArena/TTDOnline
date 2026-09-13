@@ -23,6 +23,7 @@
     '/online/world-items-v1.js?v=1',
     '/online/server-item-sell-bridge-v1.js?v=1',
     '/online/dark-monastery-adventure-v2.js?v=3',
+    '/online/dark-monastery-room1-fidelity-v1.js?v=1',
     '/online/moving-screen-neon-rooftops-v2.js?v=4',
     '/online/moving-screen-construction-climb-v1.js?v=2',
     '/online/moving-screen-engine-v5.js?v=2',
